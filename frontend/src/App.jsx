@@ -1,41 +1,39 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import MapContainer from "./components/MapContainer";
+import LoadingSpinner from "./components/LoadingSpinner";
+import LoginScreen from "./components/LoginScreen";
+import UserProfileBar from "./components/UserProfileBar";
+import PinConfirmationModal from "./components/PinConfirmationModal";
+import "./App.css";
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
   const [pins, setPins] = useState([]);
+  const [pendingPin, setPendingPin] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pinAddress, setPinAddress] = useState("");
+  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
 
-  // Check if user is already logged in (automatically persists)
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Load user's pins if logged in
       if (session?.user) {
-        const savedPins = localStorage.getItem(`pins_${session.user.id}`);
-        if (savedPins) {
-          setPins(JSON.parse(savedPins));
-        }
+        loadUserPinFromDatabase(session.user.id);
       }
     });
 
-    // Listen for auth changes (login/logout)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
 
-      // Load pins when user logs in
       if (session?.user) {
-        const savedPins = localStorage.getItem(`pins_${session.user.id}`);
-        if (savedPins) {
-          setPins(JSON.parse(savedPins));
-        }
+        loadUserPinFromDatabase(session.user.id);
       } else {
         setPins([]);
       }
@@ -44,14 +42,153 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Save pins whenever they change
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(`pins_${user.id}`, JSON.stringify(pins));
-    }
-  }, [pins, user]);
+  const loadUserPinFromDatabase = async (userId) => {
+    try {
+      console.log("🔍 Loading user's active pin...");
 
-  // Get user's location after login
+      // Query the pins table directly for the user's active pin
+      const { data, error } = await supabase
+        .from("pins")
+        .select("id, position, created_at")
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error("❌ Error loading pin:", error);
+        return;
+      }
+
+      console.log("Pin data:", data);
+
+      if (data) {
+        // Convert to the format expected by the map
+        const pin = {
+          id: data.id,
+          position: data.position,
+          timestamp: data.created_at,
+        };
+        console.log("✅ Loaded pin:", pin);
+        setPins([pin]);
+      } else {
+        console.log("ℹ️ No active pins found");
+        setPins([]);
+      }
+    } catch (error) {
+      console.error("❌ Error loading user pin:", error);
+    }
+  };
+
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+        {
+          headers: {
+            "Accept-Language": "he,en",
+          },
+        }
+      );
+      const data = await response.json();
+
+      if (data.address) {
+        const { road, house_number, suburb, city } = data.address;
+        let addressParts = [];
+
+        if (road) {
+          addressParts.push(road);
+        }
+        if (house_number) {
+          addressParts.push(house_number);
+        }
+        if (suburb && suburb !== city) {
+          addressParts.push(suburb);
+        }
+        if (city) {
+          addressParts.push(city);
+        }
+
+        return addressParts.join(", ") || data.display_name;
+      }
+
+      return data.display_name || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    } catch (error) {
+      console.error("Error reverse geocoding:", error);
+      return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+  };
+
+  const savePinToDatabase = async (userId, pin, address) => {
+    try {
+      console.log("🔍 Starting pin save process...");
+      console.log("User ID:", userId);
+      console.log("Pin:", pin);
+      console.log("Address:", address);
+
+      // Get the session
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+
+      console.log("Session data:", sessionData);
+      console.log("Session error:", sessionError);
+
+      if (sessionError) {
+        console.error("❌ Session error:", sessionError);
+        alert("Authentication error. Please log in again.");
+        return false;
+      }
+
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        console.error("❌ No access token found");
+        alert("Authentication error. Please log in again.");
+        return false;
+      }
+
+      console.log("✅ Token found:", token.substring(0, 20) + "...");
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-pin`;
+      console.log("📍 Calling URL:", url);
+
+      const payload = {
+        position: pin.position,
+        parking_zone: null,
+        address: address,
+      };
+      console.log("📦 Payload:", payload);
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log("📥 Response status:", response.status);
+      console.log("📥 Response ok:", response.ok);
+
+      const result = await response.json();
+      console.log("📥 Response body:", result);
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to save pin");
+      }
+
+      console.log("✅ Pin saved successfully!");
+      return true;
+    } catch (error) {
+      console.error("❌ Error saving pin:", error);
+      alert(`Failed to save pin location: ${error.message}`);
+      return false;
+    }
+  };
+
   useEffect(() => {
     if (user && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -98,212 +235,67 @@ function App() {
     }
   };
 
-  const handleMapClick = (latlng) => {
+  const handleMapClick = async (latlng) => {
     const newPin = {
       id: Date.now(),
       position: [latlng.lat, latlng.lng],
       timestamp: new Date().toISOString(),
     };
-    setPins([newPin]);
+
+    setPendingPin(newPin);
+    setShowConfirmModal(true);
+    setIsLoadingAddress(true);
+    setPinAddress("");
+
+    const address = await reverseGeocode(latlng.lat, latlng.lng);
+    setPinAddress(address);
+    setIsLoadingAddress(false);
   };
 
-  // Loading state
+  const handleConfirmPin = async () => {
+    if (!pendingPin || !user) return;
+
+    const success = await savePinToDatabase(user.id, pendingPin, pinAddress);
+
+    if (success) {
+      setPins([pendingPin]);
+    }
+
+    setShowConfirmModal(false);
+    setPendingPin(null);
+    setPinAddress("");
+  };
+
+  const handleCancelPin = () => {
+    setShowConfirmModal(false);
+    setPendingPin(null);
+    setPinAddress("");
+  };
+
   if (loading) {
-    return (
-      <div
-        style={{
-          height: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
-          fontSize: "18px",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <div
-            className="loading-spinner"
-            style={{
-              margin: "0 auto 20px",
-              width: "40px",
-              height: "40px",
-              border: "4px solid rgba(255,255,255,0.3)",
-              borderTop: "4px solid white",
-              borderRadius: "50%",
-              animation: "spin 1s linear infinite",
-            }}
-          ></div>
-          Loading...
-        </div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
-  // Not logged in - show login screen
   if (!user) {
-    return (
-      <div
-        style={{
-          height: "100vh",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
-          padding: "20px",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            maxWidth: "400px",
-          }}
-        >
-          <h1
-            style={{
-              marginBottom: "16px",
-              fontSize: "36px",
-              fontWeight: "700",
-            }}
-          >
-            📍 Map Pins
-          </h1>
-          <p
-            style={{
-              marginBottom: "40px",
-              fontSize: "16px",
-              opacity: 0.9,
-              lineHeight: "1.5",
-            }}
-          >
-            Pin your favorite locations on the map and access them anytime,
-            anywhere
-          </p>
-          <button
-            onClick={handleGoogleSignIn}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
-              background: "white",
-              color: "#333",
-              border: "none",
-              padding: "14px 28px",
-              borderRadius: "12px",
-              fontSize: "16px",
-              fontWeight: "600",
-              cursor: "pointer",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.2)",
-              transition: "all 0.2s ease",
-              margin: "0 auto",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 12px 32px rgba(0,0,0,0.25)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.2)";
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              />
-            </svg>
-            Continue with Google
-          </button>
-          <p
-            style={{
-              marginTop: "24px",
-              fontSize: "12px",
-              opacity: 0.7,
-            }}
-          >
-            Secure authentication powered by Supabase
-          </p>
-        </div>
-      </div>
-    );
+    return <LoginScreen onGoogleSignIn={handleGoogleSignIn} />;
   }
 
-  // Logged in - show map with user info
   return (
-    <div className="App">
-      {/* User profile bar */}
-      <div
-        style={{
-          position: "absolute",
-          top: "20px",
-          right: "20px",
-          zIndex: 1000,
-          background: "white",
-          padding: "10px 16px",
-          borderRadius: "12px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-        }}
-      >
-        {user.user_metadata?.avatar_url && (
-          <img
-            src={user.user_metadata.avatar_url}
-            alt={user.user_metadata.full_name || user.email}
-            style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "50%",
-              border: "2px solid #f0f0f0",
-            }}
-          />
-        )}
-        <div style={{ fontSize: "14px", flex: 1 }}>
-          <div style={{ fontWeight: "600", color: "#333" }}>
-            {user.user_metadata?.full_name || "User"}
-          </div>
-          <div style={{ fontSize: "12px", color: "#666" }}>{user.email}</div>
-        </div>
-        <button
-          onClick={handleSignOut}
-          style={{
-            background: "#f5f5f5",
-            border: "none",
-            padding: "8px 14px",
-            borderRadius: "8px",
-            fontSize: "13px",
-            fontWeight: "500",
-            cursor: "pointer",
-            color: "#666",
-            transition: "background 0.2s",
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.background = "#e8e8e8")}
-          onMouseOut={(e) => (e.currentTarget.style.background = "#f5f5f5")}
-        >
-          Sign Out
-        </button>
-      </div>
-
+    <div className="app">
+      <UserProfileBar user={user} onSignOut={handleSignOut} />
       <MapContainer
         userLocation={userLocation}
         pins={pins}
         onMapClick={handleMapClick}
       />
+      {showConfirmModal && (
+        <PinConfirmationModal
+          address={pinAddress}
+          isLoading={isLoadingAddress}
+          onConfirm={handleConfirmPin}
+          onCancel={handleCancelPin}
+        />
+      )}
     </div>
   );
 }

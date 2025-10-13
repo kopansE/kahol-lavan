@@ -1,0 +1,7 @@
+{
+  "compilerOptions": {
+    "lib": ["deno.window", "esnext"],
+    "strict": true
+  },
+  "importMap": "../import_map.json"
+}
