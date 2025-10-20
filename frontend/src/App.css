@@ -208,6 +208,64 @@
   opacity: 0.9;
 }
 
+/* Not Leaving Parking Button */
+.not-leaving-parking-button {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 220px;
+}
+
+.not-leaving-parking-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(255, 107, 107, 0.5);
+}
+
+.not-leaving-parking-button:active {
+  transform: translateY(0);
+}
+
+.not-leaving-parking-icon {
+  font-size: 28px;
+  animation: pulse-icon 2s infinite;
+}
+
+@keyframes pulse-icon {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.not-leaving-parking-text {
+  flex: 1;
+}
+
+.not-leaving-parking-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.not-leaving-parking-subtitle {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
 /* App Container */
 .app {
   /* Main app container styles if needed */

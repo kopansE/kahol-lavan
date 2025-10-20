@@ -6,14 +6,15 @@ import LoginScreen from "./components/LoginScreen";
 import UserProfileBar from "./components/UserProfileBar";
 import PinConfirmationModal from "./components/PinConfirmationModal";
 import LeavingParkingButton from "./components/LeavingParkingButton";
+import NotLeavingParkingButton from "./components/NotLeavingParkingButton";
 import "./App.css";
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
-  const [otherUsersPins, setOtherUsersPins] = useState([]); // Other users' active pins
-  const [userOwnPin, setUserOwnPin] = useState(null); // User's own pin (waiting or active)
+  const [otherUsersPins, setOtherUsersPins] = useState([]);
+  const [userOwnPin, setUserOwnPin] = useState(null);
   const [pendingPin, setPendingPin] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pinAddress, setPinAddress] = useState("");
@@ -50,7 +51,6 @@ function App() {
   const loadUserOwnPin = async (userId) => {
     try {
       console.log("🔍 Loading user's own pin...");
-      // Get user's own pin (either waiting or active)
       const { data, error } = await supabase
         .from("pins")
         .select("id, position, status, created_at")
@@ -66,7 +66,7 @@ function App() {
         return;
       }
 
-      console.log("🔍 User's own pin data:", data);
+      console.log("📍 User's own pin data:", data);
 
       if (data) {
         const pin = {
@@ -89,7 +89,6 @@ function App() {
   const loadOtherUsersPins = async (userId) => {
     try {
       console.log("🔍 Loading other users' pins...");
-      // Get all active pins from OTHER users only
       const { data, error } = await supabase
         .from("pins")
         .select("id, position, created_at, user_id")
@@ -103,7 +102,7 @@ function App() {
         return;
       }
 
-      console.log("🔍 Other users' pins data:", data);
+      console.log("📍 Other users' pins data:", data);
 
       if (data && data.length > 0) {
         const pins = data.map((pin) => ({
@@ -188,7 +187,7 @@ function App() {
       console.log("✅ Token found:", token.substring(0, 20) + "...");
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-pin`;
-      console.log("📍 Calling URL:", url);
+      console.log("🔗 Calling URL:", url);
 
       const payload = {
         position: pin.position,
@@ -271,7 +270,6 @@ function App() {
 
       console.log("✅ Pin activated!");
 
-      // Refresh pins after activation
       await loadUserOwnPin(user.id);
       await loadOtherUsersPins(user.id);
 
@@ -279,6 +277,52 @@ function App() {
     } catch (error) {
       console.error("Error activating pin:", error);
       alert(`Failed to activate pin: ${error.message}`);
+      return false;
+    }
+  };
+
+  const deactivateActivePin = async () => {
+    if (!userOwnPin || !user) return false;
+
+    try {
+      console.log("🔴 Deactivating pin...");
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        alert("Authentication error. Please log in again.");
+        return false;
+      }
+
+      const url = `${
+        import.meta.env.VITE_SUPABASE_URL
+      }/functions/v1/deactivate-pin`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pin_id: userOwnPin.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to deactivate pin");
+      }
+
+      console.log("✅ Pin deactivated!");
+
+      await loadUserOwnPin(user.id);
+      await loadOtherUsersPins(user.id);
+
+      return true;
+    } catch (error) {
+      console.error("Error deactivating pin:", error);
+      alert(`Failed to deactivate pin: ${error.message}`);
       return false;
     }
   };
@@ -378,7 +422,8 @@ function App() {
   console.log("🔍 Render check:", {
     userOwnPin,
     status: userOwnPin?.status,
-    shouldShowButton: userOwnPin && userOwnPin.status === "waiting",
+    shouldShowLeavingButton: userOwnPin && userOwnPin.status === "waiting",
+    shouldShowNotLeavingButton: userOwnPin && userOwnPin.status === "active",
   });
 
   return (
@@ -394,6 +439,12 @@ function App() {
         <LeavingParkingButton
           waitingPin={userOwnPin}
           onActivate={activateWaitingPin}
+        />
+      )}
+      {userOwnPin && userOwnPin.status === "active" && (
+        <NotLeavingParkingButton
+          activePin={userOwnPin}
+          onDeactivate={deactivateActivePin}
         />
       )}
       {showConfirmModal && (
