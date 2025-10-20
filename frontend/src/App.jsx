@@ -5,13 +5,15 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import LoginScreen from "./components/LoginScreen";
 import UserProfileBar from "./components/UserProfileBar";
 import PinConfirmationModal from "./components/PinConfirmationModal";
+import LeavingParkingButton from "./components/LeavingParkingButton";
 import "./App.css";
 
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
-  const [pins, setPins] = useState([]);
+  const [otherUsersPins, setOtherUsersPins] = useState([]); // Other users' active pins
+  const [userOwnPin, setUserOwnPin] = useState(null); // User's own pin (waiting or active)
   const [pendingPin, setPendingPin] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pinAddress, setPinAddress] = useState("");
@@ -23,7 +25,8 @@ function App() {
       setLoading(false);
 
       if (session?.user) {
-        loadUserPinFromDatabase(session.user.id);
+        loadUserOwnPin(session.user.id);
+        loadOtherUsersPins(session.user.id);
       }
     });
 
@@ -33,52 +36,89 @@ function App() {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        loadUserPinFromDatabase(session.user.id);
+        loadUserOwnPin(session.user.id);
+        loadOtherUsersPins(session.user.id);
       } else {
-        setPins([]);
+        setOtherUsersPins([]);
+        setUserOwnPin(null);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadUserPinFromDatabase = async (userId) => {
+  const loadUserOwnPin = async (userId) => {
     try {
-      console.log("🔍 Loading user's active pin...");
-
-      // Query the pins table directly for the user's active pin
+      console.log("🔍 Loading user's own pin...");
+      // Get user's own pin (either waiting or active)
       const { data, error } = await supabase
         .from("pins")
-        .select("id, position, created_at")
+        .select("id, position, status, created_at")
         .eq("user_id", userId)
-        .eq("status", "active")
+        .in("status", ["waiting", "active"])
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) {
-        console.error("❌ Error loading pin:", error);
+        console.error("Error loading own pin:", error);
         return;
       }
 
-      console.log("Pin data:", data);
+      console.log("🔍 User's own pin data:", data);
 
       if (data) {
-        // Convert to the format expected by the map
         const pin = {
           id: data.id,
           position: data.position,
+          status: data.status,
           timestamp: data.created_at,
         };
-        console.log("✅ Loaded pin:", pin);
-        setPins([pin]);
+        console.log("✅ Setting userOwnPin:", pin);
+        setUserOwnPin(pin);
       } else {
-        console.log("ℹ️ No active pins found");
-        setPins([]);
+        console.log("ℹ️ No pin found");
+        setUserOwnPin(null);
       }
     } catch (error) {
-      console.error("❌ Error loading user pin:", error);
+      console.error("Error loading user own pin:", error);
+    }
+  };
+
+  const loadOtherUsersPins = async (userId) => {
+    try {
+      console.log("🔍 Loading other users' pins...");
+      // Get all active pins from OTHER users only
+      const { data, error } = await supabase
+        .from("pins")
+        .select("id, position, created_at, user_id")
+        .eq("status", "active")
+        .neq("user_id", userId)
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error loading other users' pins:", error);
+        return;
+      }
+
+      console.log("🔍 Other users' pins data:", data);
+
+      if (data && data.length > 0) {
+        const pins = data.map((pin) => ({
+          id: pin.id,
+          position: pin.position,
+          timestamp: pin.created_at,
+        }));
+        console.log("✅ Setting otherUsersPins:", pins);
+        setOtherUsersPins(pins);
+      } else {
+        console.log("ℹ️ No other users' pins found");
+        setOtherUsersPins([]);
+      }
+    } catch (error) {
+      console.error("Error loading other users' pins:", error);
     }
   };
 
@@ -123,17 +163,13 @@ function App() {
 
   const savePinToDatabase = async (userId, pin, address) => {
     try {
-      console.log("🔍 Starting pin save process...");
+      console.log("🔵 Starting savePinToDatabase...");
       console.log("User ID:", userId);
       console.log("Pin:", pin);
       console.log("Address:", address);
 
-      // Get the session
       const { data: sessionData, error: sessionError } =
         await supabase.auth.getSession();
-
-      console.log("Session data:", sessionData);
-      console.log("Session error:", sessionError);
 
       if (sessionError) {
         console.error("❌ Session error:", sessionError);
@@ -173,11 +209,22 @@ function App() {
       console.log("📥 Response status:", response.status);
       console.log("📥 Response ok:", response.ok);
 
-      const result = await response.json();
-      console.log("📥 Response body:", result);
+      const responseText = await response.text();
+      console.log("📥 Raw response:", responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (e) {
+        console.error("❌ Failed to parse response as JSON:", e);
+        throw new Error(`Server error (${response.status}): ${responseText}`);
+      }
+
+      console.log("📥 Parsed response:", result);
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to save pin");
+        console.error("❌ Save failed:", result);
+        throw new Error(result.error || result.details || "Failed to save pin");
       }
 
       console.log("✅ Pin saved successfully!");
@@ -185,6 +232,53 @@ function App() {
     } catch (error) {
       console.error("❌ Error saving pin:", error);
       alert(`Failed to save pin location: ${error.message}`);
+      return false;
+    }
+  };
+
+  const activateWaitingPin = async () => {
+    if (!userOwnPin || !user) return false;
+
+    try {
+      console.log("🚀 Activating pin...");
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        alert("Authentication error. Please log in again.");
+        return false;
+      }
+
+      const url = `${
+        import.meta.env.VITE_SUPABASE_URL
+      }/functions/v1/activate-pin`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pin_id: userOwnPin.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to activate pin");
+      }
+
+      console.log("✅ Pin activated!");
+
+      // Refresh pins after activation
+      await loadUserOwnPin(user.id);
+      await loadOtherUsersPins(user.id);
+
+      return true;
+    } catch (error) {
+      console.error("Error activating pin:", error);
+      alert(`Failed to activate pin: ${error.message}`);
       return false;
     }
   };
@@ -229,7 +323,8 @@ function App() {
     try {
       await supabase.auth.signOut();
       setUserLocation(null);
-      setPins([]);
+      setOtherUsersPins([]);
+      setUserOwnPin(null);
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -258,7 +353,7 @@ function App() {
     const success = await savePinToDatabase(user.id, pendingPin, pinAddress);
 
     if (success) {
-      setPins([pendingPin]);
+      await loadUserOwnPin(user.id);
     }
 
     setShowConfirmModal(false);
@@ -280,14 +375,27 @@ function App() {
     return <LoginScreen onGoogleSignIn={handleGoogleSignIn} />;
   }
 
+  console.log("🔍 Render check:", {
+    userOwnPin,
+    status: userOwnPin?.status,
+    shouldShowButton: userOwnPin && userOwnPin.status === "waiting",
+  });
+
   return (
     <div className="app">
       <UserProfileBar user={user} onSignOut={handleSignOut} />
       <MapContainer
         userLocation={userLocation}
-        pins={pins}
+        otherUsersPins={otherUsersPins}
+        userOwnPin={userOwnPin}
         onMapClick={handleMapClick}
       />
+      {userOwnPin && userOwnPin.status === "waiting" && (
+        <LeavingParkingButton
+          waitingPin={userOwnPin}
+          onActivate={activateWaitingPin}
+        />
+      )}
       {showConfirmModal && (
         <PinConfirmationModal
           address={pinAddress}
