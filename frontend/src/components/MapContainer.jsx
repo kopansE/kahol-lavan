@@ -32,7 +32,8 @@ const createCustomIcon = (color = "#ff6b6b", className = "custom-pin") => {
 };
 
 const userLocationIcon = createCustomIcon("#4ecdc4", "user-location-pin");
-const pinIcon = createCustomIcon("#ff6b6b", "custom-pin");
+const redPinIcon = createCustomIcon("#ff6b6b", "red-pin"); // User's own pin
+const bluePinIcon = createCustomIcon("#4285F4", "blue-pin"); // Other users' pins
 
 // Component to handle map clicks
 function MapClickHandler({ onMapClick }) {
@@ -55,7 +56,12 @@ function MapRefHandler({ onMapReady }) {
   return null;
 }
 
-const MapContainer = ({ userLocation, pins, onMapClick }) => {
+const MapContainer = ({
+  userLocation,
+  otherUsersPins,
+  userOwnPin,
+  onMapClick,
+}) => {
   const mapRef = useRef();
   const [isGpsLoading, setIsGpsLoading] = React.useState(false);
   const [isMapReady, setIsMapReady] = React.useState(false);
@@ -165,22 +171,55 @@ const MapContainer = ({ userLocation, pins, onMapClick }) => {
           </Popup>
         </Marker>
 
-        {/* User dropped pins */}
-        {pins.map((pin) => (
-          <Marker key={pin.id} position={pin.position} icon={pinIcon}>
+        {/* User's own pin (RED) */}
+        {userOwnPin && (
+          <Marker
+            key={`own-${userOwnPin.id}`}
+            position={userOwnPin.position}
+            icon={redPinIcon}
+          >
             <Popup>
               <div>
-                <strong>Pin #{pin.id}</strong>
+                <strong>Your Parking Spot</strong>
                 <br />
-                Lat: {pin.position[0].toFixed(6)}
+                Status: {userOwnPin.status}
                 <br />
-                Lng: {pin.position[1].toFixed(6)}
+                Lat: {userOwnPin.position[0].toFixed(6)}
                 <br />
-                <small>Added: {new Date(pin.timestamp).toLocaleString()}</small>
+                Lng: {userOwnPin.position[1].toFixed(6)}
+                <br />
+                <small>
+                  Added: {new Date(userOwnPin.timestamp).toLocaleString()}
+                </small>
               </div>
             </Popup>
           </Marker>
-        ))}
+        )}
+
+        {/* Other users' pins (BLUE) */}
+        {otherUsersPins &&
+          otherUsersPins.length > 0 &&
+          otherUsersPins.map((pin) => (
+            <Marker
+              key={`other-${pin.id}`}
+              position={pin.position}
+              icon={bluePinIcon}
+            >
+              <Popup>
+                <div>
+                  <strong>Available Parking</strong>
+                  <br />
+                  Lat: {pin.position[0].toFixed(6)}
+                  <br />
+                  Lng: {pin.position[1].toFixed(6)}
+                  <br />
+                  <small>
+                    Added: {new Date(pin.timestamp).toLocaleString()}
+                  </small>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
 
         {/* Handle map reference and clicks */}
         <MapRefHandler onMapReady={handleMapReady} />

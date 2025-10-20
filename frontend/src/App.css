@@ -150,6 +150,64 @@
   background: #e8e8e8;
 }
 
+/* Leaving Parking Button */
+.leaving-parking-button {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 220px;
+}
+
+.leaving-parking-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+}
+
+.leaving-parking-button:active {
+  transform: translateY(0);
+}
+
+.leaving-parking-icon {
+  font-size: 28px;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.leaving-parking-text {
+  flex: 1;
+}
+
+.leaving-parking-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.leaving-parking-subtitle {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
 /* App Container */
 .app {
   /* Main app container styles if needed */
