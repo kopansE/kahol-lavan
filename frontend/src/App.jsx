@@ -3,10 +3,10 @@ import { supabase } from "./supabaseClient";
 import MapContainer from "./components/MapContainer";
 import LoadingSpinner from "./components/LoadingSpinner";
 import LoginScreen from "./components/LoginScreen";
-import UserProfileBar from "./components/UserProfileBar";
 import PinConfirmationModal from "./components/PinConfirmationModal";
 import LeavingParkingButton from "./components/LeavingParkingButton";
 import NotLeavingParkingButton from "./components/NotLeavingParkingButton";
+import PaymentSideMenu from "./components/PaymentSideMenu";
 import "./App.css";
 
 function App() {
@@ -19,6 +19,7 @@ function App() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pinAddress, setPinAddress] = useState("");
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+  const [isPaymentMenuOpen, setIsPaymentMenuOpen] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -428,7 +429,13 @@ function App() {
 
   return (
     <div className="app">
-      <UserProfileBar user={user} onSignOut={handleSignOut} />
+      <button
+        className="payment-menu-toggle-button"
+        onClick={() => setIsPaymentMenuOpen(true)}
+        title="Payment Settings"
+      >
+        💳
+      </button>
       <MapContainer
         userLocation={userLocation}
         otherUsersPins={otherUsersPins}
@@ -455,6 +462,12 @@ function App() {
           onCancel={handleCancelPin}
         />
       )}
+      <PaymentSideMenu
+        isOpen={isPaymentMenuOpen}
+        onClose={() => setIsPaymentMenuOpen(false)}
+        user={user}
+        onSignOut={handleSignOut}
+      />
     </div>
   );
 }
