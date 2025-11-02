@@ -1,7 +1,7 @@
 import React from "react";
 import "../App.css";
 
-const UserProfileBar = ({ user, onSignOut }) => {
+const UserProfileBar = ({ user }) => {
   return (
     <div className="user-profile-bar">
       {user.user_metadata?.avatar_url && (
@@ -17,9 +17,6 @@ const UserProfileBar = ({ user, onSignOut }) => {
         </div>
         <div className="user-email">{user.email}</div>
       </div>
-      <button className="signout-button" onClick={onSignOut}>
-        Sign Out
-      </button>
     </div>
   );
 };
