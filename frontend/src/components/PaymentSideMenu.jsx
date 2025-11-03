@@ -6,6 +6,7 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
   const [paymentSetupCompleted, setPaymentSetupCompleted] = useState(false);
   const [walletAmount, setWalletAmount] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -18,10 +19,10 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
 
     try {
       setLoading(true);
-      // Fetch user profile data from the profiles table
+      // Fetch payment identifiers from users table (source of truth)
       const { data, error } = await supabase
-        .from("profiles")
-        .select("payment_setup_completed")
+        .from("users")
+        .select("rapyd_customer_id, rapyd_wallet_id")
         .eq("id", user.id)
         .single();
 
@@ -29,7 +30,10 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
         console.error("Error loading user payment data:", error);
         setPaymentSetupCompleted(false);
       } else {
-        setPaymentSetupCompleted(data?.payment_setup_completed || false);
+        const hasRapydSetup = Boolean(
+          data?.rapyd_customer_id && data?.rapyd_wallet_id
+        );
+        setPaymentSetupCompleted(hasRapydSetup);
       }
     } catch (error) {
       console.error("Error loading user payment data:", error);
@@ -39,8 +43,60 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
     }
   };
 
-  const handleUpdatePaymentDetails = () => {
-    alert("Update payment details button clicked! (Coming soon)");
+  const handleUpdatePaymentDetails = async () => {
+    if (!user) return;
+
+    try {
+      setIsUpdatingPayment(true);
+
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+
+      if (sessionError) {
+        throw new Error("Authentication error. Please log in again.");
+      }
+
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        throw new Error("No session token found. Please log in again.");
+      }
+
+      const url = `${
+        import.meta.env.VITE_SUPABASE_URL
+      }/functions/v1/setup-payment-method`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const resultText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(resultText);
+      } catch (e) {
+        throw new Error(
+          `Unexpected server response (${response.status}): ${resultText}`
+        );
+      }
+
+      if (!response.ok || !result?.success || !result?.hosted_page_url) {
+        const message =
+          result?.error || result?.message || "Failed to start payment setup";
+        throw new Error(message);
+      }
+
+      // Redirect to Rapyd hosted page for card tokenization
+      window.location.href = result.hosted_page_url;
+    } catch (err) {
+      console.error("Failed to update payment details:", err);
+      alert(err.message || "Failed to update payment details");
+    } finally {
+      setIsUpdatingPayment(false);
+    }
   };
 
   const handleWithdrawToBank = () => {
@@ -81,8 +137,9 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
           <button
             className="payment-menu-button update-button"
             onClick={handleUpdatePaymentDetails}
+            disabled={isUpdatingPayment}
           >
-            Update Payment Details
+            {isUpdatingPayment ? "Redirecting..." : "Update Payment Details"}
           </button>
 
           {loading ? (
