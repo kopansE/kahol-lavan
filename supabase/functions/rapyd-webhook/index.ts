@@ -72,7 +72,6 @@ async function makeRapydRequest(
   }
 
   const url = `${baseUrl}${path}`;
-  console.log(`Making Rapyd ${method} request to: ${url}`);
 
   const response = await fetch(url, options);
   const data = await response.json();
@@ -93,8 +92,6 @@ serve(async (req) => {
   }
 
   try {
-    console.log("🚀 Edge Function: setup-payment-method started");
-
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -130,8 +127,6 @@ serve(async (req) => {
       });
     }
 
-    console.log("✅ User authenticated:", user.id);
-
     // Get user data from database
     const { data: userData, error: userDataError } = await supabaseAdmin
       .from("users")
@@ -155,7 +150,6 @@ serve(async (req) => {
 
     // Step 1: Create Rapyd Customer if not exists
     if (!customerId) {
-      console.log("Creating Rapyd customer...");
       const customerBody = {
         name: userData.full_name || user.email?.split("@")[0] || "User",
         email: user.email,
@@ -172,20 +166,16 @@ serve(async (req) => {
       );
 
       customerId = customerResponse.data.id;
-      console.log("✅ Customer created:", customerId);
 
       // Update database with customer ID
       await supabaseAdmin
         .from("users")
         .update({ rapyd_customer_id: customerId })
         .eq("id", user.id);
-    } else {
-      console.log("Customer already exists:", customerId);
     }
 
     // Step 2: Create Rapyd Wallet if not exists
     if (!walletId) {
-      console.log("Creating Rapyd wallet...");
       const walletBody = {
         first_name: userData.full_name?.split(" ")[0] || "User",
         last_name: userData.full_name?.split(" ").slice(1).join(" ") || "",
@@ -211,19 +201,15 @@ serve(async (req) => {
       );
 
       walletId = walletResponse.data.id;
-      console.log("✅ Wallet created:", walletId);
 
       // Update database with wallet ID
       await supabaseAdmin
         .from("users")
         .update({ rapyd_wallet_id: walletId })
         .eq("id", user.id);
-    } else {
-      console.log("Wallet already exists:", walletId);
     }
 
     // Step 3: Generate Hosted Card Collection Page
-    console.log("Generating hosted card page...");
     const cardPageBody = {
       customer: customerId,
       country: "IL", // Israel
@@ -242,8 +228,6 @@ serve(async (req) => {
 
     const hostedPageUrl = cardPageResponse.data.redirect_url;
     const hostedPageId = cardPageResponse.data.id;
-
-    console.log("✅ Hosted page generated:", hostedPageId);
 
     // Return the hosted page URL to frontend
     return new Response(

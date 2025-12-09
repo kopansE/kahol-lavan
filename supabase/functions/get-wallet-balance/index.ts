@@ -9,7 +9,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// EXACT implementation from Rapyd official Node.js documentation
 function generateRapydSignature(
   httpMethod: string,
   urlPath: string,
@@ -26,7 +25,6 @@ function generateRapydSignature(
   const hash = createHmac("sha256", secretKey);
   hash.update(toSign);
 
-  // THIS IS THE EXACT LINE FROM RAPYD OFFICIAL DOCS
   const hexDigest = hash.digest("hex");
   const signature = Buffer.from(hexDigest).toString("base64");
 
@@ -46,7 +44,6 @@ async function makeRapydRequest(
     throw new Error("Missing Rapyd credentials");
   }
 
-  // Generate salt - alphanumeric only
   const chars =
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let salt = "";
@@ -57,8 +54,6 @@ async function makeRapydRequest(
   }
 
   const timestamp = Math.floor(Date.now() / 1000).toString();
-
-  // Rapyd requires compact JSON (no spaces) for signature calculation
   const bodyString = body ? JSON.stringify(body) : "";
 
   const signature = generateRapydSignature(
@@ -150,125 +145,45 @@ serve(async (req) => {
 
     const { data: userData, error: userDataError } = await supabaseAdmin
       .from("users")
-      .select("*")
+      .select("rapyd_wallet_id")
       .eq("id", user.id)
       .single();
 
-    if (userDataError) {
+    if (userDataError || !userData?.rapyd_wallet_id) {
       return new Response(
-        JSON.stringify({ error: "Failed to fetch user data" }),
+        JSON.stringify({ error: "Wallet not found. Please setup payment first." }),
         {
-          status: 500,
+          status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
-    let customerId = userData.rapyd_customer_id;
-    let walletId = userData.rapyd_wallet_id;
+    const walletId = userData.rapyd_wallet_id;
 
-    // Clear test bypass values
-    if (
-      customerId &&
-      (customerId.includes("test") || customerId.includes("bypass"))
-    ) {
-      customerId = null;
-    }
-    if (
-      walletId &&
-      (walletId.includes("test") || walletId.includes("bypass"))
-    ) {
-      walletId = null;
-    }
-
-    if (!customerId) {
-      const customerBody = {
-        name: userData.full_name || user.email?.split("@")[0] || "User",
-        email: user.email,
-        phone_number: "",
-        metadata: { user_id: user.id },
-      };
-
-      const customerResponse = await makeRapydRequest(
-        "post",
-        "/v1/customers",
-        customerBody
-      );
-      customerId = customerResponse.data.id;
-
-      await supabaseAdmin
-        .from("users")
-        .update({ rapyd_customer_id: customerId })
-        .eq("id", user.id);
-    }
-
-    if (!walletId) {
-      const walletBody = {
-        first_name: userData.full_name?.split(" ")[0] || "User",
-        last_name: userData.full_name?.split(" ").slice(1).join(" ") || "",
-        email: user.email,
-        ewallet_reference_id: user.id,
-        metadata: { user_id: user.id },
-        type: "person",
-        contact: {
-          phone_number: "",
-          email: user.email,
-          first_name: userData.full_name?.split(" ")[0] || "User",
-          last_name: userData.full_name?.split(" ").slice(1).join(" ") || "",
-          contact_type: "personal",
-          country: "IL",
-        },
-      };
-
-      // *** CORRECTION: Using the current, correct endpoint /v1/ewallets ***
-      const walletResponse = await makeRapydRequest(
-        "post",
-        "/v1/ewallets",
-        walletBody
-      );
-      // ******************************************************************
-
-      walletId = walletResponse.data.id;
-
-      await supabaseAdmin
-        .from("users")
-        .update({ rapyd_wallet_id: walletId })
-        .eq("id", user.id);
-    }
-
-    const appUrl = Deno.env.get("APP_URL") || "http://localhost:5173";
-
-    const checkoutBody = {
-      amount: 100, // 1 ILS in agorot (smallest amount)
-      country: "IL",
-      currency: "ILS",
-      customer: customerId,
-      payment_method_type_categories: ["card"],
-      complete_payment_url: `${appUrl}?payment_setup=complete`,
-      error_payment_url: `${appUrl}?payment_setup=error`,
-      cancel_checkout_url: `${appUrl}?payment_setup=cancelled`,
-      merchant_reference_id: `setup_${user.id}_${Date.now()}`,
-      metadata: {
-        user_id: user.id,
-        type: "card_setup",
-      },
-      requested_currency: "ILS",
-      capture: false, // Don't capture, just authorize to save payment method
-    };
-
-    const checkoutResponse = await makeRapydRequest(
-      "post",
-      "/v1/checkout",
-      checkoutBody
+    // Get wallet details from Rapyd
+    const walletResponse = await makeRapydRequest(
+      "get",
+      `/v1/ewallets/${walletId}`
     );
+
+    const walletData = walletResponse.data;
+    const accounts = walletData.accounts || [];
+
+    // Get balance for each currency
+    const balances = accounts.map((account: any) => ({
+      currency: account.currency,
+      balance: account.balance,
+      received_balance: account.received_balance,
+      on_hold_balance: account.on_hold_balance,
+    }));
 
     return new Response(
       JSON.stringify({
         success: true,
-        hosted_page_url: checkoutResponse.data.redirect_url,
-        checkout_id: checkoutResponse.data.id,
-        customer_id: customerId,
         wallet_id: walletId,
+        balances: balances,
+        status: walletData.status,
       }),
       {
         status: 200,
@@ -286,3 +201,4 @@ serve(async (req) => {
     );
   }
 });
+

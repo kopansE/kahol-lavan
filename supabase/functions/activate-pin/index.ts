@@ -13,8 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    console.log("🚀 Edge Function: activate-pin started");
-
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -49,8 +47,6 @@ serve(async (req) => {
       });
     }
 
-    console.log("✅ User authenticated:", user.id);
-
     const { pin_id } = await req.json();
 
     if (!pin_id) {
@@ -80,7 +76,6 @@ serve(async (req) => {
     }
 
     // Update pin status to active
-    console.log("Activating pin...");
     const { error: updateError } = await supabaseAdmin
       .from("pins")
       .update({ status: "active" })
@@ -99,8 +94,6 @@ serve(async (req) => {
         }
       );
     }
-
-    console.log("✅ Pin activated successfully!");
 
     return new Response(
       JSON.stringify({ success: true, message: "Pin activated" }),

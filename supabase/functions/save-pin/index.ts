@@ -13,13 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    console.log("📍 Edge Function: save-pin started");
-
     const authHeader = req.headers.get("Authorization");
-    console.log("Auth header present:", !!authHeader);
 
     if (!authHeader) {
-      console.error("❌ No Authorization header");
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
         {
@@ -39,14 +35,11 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
-    console.log("Verifying user token...");
     const token = authHeader.replace("Bearer ", "");
     const {
       data: { user },
       error: userError,
     } = await supabaseClient.auth.getUser(token);
-
-    console.log("User lookup result:", { user: !!user, error: userError });
 
     if (userError) {
       console.error("❌ User error:", userError);
@@ -64,10 +57,7 @@ serve(async (req) => {
       });
     }
 
-    console.log("✅ User authenticated:", user.id);
-
     const { position, parking_zone, address } = await req.json();
-    console.log("Request body:", { position, parking_zone, address });
 
     if (!position || position.length !== 2) {
       return new Response(
@@ -80,20 +70,12 @@ serve(async (req) => {
     }
 
     // Delete any existing pins for this user
-    console.log("Deleting existing pins...");
     const { error: deleteError } = await supabaseAdmin
       .from("pins")
       .delete()
       .eq("user_id", user.id);
 
-    if (deleteError) {
-      console.error("Error deleting pins:", deleteError);
-    } else {
-      console.log("✅ Deleted existing pins");
-    }
-
     // Insert new pin with "waiting" status
-    console.log("Inserting new pin with 'waiting' status...");
     const { data: pin, error: insertError } = await supabaseAdmin
       .from("pins")
       .insert({
@@ -120,11 +102,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("✅ Pin inserted:", pin.id);
-    console.log("Pin status:", pin.status);
-
     // Update user's current_pin_id
-    console.log("Updating user record...");
     const { error: updateUserError } = await supabaseAdmin
       .from("users")
       .update({
@@ -138,14 +116,6 @@ serve(async (req) => {
         updated_at: new Date().toISOString(),
       })
       .eq("id", user.id);
-
-    if (updateUserError) {
-      console.error("⚠️ Error updating user (non-critical):", updateUserError);
-    } else {
-      console.log("✅ User record updated");
-    }
-
-    console.log("✅ Save pin complete!");
 
     return new Response(JSON.stringify({ success: true, pin }), {
       status: 200,
