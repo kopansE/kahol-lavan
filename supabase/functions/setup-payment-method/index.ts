@@ -196,10 +196,20 @@ serve(async (req) => {
       );
       customerId = customerResponse.data.id;
 
-      await supabaseAdmin
+      const { error: customerUpdateError } = await supabaseAdmin
         .from("users")
         .update({ rapyd_customer_id: customerId })
         .eq("id", user.id);
+
+      if (customerUpdateError) {
+        console.error(
+          "Failed to save rapyd_customer_id to database:",
+          customerUpdateError
+        );
+        throw new Error(
+          `Database update failed for customer ID: ${customerUpdateError.message}`
+        );
+      }
     }
 
     if (!walletId) {
@@ -230,10 +240,20 @@ serve(async (req) => {
 
       walletId = walletResponse.data.id;
 
-      await supabaseAdmin
+      const { error: walletUpdateError } = await supabaseAdmin
         .from("users")
         .update({ rapyd_wallet_id: walletId })
         .eq("id", user.id);
+
+      if (walletUpdateError) {
+        console.error(
+          "Failed to save rapyd_wallet_id to database:",
+          walletUpdateError
+        );
+        throw new Error(
+          `Database update failed for wallet ID: ${walletUpdateError.message}`
+        );
+      }
     }
 
     // Attempt to parse request body for dynamic redirect URL
@@ -277,11 +297,11 @@ serve(async (req) => {
       const middlemanUrl = `${supabaseUrl}/functions/v1/handle-redirect`;
       console.log("Using Middleman Redirect:", middlemanUrl);
 
-      // Send CLEAN URL to Rapyd (no query params) to avoid rejection
-      // We let handle-redirect figure out the target (hardcoded dev URL)
-      completePaymentUrl = `${middlemanUrl}`;
-      errorPaymentUrl = `${middlemanUrl}`;
-      cancelCheckoutUrl = `${middlemanUrl}`;
+      // Add status query parameters to distinguish between success, error, and cancellation
+      // This allows handle-redirect to route to the correct page
+      completePaymentUrl = `${middlemanUrl}?payment_setup=complete`;
+      errorPaymentUrl = `${middlemanUrl}?payment_setup=error`;
+      cancelCheckoutUrl = `${middlemanUrl}?payment_setup=cancelled`;
     } else {
       console.log("Not using Middleman. Redirect Base URL:", redirectBaseUrl);
     }

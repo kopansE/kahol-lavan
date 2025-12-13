@@ -51,6 +51,7 @@ serve(async (req) => {
     const targetUrl = new URL(target);
 
     // Copy all current search params to the target, EXCEPT 'target'
+    // This includes payment_setup status (complete, error, cancelled)
     url.searchParams.forEach((value, key) => {
       if (key !== "target") {
         targetUrl.searchParams.append(key, value);

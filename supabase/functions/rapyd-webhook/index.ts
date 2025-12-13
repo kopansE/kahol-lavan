@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
+import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +9,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Helper function to generate Rapyd signature
 function generateRapydSignature(
   httpMethod: string,
   urlPath: string,
@@ -18,11 +18,17 @@ function generateRapydSignature(
   secretKey: string,
   body: string = ""
 ): string {
+  const method = httpMethod.toLowerCase();
   const toSign =
-    httpMethod + urlPath + salt + timestamp + accessKey + secretKey + body;
-  const hmac = createHmac("sha256", secretKey);
-  hmac.update(toSign);
-  const signature = hmac.digest("base64");
+    method + urlPath + salt + timestamp + accessKey + secretKey + body;
+
+  const hash = createHmac("sha256", secretKey);
+  hash.update(toSign);
+
+  // THIS IS THE EXACT LINE FROM RAPYD OFFICIAL DOCS
+  const hexDigest = hash.digest("hex");
+  const signature = Buffer.from(hexDigest).toString("base64");
+
   return signature;
 }
 
@@ -40,12 +46,23 @@ async function makeRapydRequest(
     throw new Error("Missing Rapyd credentials");
   }
 
-  const salt = crypto.randomUUID().replace(/-/g, "");
+  // Generate salt - alphanumeric only
+  const chars =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let salt = "";
+  const randomBytes = new Uint8Array(12);
+  crypto.getRandomValues(randomBytes);
+  for (let i = 0; i < 12; i++) {
+    salt += chars[randomBytes[i] % chars.length];
+  }
+
   const timestamp = Math.floor(Date.now() / 1000).toString();
+
+  // Rapyd requires compact JSON (no spaces) for signature calculation
   const bodyString = body ? JSON.stringify(body) : "";
 
   const signature = generateRapydSignature(
-    method.toUpperCase(),
+    method,
     path,
     salt,
     timestamp,
@@ -168,10 +185,20 @@ serve(async (req) => {
       customerId = customerResponse.data.id;
 
       // Update database with customer ID
-      await supabaseAdmin
+      const { error: customerUpdateError } = await supabaseAdmin
         .from("users")
         .update({ rapyd_customer_id: customerId })
         .eq("id", user.id);
+
+      if (customerUpdateError) {
+        console.error(
+          "Failed to save rapyd_customer_id to database:",
+          customerUpdateError
+        );
+        throw new Error(
+          `Database update failed for customer ID: ${customerUpdateError.message}`
+        );
+      }
     }
 
     // Step 2: Create Rapyd Wallet if not exists
@@ -191,22 +218,34 @@ serve(async (req) => {
           first_name: userData.full_name?.split(" ")[0] || "User",
           last_name: userData.full_name?.split(" ").slice(1).join(" ") || "",
           contact_type: "personal",
+          country: "IL",
         },
       };
 
+      // Using the current, correct endpoint /v1/ewallets
       const walletResponse = await makeRapydRequest(
         "POST",
-        "/v1/user",
+        "/v1/ewallets",
         walletBody
       );
 
       walletId = walletResponse.data.id;
 
       // Update database with wallet ID
-      await supabaseAdmin
+      const { error: walletUpdateError } = await supabaseAdmin
         .from("users")
         .update({ rapyd_wallet_id: walletId })
         .eq("id", user.id);
+
+      if (walletUpdateError) {
+        console.error(
+          "Failed to save rapyd_wallet_id to database:",
+          walletUpdateError
+        );
+        throw new Error(
+          `Database update failed for wallet ID: ${walletUpdateError.message}`
+        );
+      }
     }
 
     // Step 3: Generate Hosted Card Collection Page
