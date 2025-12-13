@@ -65,12 +65,16 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
         import.meta.env.VITE_SUPABASE_URL
       }/functions/v1/setup-payment-method`;
 
+      console.log("Sending redirect_base_url:", window.location.origin);
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({
+          redirect_base_url: window.location.origin,
+        }),
       });
 
       const resultText = await response.text();

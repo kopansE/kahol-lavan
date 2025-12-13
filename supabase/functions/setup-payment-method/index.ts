@@ -236,7 +236,55 @@ serve(async (req) => {
         .eq("id", user.id);
     }
 
-    const appUrl = Deno.env.get("APP_URL") || "http://localhost:5173";
+    // Attempt to parse request body for dynamic redirect URL
+    let redirectBaseUrl: string | null = null;
+    try {
+      // Read body directly (no clone needed as we don't read it elsewhere)
+      const body = await req.json();
+      console.log("Received body:", body); // DEBUG LOG
+      if (body && typeof body.redirect_base_url === "string") {
+        redirectBaseUrl = body.redirect_base_url;
+      }
+    } catch (e) {
+      console.warn("Error parsing request body:", e.message);
+    }
+
+    // Clean up URL (remove trailing slash)
+    if (redirectBaseUrl && redirectBaseUrl.endsWith("/")) {
+      redirectBaseUrl = redirectBaseUrl.slice(0, -1);
+    }
+
+    const appUrl =
+      redirectBaseUrl || Deno.env.get("APP_URL") || "http://localhost:5173";
+    console.log("Using App URL for Rapyd redirect:", appUrl);
+
+    // Use the middleman function for redirection
+    // This solves the issue where Rapyd rejects ngrok/localhost URLs
+    let supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+
+    // Ensure we have the project URL not the API URL if possible, or construct standard functions URL
+    // Standard format: https://<project_ref>.supabase.co/functions/v1/<function_name>
+    // Often SUPABASE_URL is like https://xyz.supabase.co, which is correct.
+
+    // Check if we are in a local dev environment or using a custom redirect base
+    // If redirectBaseUrl is present (ngrok), we route through the middleman
+    let completePaymentUrl = `${appUrl}?payment_setup=complete`;
+    let errorPaymentUrl = `${appUrl}?payment_setup=error`;
+    let cancelCheckoutUrl = `${appUrl}?payment_setup=cancelled`;
+
+    if (redirectBaseUrl && redirectBaseUrl.includes("ngrok")) {
+      // Construct middleman URL explicitly to avoid issues with SUPABASE_URL env var format
+      const middlemanUrl = `${supabaseUrl}/functions/v1/handle-redirect`;
+      console.log("Using Middleman Redirect:", middlemanUrl);
+
+      // Send CLEAN URL to Rapyd (no query params) to avoid rejection
+      // We let handle-redirect figure out the target (hardcoded dev URL)
+      completePaymentUrl = `${middlemanUrl}`;
+      errorPaymentUrl = `${middlemanUrl}`;
+      cancelCheckoutUrl = `${middlemanUrl}`;
+    } else {
+      console.log("Not using Middleman. Redirect Base URL:", redirectBaseUrl);
+    }
 
     const checkoutBody = {
       amount: 100, // 1 ILS in agorot (smallest amount)
@@ -244,9 +292,9 @@ serve(async (req) => {
       currency: "ILS",
       customer: customerId,
       payment_method_type_categories: ["card"],
-      complete_payment_url: `${appUrl}?payment_setup=complete`,
-      error_payment_url: `${appUrl}?payment_setup=error`,
-      cancel_checkout_url: `${appUrl}?payment_setup=cancelled`,
+      complete_payment_url: completePaymentUrl,
+      error_payment_url: errorPaymentUrl,
+      cancel_checkout_url: cancelCheckoutUrl,
       merchant_reference_id: `setup_${user.id}_${Date.now()}`,
       metadata: {
         user_id: user.id,
@@ -256,11 +304,43 @@ serve(async (req) => {
       capture: false, // Don't capture, just authorize to save payment method
     };
 
-    const checkoutResponse = await makeRapydRequest(
-      "post",
-      "/v1/checkout",
-      checkoutBody
-    );
+    const makeCheckoutRequest = async () => {
+      // Body is already fully constructed with correct URLs
+      return await makeRapydRequest("post", "/v1/checkout", checkoutBody);
+    };
+
+    let checkoutResponse;
+    try {
+      checkoutResponse = await makeCheckoutRequest();
+    } catch (error) {
+      if (
+        error.message.includes("ERROR_HOSTED_PAGE_INVALID_URL") &&
+        appUrl.includes("localhost")
+      ) {
+        console.warn(
+          "Localhost URL rejected by Rapyd. Falling back to APP_URL (Vercel)."
+        );
+        const fallbackUrl = Deno.env.get("APP_URL");
+        if (fallbackUrl && fallbackUrl !== appUrl) {
+          // Re-construct body with fallback URL
+          const fallbackBody = {
+            ...checkoutBody,
+            complete_payment_url: `${fallbackUrl}?payment_setup=complete`,
+            error_payment_url: `${fallbackUrl}?payment_setup=error`,
+            cancel_checkout_url: `${fallbackUrl}?payment_setup=cancelled`,
+          };
+          checkoutResponse = await makeRapydRequest(
+            "post",
+            "/v1/checkout",
+            fallbackBody
+          );
+        } else {
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    }
 
     return new Response(
       JSON.stringify({
