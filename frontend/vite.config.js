@@ -7,10 +7,6 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
-    allowedHosts: [
-      "affirmably-chymous-lorenza.ngrok-free.dev",
-      ".ngrok-free.dev",
-      "localhost",
-    ],
+    allowedHosts: [".ngrok-free.dev", "localhost"],
   },
 });

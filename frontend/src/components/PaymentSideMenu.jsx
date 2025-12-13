@@ -65,7 +65,6 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
         import.meta.env.VITE_SUPABASE_URL
       }/functions/v1/setup-payment-method`;
 
-      console.log("Sending redirect_base_url:", window.location.origin);
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -154,10 +153,10 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
                 <h3>Wallet Balance</h3>
                 {walletAmount !== null ? (
                   <div className="wallet-amount">
-                    ${walletAmount.toFixed(2)}
+                    ₪{walletAmount.toFixed(2)}
                   </div>
                 ) : (
-                  <div className="wallet-amount loading">$0.00</div>
+                  <div className="wallet-amount loading">₪0.00</div>
                 )}
               </div>
 

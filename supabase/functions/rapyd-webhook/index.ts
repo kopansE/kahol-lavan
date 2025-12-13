@@ -288,7 +288,6 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: error.message || "Internal server error",
-        stack: error.stack,
       }),
       {
         status: 500,
