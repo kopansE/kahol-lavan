@@ -51,7 +51,6 @@ function App() {
 
   const loadUserOwnPin = async (userId) => {
     try {
-      console.log("🔍 Loading user's own pin...");
       const { data, error } = await supabase
         .from("pins")
         .select("id, position, status, created_at")
@@ -66,9 +65,6 @@ function App() {
         console.error("Error loading own pin:", error);
         return;
       }
-
-      console.log("📍 User's own pin data:", data);
-
       if (data) {
         const pin = {
           id: data.id,
@@ -76,10 +72,8 @@ function App() {
           status: data.status,
           timestamp: data.created_at,
         };
-        console.log("✅ Setting userOwnPin:", pin);
         setUserOwnPin(pin);
       } else {
-        console.log("ℹ️ No pin found");
         setUserOwnPin(null);
       }
     } catch (error) {
@@ -89,7 +83,6 @@ function App() {
 
   const loadOtherUsersPins = async (userId) => {
     try {
-      console.log("🔍 Loading other users' pins...");
       const { data, error } = await supabase
         .from("pins")
         .select("id, position, created_at, user_id")
@@ -102,19 +95,14 @@ function App() {
         console.error("Error loading other users' pins:", error);
         return;
       }
-
-      console.log("📍 Other users' pins data:", data);
-
       if (data && data.length > 0) {
         const pins = data.map((pin) => ({
           id: pin.id,
           position: pin.position,
           timestamp: pin.created_at,
         }));
-        console.log("✅ Setting otherUsersPins:", pins);
         setOtherUsersPins(pins);
       } else {
-        console.log("ℹ️ No other users' pins found");
         setOtherUsersPins([]);
       }
     } catch (error) {
@@ -163,10 +151,8 @@ function App() {
 
   const savePinToDatabase = async (userId, pin, address) => {
     try {
-      console.log("🔵 Starting savePinToDatabase...");
-      console.log("User ID:", userId);
-      console.log("Pin:", pin);
-      console.log("Address:", address);
+
+
 
       const { data: sessionData, error: sessionError } =
         await supabase.auth.getSession();
@@ -185,18 +171,12 @@ function App() {
         return false;
       }
 
-      console.log("✅ Token found:", token.substring(0, 20) + "...");
-
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-pin`;
-      console.log("🔗 Calling URL:", url);
-
       const payload = {
         position: pin.position,
         parking_zone: null,
         address: address,
       };
-      console.log("📦 Payload:", payload);
-
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -206,12 +186,7 @@ function App() {
         body: JSON.stringify(payload),
       });
 
-      console.log("📥 Response status:", response.status);
-      console.log("📥 Response ok:", response.ok);
-
       const responseText = await response.text();
-      console.log("📥 Raw response:", responseText);
-
       let result;
       try {
         result = JSON.parse(responseText);
@@ -219,15 +194,10 @@ function App() {
         console.error("❌ Failed to parse response as JSON:", e);
         throw new Error(`Server error (${response.status}): ${responseText}`);
       }
-
-      console.log("📥 Parsed response:", result);
-
       if (!response.ok || !result.success) {
         console.error("❌ Save failed:", result);
         throw new Error(result.error || result.details || "Failed to save pin");
       }
-
-      console.log("✅ Pin saved successfully!");
       return true;
     } catch (error) {
       console.error("❌ Error saving pin:", error);
@@ -240,8 +210,6 @@ function App() {
     if (!userOwnPin || !user) return false;
 
     try {
-      console.log("🚀 Activating pin...");
-
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
@@ -268,9 +236,6 @@ function App() {
       if (!response.ok || !result.success) {
         throw new Error(result.error || "Failed to activate pin");
       }
-
-      console.log("✅ Pin activated!");
-
       await loadUserOwnPin(user.id);
       await loadOtherUsersPins(user.id);
 
@@ -286,8 +251,6 @@ function App() {
     if (!userOwnPin || !user) return false;
 
     try {
-      console.log("🔴 Deactivating pin...");
-
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
 
@@ -314,9 +277,6 @@ function App() {
       if (!response.ok || !result.success) {
         throw new Error(result.error || "Failed to deactivate pin");
       }
-
-      console.log("✅ Pin deactivated!");
-
       await loadUserOwnPin(user.id);
       await loadOtherUsersPins(user.id);
 
@@ -419,14 +379,6 @@ function App() {
   if (!user) {
     return <LoginScreen onGoogleSignIn={handleGoogleSignIn} />;
   }
-
-  console.log("🔍 Render check:", {
-    userOwnPin,
-    status: userOwnPin?.status,
-    shouldShowLeavingButton: userOwnPin && userOwnPin.status === "waiting",
-    shouldShowNotLeavingButton: userOwnPin && userOwnPin.status === "active",
-  });
-
   return (
     <div className="app">
       <button
@@ -473,3 +425,4 @@ function App() {
 }
 
 export default App;
+

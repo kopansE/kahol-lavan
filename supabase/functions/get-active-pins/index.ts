@@ -13,7 +13,6 @@ serve(async (req) => {
     });
   }
   try {
-    console.log("🔍 Edge Function: get-active-pins started");
     // Create Supabase clients
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -34,7 +33,6 @@ serve(async (req) => {
       } = await supabaseClient.auth.getUser(token);
       if (!userError && user) {
         userId = user.id;
-        console.log("✅ User authenticated:", userId);
       }
     }
     // Get query parameters
@@ -43,12 +41,7 @@ serve(async (req) => {
     const lat = url.searchParams.get("lat");
     const lng = url.searchParams.get("lng");
     const radius = url.searchParams.get("radius") || "5"; // default 5km radius
-    console.log("Query params:", {
-      parking_zone,
-      lat,
-      lng,
-      radius,
-    });
+
     // Build query - use admin client to bypass RLS
     let query = supabaseAdmin
       .from("pins")
@@ -95,7 +88,7 @@ serve(async (req) => {
         }
       );
     }
-    console.log(`✅ Found ${pins?.length || 0} pins`);
+
     // If lat/lng provided, filter by distance
     let filteredPins = pins || [];
     if (lat && lng) {
@@ -108,9 +101,6 @@ serve(async (req) => {
         const distance = calculateDistance(userLat, userLng, pinLat, pinLng);
         return distance <= maxRadius;
       });
-      console.log(
-        `✅ Filtered to ${filteredPins.length} pins within ${maxRadius}km`
-      );
     }
     return new Response(
       JSON.stringify({

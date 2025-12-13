@@ -13,9 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    console.log("🚀 Edge Function: activate-pin started");
-
     const authHeader = req.headers.get("Authorization");
+
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
@@ -42,56 +41,59 @@ serve(async (req) => {
       error: userError,
     } = await supabaseClient.auth.getUser(token);
 
-    if (userError || !user) {
+    if (userError) {
+      console.error("❌ User error:", userError);
+      return new Response(JSON.stringify({ error: userError.message }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!user) {
+      console.error("❌ No user found");
       return new Response(JSON.stringify({ error: "User not found" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("✅ User authenticated:", user.id);
+    const { position, parking_zone, address } = await req.json();
 
-    const { pin_id } = await req.json();
-
-    if (!pin_id) {
-      return new Response(JSON.stringify({ error: "Pin ID is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify pin belongs to user and is in waiting status
-    const { data: pin, error: fetchError } = await supabaseAdmin
-      .from("pins")
-      .select("*")
-      .eq("id", pin_id)
-      .eq("user_id", user.id)
-      .eq("status", "waiting")
-      .single();
-
-    if (fetchError || !pin) {
+    if (!position || position.length !== 2) {
       return new Response(
-        JSON.stringify({ error: "Pin not found or not in waiting status" }),
+        JSON.stringify({ error: "Invalid position format" }),
         {
-          status: 404,
+          status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
-    // Update pin status to active
-    console.log("Activating pin...");
-    const { error: updateError } = await supabaseAdmin
+    // Delete any existing pins for this user
+    const { error: deleteError } = await supabaseAdmin
       .from("pins")
-      .update({ status: "active" })
-      .eq("id", pin_id);
+      .delete()
+      .eq("user_id", user.id);
 
-    if (updateError) {
-      console.error("❌ Error activating pin:", updateError);
+    // Insert new pin with "waiting" status
+    const { data: pin, error: insertError } = await supabaseAdmin
+      .from("pins")
+      .insert({
+        user_id: user.id,
+        position: position,
+        parking_zone: parking_zone,
+        status: "waiting",
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("❌ Error inserting pin:", insertError);
       return new Response(
         JSON.stringify({
-          error: "Failed to activate pin",
-          details: updateError.message,
+          error: "Failed to save pin",
+          details: insertError.message,
         }),
         {
           status: 500,
@@ -100,15 +102,25 @@ serve(async (req) => {
       );
     }
 
-    console.log("✅ Pin activated successfully!");
+    // Update user's current_pin_id
+    const { error: updateUserError } = await supabaseAdmin
+      .from("users")
+      .update({
+        current_pin_id: pin.id,
+        last_pin_location: {
+          id: pin.id,
+          position: position,
+          address: address,
+          timestamp: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
 
-    return new Response(
-      JSON.stringify({ success: true, message: "Pin activated" }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({ success: true, pin }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
     console.error("❌ Unexpected error:", error);
     return new Response(

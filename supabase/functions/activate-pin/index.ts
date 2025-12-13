@@ -13,8 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    console.log("🚀 Edge Function: deactivate-pin started");
-
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -49,8 +47,6 @@ serve(async (req) => {
       });
     }
 
-    console.log("✅ User authenticated:", user.id);
-
     const { pin_id } = await req.json();
 
     if (!pin_id) {
@@ -60,18 +56,18 @@ serve(async (req) => {
       });
     }
 
-    // Verify pin belongs to user and is in active status
+    // Verify pin belongs to user and is in waiting status
     const { data: pin, error: fetchError } = await supabaseAdmin
       .from("pins")
       .select("*")
       .eq("id", pin_id)
       .eq("user_id", user.id)
-      .eq("status", "active")
+      .eq("status", "waiting")
       .single();
 
     if (fetchError || !pin) {
       return new Response(
-        JSON.stringify({ error: "Pin not found or not in active status" }),
+        JSON.stringify({ error: "Pin not found or not in waiting status" }),
         {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -79,18 +75,17 @@ serve(async (req) => {
       );
     }
 
-    // Update pin status back to waiting
-    console.log("Deactivating pin...");
+    // Update pin status to active
     const { error: updateError } = await supabaseAdmin
       .from("pins")
-      .update({ status: "waiting" })
+      .update({ status: "active" })
       .eq("id", pin_id);
 
     if (updateError) {
-      console.error("❌ Error deactivating pin:", updateError);
+      console.error("❌ Error activating pin:", updateError);
       return new Response(
         JSON.stringify({
-          error: "Failed to deactivate pin",
+          error: "Failed to activate pin",
           details: updateError.message,
         }),
         {
@@ -100,10 +95,8 @@ serve(async (req) => {
       );
     }
 
-    console.log("✅ Pin deactivated successfully!");
-
     return new Response(
-      JSON.stringify({ success: true, message: "Pin deactivated" }),
+      JSON.stringify({ success: true, message: "Pin activated" }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

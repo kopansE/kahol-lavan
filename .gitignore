@@ -174,3 +174,4 @@ coverage/
 
 # Stylelint cache
 .stylelintcache
+.vercel

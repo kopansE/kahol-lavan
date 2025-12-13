@@ -1,33 +1,29 @@
-
 [functions.save-pin]
 enabled = true
 verify_jwt = true
 import_map = "./functions/save-pin/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/save-pin/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/save-pin/*.html" ]
+
+[functions.activate-pin]
+enabled = true
+verify_jwt = true
+import_map = "./functions/activate-pin/deno.json"
+entrypoint = "./functions/activate-pin/index.ts"
+
+[functions.deactivate-pin]
+enabled = true
+verify_jwt = true
+import_map = "./functions/deactivate-pin/deno.json"
+entrypoint = "./functions/deactivate-pin/index.ts"
 
 [functions.get-active-pins]
 enabled = true
 verify_jwt = true
 import_map = "./functions/get-active-pins/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/get-active-pins/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/get-active-pins/*.html" ]
 
 [functions.handle-new-user]
 enabled = true
 verify_jwt = true
 import_map = "./functions/handle-new-user/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
 entrypoint = "./functions/handle-new-user/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/handle-new-user/*.html" ]
