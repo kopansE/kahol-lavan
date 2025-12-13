@@ -83,7 +83,6 @@ serve(async (req) => {
         position: position,
         parking_zone: parking_zone,
         status: "waiting",
-        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       })
       .select()
       .single();

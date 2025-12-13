@@ -51,7 +51,6 @@ serve(async (req) => {
         position,
         parking_zone,
         created_at,
-        expires_at,
         price,
         users!pins_user_id_fkey (
           email,
@@ -60,8 +59,7 @@ serve(async (req) => {
         )
       `
       )
-      .eq("status", "active")
-      .gt("expires_at", new Date().toISOString()); // Only get non-expired pins
+      .eq("status", "active");
     // Exclude user's own pins if logged in
     if (userId) {
       query = query.neq("user_id", userId);

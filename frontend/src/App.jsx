@@ -56,7 +56,6 @@ function App() {
         .select("id, position, status, created_at")
         .eq("user_id", userId)
         .in("status", ["waiting", "active"])
-        .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -88,7 +87,6 @@ function App() {
         .select("id, position, created_at, user_id")
         .eq("status", "active")
         .neq("user_id", userId)
-        .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -151,9 +149,6 @@ function App() {
 
   const savePinToDatabase = async (userId, pin, address) => {
     try {
-
-
-
       const { data: sessionData, error: sessionError } =
         await supabase.auth.getSession();
 
@@ -425,4 +420,3 @@ function App() {
 }
 
 export default App;
-

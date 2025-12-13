@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
-    allowedHosts: [".ngrok-free.dev", "localhost"],
+    // Allow all hosts in development - configure via environment if needed
+    allowedHosts: "all",
   },
 });
