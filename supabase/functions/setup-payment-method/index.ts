@@ -266,7 +266,21 @@ serve(async (req) => {
         redirectBaseUrl = body.redirect_base_url;
       }
     } catch (e) {
-      console.warn("Error parsing request body:", e.message);
+      console.error(
+        "Error parsing request body - this may cause redirect issues:",
+        e.message
+      );
+      // Body parsing failure is a potential issue - log more details
+      return new Response(
+        JSON.stringify({
+          error: "Failed to parse request body",
+          details: e.message,
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     // Clean up URL (remove trailing slash)
