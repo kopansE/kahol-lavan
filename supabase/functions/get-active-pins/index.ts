@@ -52,7 +52,8 @@ serve(async (req) => {
         parking_zone,
         created_at,
         price,
-        users!pins_user_id_fkey (
+        user_id,
+        users (
           email,
           full_name,
           avatar_url
