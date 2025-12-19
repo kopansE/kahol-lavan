@@ -301,34 +301,80 @@ serve(async (req) => {
     // Often SUPABASE_URL is like https://xyz.supabase.co, which is correct.
 
     // Check if we are in a local dev environment or using a custom redirect base
-    // If redirectBaseUrl is present (ngrok), we route through the middleman
-    let completePaymentUrl = `${appUrl}?payment_setup=complete`;
-    let errorPaymentUrl = `${appUrl}?payment_setup=error`;
-    let cancelCheckoutUrl = `${appUrl}?payment_setup=cancelled`;
+    // If redirectBaseUrl is present (ngrok or localhost), we route through the middleman
+    // Rapyd requires publicly accessible HTTPS URLs, so we always use middleman for local/dev URLs
+    const isLocalOrNgrok =
+      !appUrl ||
+      appUrl.includes("localhost") ||
+      appUrl.includes("127.0.0.1") ||
+      appUrl.includes("ngrok") ||
+      appUrl.startsWith("http://") ||
+      !appUrl.startsWith("https://");
 
-    if (redirectBaseUrl && redirectBaseUrl.includes("ngrok")) {
+    console.log(
+      "URL detection - appUrl:",
+      appUrl,
+      "isLocalOrNgrok:",
+      isLocalOrNgrok
+    );
+
+    let completeCheckoutUrl: string;
+    let errorPaymentUrl: string;
+    let cancelCheckoutUrl: string;
+
+    if (isLocalOrNgrok) {
       // Construct middleman URL explicitly to avoid issues with SUPABASE_URL env var format
       const middlemanUrl = `${supabaseUrl}/functions/v1/handle-redirect`;
-      console.log("Using Middleman Redirect:", middlemanUrl);
+      console.log(
+        "Using Middleman Redirect (local/dev detected):",
+        middlemanUrl
+      );
 
       // Add status query parameters to distinguish between success, error, and cancellation
       // This allows handle-redirect to route to the correct page
-      completePaymentUrl = `${middlemanUrl}?payment_setup=complete`;
+      completeCheckoutUrl = `${middlemanUrl}?payment_setup=complete`;
       errorPaymentUrl = `${middlemanUrl}?payment_setup=error`;
       cancelCheckoutUrl = `${middlemanUrl}?payment_setup=cancelled`;
     } else {
-      console.log("Not using Middleman. Redirect Base URL:", redirectBaseUrl);
+      // Production URLs - use direct redirect
+      console.log("Using Direct Redirect (production):", appUrl);
+      completeCheckoutUrl = `${appUrl}?payment_setup=complete`;
+      errorPaymentUrl = `${appUrl}?payment_setup=error`;
+      cancelCheckoutUrl = `${appUrl}?payment_setup=cancelled`;
     }
 
+    // Ensure all URLs are HTTPS (Rapyd requirement)
+    const ensureHttps = (url: string): string => {
+      if (
+        url.startsWith("http://") &&
+        !url.includes("localhost") &&
+        !url.includes("127.0.0.1")
+      ) {
+        return url.replace("http://", "https://");
+      }
+      return url;
+    };
+
+    completeCheckoutUrl = ensureHttps(completeCheckoutUrl);
+    errorPaymentUrl = ensureHttps(errorPaymentUrl);
+    cancelCheckoutUrl = ensureHttps(cancelCheckoutUrl);
+
+    console.log("Final URLs for Rapyd:");
+    console.log("  complete_url:", completeCheckoutUrl);
+    console.log("  cancel_url:", cancelCheckoutUrl);
+    console.log("  error_payment_url:", errorPaymentUrl);
+
+    // Rapyd explicitly requires 'complete_url' and 'cancel_url' (not complete_checkout_url)
     const checkoutBody = {
       amount: 100, // 1 ILS in agorot (smallest amount)
       country: "IL",
       currency: "ILS",
       customer: customerId,
       payment_method_type_categories: ["card"],
-      complete_payment_url: completePaymentUrl,
+      complete_url: completeCheckoutUrl,
+      cancel_url: cancelCheckoutUrl,
+      complete_payment_url: completeCheckoutUrl, // For third-party redirects (also needed)
       error_payment_url: errorPaymentUrl,
-      cancel_checkout_url: cancelCheckoutUrl,
       merchant_reference_id: `setup_${user.id}_${Date.now()}`,
       metadata: {
         user_id: user.id,
@@ -347,30 +393,27 @@ serve(async (req) => {
     try {
       checkoutResponse = await makeCheckoutRequest();
     } catch (error) {
+      // If URL error and we're not already using middleman, try using middleman as fallback
       if (
         error.message.includes("ERROR_HOSTED_PAGE_INVALID_URL") &&
-        appUrl.includes("localhost")
+        !isLocalOrNgrok
       ) {
         console.warn(
-          "Localhost URL rejected by Rapyd. Falling back to APP_URL (Vercel)."
+          "URL rejected by Rapyd. Falling back to middleman redirect."
         );
-        const fallbackUrl = Deno.env.get("APP_URL");
-        if (fallbackUrl && fallbackUrl !== appUrl) {
-          // Re-construct body with fallback URL
-          const fallbackBody = {
-            ...checkoutBody,
-            complete_payment_url: `${fallbackUrl}?payment_setup=complete`,
-            error_payment_url: `${fallbackUrl}?payment_setup=error`,
-            cancel_checkout_url: `${fallbackUrl}?payment_setup=cancelled`,
-          };
-          checkoutResponse = await makeRapydRequest(
-            "post",
-            "/v1/checkout",
-            fallbackBody
-          );
-        } else {
-          throw error;
-        }
+        const middlemanUrl = `${supabaseUrl}/functions/v1/handle-redirect`;
+        const fallbackBody = {
+          ...checkoutBody,
+          complete_url: `${middlemanUrl}?payment_setup=complete`,
+          cancel_url: `${middlemanUrl}?payment_setup=cancelled`,
+          complete_payment_url: `${middlemanUrl}?payment_setup=complete`,
+          error_payment_url: `${middlemanUrl}?payment_setup=error`,
+        };
+        checkoutResponse = await makeRapydRequest(
+          "post",
+          "/v1/checkout",
+          fallbackBody
+        );
       } else {
         throw error;
       }

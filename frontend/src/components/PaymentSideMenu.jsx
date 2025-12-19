@@ -65,6 +65,11 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
         import.meta.env.VITE_SUPABASE_URL
       }/functions/v1/setup-payment-method`;
 
+      // Prefer ngrok URL from env, otherwise use current origin
+      // The backend will handle redirecting through middleman if needed
+      const redirectBaseUrl =
+        import.meta.env.VITE_NGROK_URL || window.location.origin;
+
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -72,7 +77,7 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          redirect_base_url: window.location.origin,
+          redirect_base_url: redirectBaseUrl,
         }),
       });
 

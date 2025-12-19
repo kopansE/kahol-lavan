@@ -27,3 +27,9 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/handle-new-user/deno.json"
 entrypoint = "./functions/handle-new-user/index.ts"
+
+[functions.handle-redirect]
+enabled = true
+verify_jwt = false
+import_map = "./functions/handle-redirect/deno.json"
+entrypoint = "./functions/handle-redirect/index.ts"
