@@ -1,153 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
-import { Buffer } from "https://deno.land/std@0.168.0/node/buffer.ts";
+import {
+  createSupabaseAdmin,
+  authenticateUser,
+  handleCorsPreFlight,
+  errorResponse,
+  successResponse,
+} from "../_shared/auth-utils.ts";
+import { makeRapydRequest } from "../_shared/rapyd-utils.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-// EXACT implementation from Rapyd official Node.js documentation
-function generateRapydSignature(
-  httpMethod: string,
-  urlPath: string,
-  salt: string,
-  timestamp: string,
-  accessKey: string,
-  secretKey: string,
-  body: string = ""
-): string {
-  const method = httpMethod.toLowerCase();
-  const toSign =
-    method + urlPath + salt + timestamp + accessKey + secretKey + body;
-
-  const hash = createHmac("sha256", secretKey);
-  hash.update(toSign);
-
-  // THIS IS THE EXACT LINE FROM RAPYD OFFICIAL DOCS
-  const hexDigest = hash.digest("hex");
-  const signature = Buffer.from(hexDigest).toString("base64");
-
-  return signature;
-}
-
-async function makeRapydRequest(
-  method: string,
-  path: string,
-  body: any = null
-): Promise<any> {
-  const accessKey = Deno.env.get("RAPYD_ACCESS_KEY");
-  const secretKey = Deno.env.get("RAPYD_SECRET_KEY");
-  const baseUrl = Deno.env.get("RAPYD_API_BASE_URL");
-
-  if (!accessKey || !secretKey || !baseUrl) {
-    throw new Error("Missing Rapyd credentials");
-  }
-
-  // Generate salt - alphanumeric only
-  const chars =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let salt = "";
-  const randomBytes = new Uint8Array(12);
-  crypto.getRandomValues(randomBytes);
-  for (let i = 0; i < 12; i++) {
-    salt += chars[randomBytes[i] % chars.length];
-  }
-
-  const timestamp = Math.floor(Date.now() / 1000).toString();
-
-  // Rapyd requires compact JSON (no spaces) for signature calculation
-  const bodyString = body ? JSON.stringify(body) : "";
-
-  const signature = generateRapydSignature(
-    method,
-    path,
-    salt,
-    timestamp,
-    accessKey,
-    secretKey,
-    bodyString
-  );
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    access_key: accessKey,
-    salt: salt,
-    timestamp: timestamp,
-    signature: signature,
-  };
-
-  const options: RequestInit = {
-    method: method.toUpperCase(),
-    headers: headers,
-    ...(body && { body: bodyString }),
-  };
-
-  const url = `${baseUrl}${path}`;
-  const response = await fetch(url, options);
-  const rawText = await response.text();
-
-  let data: any;
-  try {
-    data = JSON.parse(rawText);
-  } catch (e) {
-    data = { rawText };
-  }
-
-  if (!response.ok || data.status?.status !== "SUCCESS") {
-    console.error("Rapyd error:", data);
-    throw new Error(
-      data.status?.error_code ||
-        data.status?.message ||
-        `Rapyd API error: ${response.status}`
-    );
-  }
-
-  return data;
-}
-
+/**
+ * Setup payment method using Rapyd checkout
+ * This creates a checkout session for the user to add their payment method
+ */
 serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return handleCorsPreFlight();
   }
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "No authorization header" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
+    const user = await authenticateUser(req);
+    const supabaseAdmin = createSupabaseAdmin();
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
-
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser(token);
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "User not found" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // Get user data
     const { data: userData, error: userDataError } = await supabaseAdmin
       .from("users")
       .select("*")
@@ -155,17 +29,39 @@ serve(async (req) => {
       .single();
 
     if (userDataError) {
-      return new Response(
-        JSON.stringify({ error: "Failed to fetch user data" }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return errorResponse("Failed to fetch user data", 500);
     }
 
+    // Parse request body for redirect URL
+    let requestBody: any = {};
+    try {
+      requestBody = await req.json();
+    } catch (e) {
+      // Empty body is okay
+    }
+
+    // Handle payment setup completion callback from frontend
+    if (requestBody && requestBody.mark_complete === true) {
+      const { error: completeUpdateError } = await supabaseAdmin
+        .from("users")
+        .update({
+          payment_setup_complete: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+
+      if (completeUpdateError) {
+        return errorResponse("Failed to mark payment setup as complete", 500);
+      }
+
+      return successResponse({
+        success: true,
+        message: "Payment setup marked as complete",
+      });
+    }
+
+    // Get existing customer ID if available
     let customerId = userData.rapyd_customer_id;
-    let walletId = userData.rapyd_wallet_id;
 
     // Clear test bypass values
     if (
@@ -174,113 +70,11 @@ serve(async (req) => {
     ) {
       customerId = null;
     }
-    if (
-      walletId &&
-      (walletId.includes("test") || walletId.includes("bypass"))
-    ) {
-      walletId = null;
-    }
 
-    if (!customerId) {
-      const customerBody = {
-        name: userData.full_name || user.email?.split("@")[0] || "User",
-        email: user.email,
-        phone_number: "",
-        metadata: { user_id: user.id },
-      };
-
-      const customerResponse = await makeRapydRequest(
-        "post",
-        "/v1/customers",
-        customerBody
-      );
-      customerId = customerResponse.data.id;
-
-      const { error: customerUpdateError } = await supabaseAdmin
-        .from("users")
-        .update({ rapyd_customer_id: customerId })
-        .eq("id", user.id);
-
-      if (customerUpdateError) {
-        console.error(
-          "Failed to save rapyd_customer_id to database:",
-          customerUpdateError
-        );
-        throw new Error(
-          `Database update failed for customer ID: ${customerUpdateError.message}`
-        );
-      }
-    }
-
-    if (!walletId) {
-      const walletBody = {
-        first_name: userData.full_name?.split(" ")[0] || "User",
-        last_name: userData.full_name?.split(" ").slice(1).join(" ") || "",
-        email: user.email,
-        ewallet_reference_id: user.id,
-        metadata: { user_id: user.id },
-        type: "person",
-        contact: {
-          phone_number: "",
-          email: user.email,
-          first_name: userData.full_name?.split(" ")[0] || "User",
-          last_name: userData.full_name?.split(" ").slice(1).join(" ") || "",
-          contact_type: "personal",
-          country: "IL",
-        },
-      };
-
-      // *** CORRECTION: Using the current, correct endpoint /v1/ewallets ***
-      const walletResponse = await makeRapydRequest(
-        "post",
-        "/v1/ewallets",
-        walletBody
-      );
-      // ******************************************************************
-
-      walletId = walletResponse.data.id;
-
-      const { error: walletUpdateError } = await supabaseAdmin
-        .from("users")
-        .update({ rapyd_wallet_id: walletId })
-        .eq("id", user.id);
-
-      if (walletUpdateError) {
-        console.error(
-          "Failed to save rapyd_wallet_id to database:",
-          walletUpdateError
-        );
-        throw new Error(
-          `Database update failed for wallet ID: ${walletUpdateError.message}`
-        );
-      }
-    }
-
-    // Attempt to parse request body for dynamic redirect URL
+    // Extract redirect URL from request body
     let redirectBaseUrl: string | null = null;
-    try {
-      // Read body directly (no clone needed as we don't read it elsewhere)
-      const body = await req.json();
-      console.log("Received body:", body); // DEBUG LOG
-      if (body && typeof body.redirect_base_url === "string") {
-        redirectBaseUrl = body.redirect_base_url;
-      }
-    } catch (e) {
-      console.error(
-        "Error parsing request body - this may cause redirect issues:",
-        e.message
-      );
-      // Body parsing failure is a potential issue - log more details
-      return new Response(
-        JSON.stringify({
-          error: "Failed to parse request body",
-          details: e.message,
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    if (requestBody && typeof requestBody.redirect_base_url === "string") {
+      redirectBaseUrl = requestBody.redirect_base_url;
     }
 
     // Clean up URL (remove trailing slash)
@@ -292,17 +86,9 @@ serve(async (req) => {
       redirectBaseUrl || Deno.env.get("APP_URL") || "http://localhost:5173";
     console.log("Using App URL for Rapyd redirect:", appUrl);
 
-    // Use the middleman function for redirection
-    // This solves the issue where Rapyd rejects ngrok/localhost URLs
-    let supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 
-    // Ensure we have the project URL not the API URL if possible, or construct standard functions URL
-    // Standard format: https://<project_ref>.supabase.co/functions/v1/<function_name>
-    // Often SUPABASE_URL is like https://xyz.supabase.co, which is correct.
-
-    // Check if we are in a local dev environment or using a custom redirect base
-    // If redirectBaseUrl is present (ngrok or localhost), we route through the middleman
-    // Rapyd requires publicly accessible HTTPS URLs, so we always use middleman for local/dev URLs
+    // Check if we need to use middleman redirect for local/ngrok URLs
     const isLocalOrNgrok =
       !appUrl ||
       appUrl.includes("localhost") ||
@@ -323,18 +109,17 @@ serve(async (req) => {
     let cancelCheckoutUrl: string;
 
     if (isLocalOrNgrok) {
-      // Construct middleman URL explicitly to avoid issues with SUPABASE_URL env var format
+      // Use middleman redirect for local/dev URLs
       const middlemanUrl = `${supabaseUrl}/functions/v1/handle-redirect`;
       console.log(
         "Using Middleman Redirect (local/dev detected):",
         middlemanUrl
       );
 
-      // Add status query parameters to distinguish between success, error, and cancellation
-      // This allows handle-redirect to route to the correct page
-      completeCheckoutUrl = `${middlemanUrl}?payment_setup=complete`;
-      errorPaymentUrl = `${middlemanUrl}?payment_setup=error`;
-      cancelCheckoutUrl = `${middlemanUrl}?payment_setup=cancelled`;
+      const encodedTarget = encodeURIComponent(appUrl);
+      completeCheckoutUrl = `${middlemanUrl}?payment_setup=complete&target=${encodedTarget}`;
+      errorPaymentUrl = `${middlemanUrl}?payment_setup=error&target=${encodedTarget}`;
+      cancelCheckoutUrl = `${middlemanUrl}?payment_setup=cancelled&target=${encodedTarget}`;
     } else {
       // Production URLs - use direct redirect
       console.log("Using Direct Redirect (production):", appUrl);
@@ -364,16 +149,15 @@ serve(async (req) => {
     console.log("  cancel_url:", cancelCheckoutUrl);
     console.log("  error_payment_url:", errorPaymentUrl);
 
-    // Rapyd explicitly requires 'complete_url' and 'cancel_url' (not complete_checkout_url)
-    const checkoutBody = {
+    // Build checkout body
+    const checkoutBody: any = {
       amount: 100, // 1 ILS in agorot (smallest amount)
       country: "IL",
       currency: "ILS",
-      customer: customerId,
       payment_method_type_categories: ["card"],
       complete_url: completeCheckoutUrl,
       cancel_url: cancelCheckoutUrl,
-      complete_payment_url: completeCheckoutUrl, // For third-party redirects (also needed)
+      complete_payment_url: completeCheckoutUrl,
       error_payment_url: errorPaymentUrl,
       merchant_reference_id: `setup_${user.id}_${Date.now()}`,
       metadata: {
@@ -382,16 +166,28 @@ serve(async (req) => {
       },
       requested_currency: "ILS",
       capture: false, // Don't capture, just authorize to save payment method
+      custom_elements: {
+        save_card_default: true, // Tell Rapyd to save payment method to customer
+      },
     };
 
-    const makeCheckoutRequest = async () => {
-      // Body is already fully constructed with correct URLs
-      return await makeRapydRequest("post", "/v1/checkout", checkoutBody);
-    };
+    // Only include customer ID if it exists
+    if (customerId) {
+      checkoutBody.customer = customerId;
+      console.log("Using existing customer ID:", customerId);
+    } else {
+      console.log(
+        "No existing customer - Rapyd will create customer during checkout"
+      );
+    }
 
     let checkoutResponse;
     try {
-      checkoutResponse = await makeCheckoutRequest();
+      checkoutResponse = await makeRapydRequest(
+        "post",
+        "/v1/checkout",
+        checkoutBody
+      );
     } catch (error) {
       // If URL error and we're not already using middleman, try using middleman as fallback
       if (
@@ -402,12 +198,13 @@ serve(async (req) => {
           "URL rejected by Rapyd. Falling back to middleman redirect."
         );
         const middlemanUrl = `${supabaseUrl}/functions/v1/handle-redirect`;
+        const encodedTarget = encodeURIComponent(appUrl);
         const fallbackBody = {
           ...checkoutBody,
-          complete_url: `${middlemanUrl}?payment_setup=complete`,
-          cancel_url: `${middlemanUrl}?payment_setup=cancelled`,
-          complete_payment_url: `${middlemanUrl}?payment_setup=complete`,
-          error_payment_url: `${middlemanUrl}?payment_setup=error`,
+          complete_url: `${middlemanUrl}?payment_setup=complete&target=${encodedTarget}`,
+          cancel_url: `${middlemanUrl}?payment_setup=cancelled&target=${encodedTarget}`,
+          complete_payment_url: `${middlemanUrl}?payment_setup=complete&target=${encodedTarget}`,
+          error_payment_url: `${middlemanUrl}?payment_setup=error&target=${encodedTarget}`,
         };
         checkoutResponse = await makeRapydRequest(
           "post",
@@ -419,27 +216,32 @@ serve(async (req) => {
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        hosted_page_url: checkoutResponse.data.redirect_url,
-        checkout_id: checkoutResponse.data.id,
-        customer_id: customerId,
-        wallet_id: walletId,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    // Store checkout ID for later retrieval in complete-payment-setup
+    const { error: checkoutUpdateError } = await supabaseAdmin
+      .from("users")
+      .update({
+        payment_setup_complete: false,
+        rapyd_checkout_id: checkoutResponse.data.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (checkoutUpdateError) {
+      console.error(
+        "Failed to update checkout status in database:",
+        checkoutUpdateError
+      );
+      // Don't throw - this is not critical, checkout can still proceed
+    }
+
+    return successResponse({
+      success: true,
+      hosted_page_url: checkoutResponse.data.redirect_url,
+      checkout_id: checkoutResponse.data.id,
+      customer_id: customerId || null,
+    });
   } catch (error) {
     console.error("❌ Error:", error.message);
-    return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return errorResponse(error.message || "Internal server error");
   }
 });

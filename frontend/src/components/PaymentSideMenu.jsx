@@ -22,7 +22,7 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
       // Fetch payment identifiers from users table (source of truth)
       const { data, error } = await supabase
         .from("users")
-        .select("rapyd_customer_id, rapyd_wallet_id")
+        .select("rapyd_customer_id, rapyd_payment_method_id")
         .eq("id", user.id)
         .single();
 
@@ -30,8 +30,9 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
         console.error("Error loading user payment data:", error);
         setPaymentSetupCompleted(false);
       } else {
+        // Payment setup is complete if customer has a payment method saved
         const hasRapydSetup = Boolean(
-          data?.rapyd_customer_id && data?.rapyd_wallet_id
+          data?.rapyd_customer_id && data?.rapyd_payment_method_id
         );
         setPaymentSetupCompleted(hasRapydSetup);
       }

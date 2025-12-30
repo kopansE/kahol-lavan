@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/auth-utils.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
+/**
+ * Middleman redirect function
+ * Rapyd requires HTTPS URLs, but local dev uses ngrok/localhost
+ * This function receives redirects from Rapyd and forwards them to the actual app URL
+ */
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -15,8 +15,7 @@ serve(async (req) => {
     const url = new URL(req.url);
     let target = url.searchParams.get("target");
 
-    // FALLBACK for Rapyd: If no target is provided, assume it's the dev tunnel
-    // This allows us to send a "clean" URL to Rapyd (no query params)
+    // FALLBACK: If no target is provided, use ngrok URL from env
     if (!target) {
       console.log("No target param found. Using fallback dev URL.");
       target = Deno.env.get("NGROK_URL");
@@ -35,7 +34,6 @@ serve(async (req) => {
       }
     }
 
-    // DEBUG: Log everything
     console.log("Handle Redirect called with:", req.url);
     console.log("Target:", target);
 

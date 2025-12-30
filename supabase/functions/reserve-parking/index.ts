@@ -1,5 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import {
+  createSupabaseAdmin,
+  authenticateUser,
+  handleCorsPreFlight,
+  errorResponse,
+  successResponse,
+} from "../_shared/auth-utils.ts";
+import {
+  makeRapydRequest,
+  generateRapydSignature,
+} from "../_shared/rapyd-utils.ts";
 import * as crypto from "https://deno.land/std@0.177.0/node/crypto.ts";
 
 const RAPYD_ACCESS_KEY = Deno.env.get("RAPYD_ACCESS_KEY")!;
@@ -7,83 +17,20 @@ const RAPYD_SECRET_KEY = Deno.env.get("RAPYD_SECRET_KEY")!;
 const RAPYD_BASE_URL =
   Deno.env.get("RAPYD_API_BASE_URL") || "https://sandboxapi.rapyd.net";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-function generateSignature(
-  method: string,
-  path: string,
-  salt: string,
-  timestamp: string,
-  body: string
-) {
-  const bodyString = body === "{}" || body === "" ? "" : body;
-  const toSign =
-    method.toLowerCase() +
-    path +
-    salt +
-    timestamp +
-    RAPYD_ACCESS_KEY +
-    RAPYD_SECRET_KEY +
-    bodyString;
-  const hash = crypto.createHmac("sha256", RAPYD_SECRET_KEY);
-  hash.update(toSign);
-  return btoa(hash.digest("hex"));
-}
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return handleCorsPreFlight();
   }
 
   try {
-    // Get authenticated user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "No authorization header" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
-
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser(token);
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "User not found" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    const user = await authenticateUser(req);
     const { pin_id } = await req.json();
 
     if (!pin_id) {
-      return new Response(JSON.stringify({ error: "pin_id is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("pin_id is required", 400);
     }
+
+    const supabaseAdmin = createSupabaseAdmin();
 
     // Get the pin details including the owner's user_id
     const { data: pinData, error: pinError } = await supabaseAdmin
@@ -93,28 +40,16 @@ serve(async (req) => {
       .single();
 
     if (pinError || !pinData) {
-      return new Response(JSON.stringify({ error: "Pin not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Pin not found", 404);
     }
 
     if (pinData.status !== "active") {
-      return new Response(JSON.stringify({ error: "Pin is not active" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return errorResponse("Pin is not active", 400);
     }
 
     // Prevent users from reserving their own parking
     if (pinData.user_id === user.id) {
-      return new Response(
-        JSON.stringify({ error: "Cannot reserve your own parking" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return errorResponse("Cannot reserve your own parking", 400);
     }
 
     // Get the current user's (sender) payment info
@@ -125,15 +60,9 @@ serve(async (req) => {
       .single();
 
     if (senderError || !senderData || !senderData.rapyd_customer_id) {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Payment method not set up. Please add a payment method first.",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+      return errorResponse(
+        "Payment method not set up. Please add a payment method first.",
+        400
       );
     }
 
@@ -145,26 +74,20 @@ serve(async (req) => {
       .single();
 
     if (receiverError || !receiverData || !receiverData.rapyd_wallet_id) {
-      return new Response(
-        JSON.stringify({
-          error: "Parking owner's wallet not found",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return errorResponse("Parking owner's wallet not found", 400);
     }
 
     // Get the sender's payment methods to find their card
     const listPaymentMethodsPath = `/v1/customers/${senderData.rapyd_customer_id}/payment_methods`;
     const listSalt = crypto.randomBytes(12).toString("hex");
     const listTimestamp = Math.floor(Date.now() / 1000).toString();
-    const listSignature = generateSignature(
+    const listSignature = generateRapydSignature(
       "get",
       listPaymentMethodsPath,
       listSalt,
       listTimestamp,
+      RAPYD_ACCESS_KEY,
+      RAPYD_SECRET_KEY,
       ""
     );
 
@@ -189,15 +112,9 @@ serve(async (req) => {
       !paymentMethodsResult.data ||
       paymentMethodsResult.data.length === 0
     ) {
-      return new Response(
-        JSON.stringify({
-          error: "No payment method found. Please add a card first.",
-          details: paymentMethodsResult.status.message,
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+      return errorResponse(
+        "No payment method found. Please add a card first.",
+        400
       );
     }
 
@@ -230,7 +147,15 @@ serve(async (req) => {
       },
     });
 
-    const signature = generateSignature("post", path, salt, timestamp, body);
+    const signature = generateRapydSignature(
+      "post",
+      path,
+      salt,
+      timestamp,
+      RAPYD_ACCESS_KEY,
+      RAPYD_SECRET_KEY,
+      body
+    );
 
     const response = await fetch(`${RAPYD_BASE_URL}${path}`, {
       method: "POST",
@@ -247,20 +172,13 @@ serve(async (req) => {
     const result = await response.json();
 
     if (result.status.status !== "SUCCESS") {
-      return new Response(
-        JSON.stringify({
-          error: result.status.message || "Payment failed",
-          details: result.status.error_code,
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+      return errorResponse(
+        result.status.message || "Payment failed",
+        400
       );
     }
 
-    // Update the pin status to "reserved" or create a reservation record
-    // (You might want to add a reservations table or update the pin status)
+    // Update the pin status to "reserved"
     const { error: updateError } = await supabaseAdmin
       .from("pins")
       .update({ status: "reserved", reserved_by: user.id })
@@ -271,27 +189,15 @@ serve(async (req) => {
       // Don't fail the request since payment succeeded
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        payment_id: result.data.id,
-        amount_paid: amount,
-        destination_wallet: receiverData.rapyd_wallet_id,
-        message: "Parking reserved successfully!",
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return successResponse({
+      success: true,
+      payment_id: result.data.id,
+      amount_paid: amount,
+      destination_wallet: receiverData.rapyd_wallet_id,
+      message: "Parking reserved successfully!",
+    });
   } catch (err) {
     console.error("Error in reserve-parking:", err);
-    return new Response(
-      JSON.stringify({ error: err.message || "Internal server error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return errorResponse(err.message || "Internal server error");
   }
 });
