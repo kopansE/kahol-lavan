@@ -33,6 +33,7 @@ export function createSupabaseClient() {
 
 /**
  * Authenticate user from request and return user object
+ * Also ensures user exists in public.users table
  */
 export async function authenticateUser(req: Request) {
   const authHeader = req.headers.get("Authorization");
@@ -51,6 +52,22 @@ export async function authenticateUser(req: Request) {
   if (userError || !user) {
     throw new Error("User not found");
   }
+
+  // Ensure user exists in public.users (handles cases where user was deleted from public.users)
+  const supabaseAdmin = createSupabaseAdmin();
+  await supabaseAdmin.from("users").upsert(
+    {
+      id: user.id,
+      email: user.email,
+      full_name: user.user_metadata?.full_name || null,
+      avatar_url: user.user_metadata?.avatar_url || null,
+      updated_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "id",
+      ignoreDuplicates: false,
+    }
+  );
 
   return user;
 }
