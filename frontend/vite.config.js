@@ -7,7 +7,12 @@ export default defineConfig({
   server: {
     port: 3000,
     host: true,
-    // Allow all hosts in development - configure via environment if needed
-    allowedHosts: "all",
+    strictPort: true,
+    hmr: {
+      // For ngrok: use the ngrok domain for HMR WebSocket connections
+      host: "affirmably-chymous-lorenza.ngrok-free.dev",
+      protocol: "wss",
+      clientPort: 443,
+    },
   },
 });

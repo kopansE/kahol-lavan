@@ -61,6 +61,7 @@ const MapContainer = ({
   otherUsersPins,
   userOwnPin,
   onMapClick,
+  onPinClick,
 }) => {
   const mapRef = useRef();
   const [isGpsLoading, setIsGpsLoading] = React.useState(false);
@@ -204,21 +205,15 @@ const MapContainer = ({
               key={`other-${pin.id}`}
               position={pin.position}
               icon={bluePinIcon}
-            >
-              <Popup>
-                <div>
-                  <strong>Available Parking</strong>
-                  <br />
-                  Lat: {pin.position[0].toFixed(6)}
-                  <br />
-                  Lng: {pin.position[1].toFixed(6)}
-                  <br />
-                  <small>
-                    Added: {new Date(pin.timestamp).toLocaleString()}
-                  </small>
-                </div>
-              </Popup>
-            </Marker>
+              eventHandlers={{
+                click: (e) => {
+                  e.originalEvent.stopPropagation();
+                  if (onPinClick) {
+                    onPinClick(pin);
+                  }
+                },
+              }}
+            />
           ))}
 
         {/* Handle map reference and clicks */}

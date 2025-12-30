@@ -7,6 +7,7 @@ import PinConfirmationModal from "./components/PinConfirmationModal";
 import LeavingParkingButton from "./components/LeavingParkingButton";
 import NotLeavingParkingButton from "./components/NotLeavingParkingButton";
 import PaymentSideMenu from "./components/PaymentSideMenu";
+import ParkingDetailModal from "./components/ParkingDetailModal";
 import "./App.css";
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
   const [pinAddress, setPinAddress] = useState("");
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isPaymentMenuOpen, setIsPaymentMenuOpen] = useState(false);
+  const [selectedParking, setSelectedParking] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -48,6 +50,83 @@ function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Handle payment setup completion callback
+  useEffect(() => {
+    const handlePaymentSetupCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentSetup = urlParams.get("payment_setup");
+
+      if (paymentSetup === "complete" && user) {
+        console.log("🔄 Payment setup completed, fetching payment method...");
+
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const token = sessionData?.session?.access_token;
+
+          if (!token) {
+            throw new Error("No session token");
+          }
+
+          const url = `${
+            import.meta.env.VITE_SUPABASE_URL
+          }/functions/v1/complete-payment-setup`;
+
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const result = await response.json();
+
+          if (response.ok && result.success) {
+            console.log("✅ Payment method saved:", result.payment_method);
+            alert(
+              `Payment method added successfully! Last 4 digits: ${result.payment_method.last4}`
+            );
+          } else {
+            console.error("❌ Failed to complete payment setup:", result.error);
+            alert(
+              result.error || "Failed to save payment method. Please try again."
+            );
+          }
+        } catch (error) {
+          console.error("❌ Error completing payment setup:", error);
+          alert("Failed to save payment method. Please try again.");
+        } finally {
+          // Clean up URL
+          window.history.replaceState(
+            {},
+            document.title,
+            window.location.pathname
+          );
+        }
+      } else if (paymentSetup === "cancelled") {
+        console.log("⚠️ Payment setup cancelled");
+        alert("Payment setup was cancelled.");
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname
+        );
+      } else if (paymentSetup === "error") {
+        console.error("❌ Payment setup error");
+        alert("An error occurred during payment setup.");
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname
+        );
+      }
+    };
+
+    if (user) {
+      handlePaymentSetupCallback();
+    }
+  }, [user]);
 
   const loadUserOwnPin = async (userId) => {
     try {
@@ -82,19 +161,35 @@ function App() {
 
   const loadOtherUsersPins = async (userId) => {
     try {
-      const { data, error } = await supabase
-        .from("pins")
-        .select("id, position, created_at, user_id")
-        .eq("status", "active")
-        .neq("user_id", userId)
-        .order("created_at", { ascending: false });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-      if (error) {
-        console.error("Error loading other users' pins:", error);
+      if (!token) {
+        console.error("No access token found");
         return;
       }
-      if (data && data.length > 0) {
-        const pins = data.map((pin) => ({
+
+      const url = `${
+        import.meta.env.VITE_SUPABASE_URL
+      }/functions/v1/get-active-pins`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("Error loading other users' pins:", result.error);
+        return;
+      }
+
+      if (result.pins && result.pins.length > 0) {
+        const pins = result.pins.map((pin) => ({
           id: pin.id,
           position: pin.position,
           timestamp: pin.created_at,
@@ -367,6 +462,19 @@ function App() {
     setPinAddress("");
   };
 
+  const handlePinClick = async (pin) => {
+    // Add address if not already present
+    if (!pin.address && pin.position) {
+      const address = await reverseGeocode(pin.position[0], pin.position[1]);
+      pin.address = address;
+    }
+    setSelectedParking(pin);
+  };
+
+  const handleCloseParkingDetail = () => {
+    setSelectedParking(null);
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -388,6 +496,7 @@ function App() {
         otherUsersPins={otherUsersPins}
         userOwnPin={userOwnPin}
         onMapClick={handleMapClick}
+        onPinClick={handlePinClick}
       />
       {userOwnPin && userOwnPin.status === "waiting" && (
         <LeavingParkingButton
@@ -415,6 +524,12 @@ function App() {
         user={user}
         onSignOut={handleSignOut}
       />
+      {selectedParking && (
+        <ParkingDetailModal
+          parking={selectedParking}
+          onClose={handleCloseParkingDetail}
+        />
+      )}
     </div>
   );
 }

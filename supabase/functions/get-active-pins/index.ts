@@ -1,27 +1,45 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import {
+  createSupabaseAdmin,
+  createSupabaseClient,
+  handleCorsPreFlight,
+  errorResponse,
+  successResponse,
+} from "../_shared/auth-utils.ts";
+
+// Calculate distance between two points using Haversine formula (in km)
+function calculateDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function toRad(degrees: number): number {
+  return degrees * (Math.PI / 180);
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders,
-    });
+    return handleCorsPreFlight();
   }
+
   try {
-    // Create Supabase clients
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
+    const supabaseAdmin = createSupabaseAdmin();
+    const supabaseClient = createSupabaseClient();
+
     // Get the user (optional - to exclude their own pins)
     let userId = null;
     const authHeader = req.headers.get("Authorization");
@@ -35,6 +53,7 @@ serve(async (req) => {
         userId = user.id;
       }
     }
+
     // Get query parameters
     const url = new URL(req.url);
     const parking_zone = url.searchParams.get("parking_zone");
@@ -52,7 +71,8 @@ serve(async (req) => {
         parking_zone,
         created_at,
         price,
-        users!pins_user_id_fkey (
+        user_id,
+        users (
           email,
           full_name,
           avatar_url
@@ -60,31 +80,24 @@ serve(async (req) => {
       `
       )
       .eq("status", "active");
+
     // Exclude user's own pins if logged in
     if (userId) {
       query = query.neq("user_id", userId);
     }
+
     // Filter by parking zone if provided
     if (parking_zone) {
       query = query.eq("parking_zone", parseInt(parking_zone));
     }
+
     const { data: pins, error } = await query.order("created_at", {
       ascending: false,
     });
+
     if (error) {
       console.error("❌ Error fetching pins:", error);
-      return new Response(
-        JSON.stringify({
-          error: "Failed to fetch pins",
-        }),
-        {
-          status: 500,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      return errorResponse("Failed to fetch pins", 500);
     }
 
     // If lat/lng provided, filter by distance
@@ -100,49 +113,13 @@ serve(async (req) => {
         return distance <= maxRadius;
       });
     }
-    return new Response(
-      JSON.stringify({
-        success: true,
-        pins: filteredPins,
-      }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+
+    return successResponse({
+      success: true,
+      pins: filteredPins,
+    });
   } catch (error) {
     console.error("❌ Unexpected error:", error);
-    return new Response(
-      JSON.stringify({
-        error: error.message,
-      }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    return errorResponse(error.message || "Internal server error");
   }
 });
-// Calculate distance between two points using Haversine formula (in km)
-function calculateDistance(lat1, lng1, lat2, lng2) {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-function toRad(degrees) {
-  return degrees * (Math.PI / 180);
-}
