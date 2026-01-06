@@ -7,15 +7,15 @@ import {
   successResponse,
 } from "../_shared/auth-utils.ts";
 import {
-  makeRapydRequest,
-  generateRapydSignature,
+  checkWalletBalance,
+  addFundsToWallet,
+  transferFundsBetweenWallets,
+  logTransaction,
 } from "../_shared/rapyd-utils.ts";
-import * as crypto from "https://deno.land/std@0.177.0/node/crypto.ts";
 
-const RAPYD_ACCESS_KEY = Deno.env.get("RAPYD_ACCESS_KEY")!;
-const RAPYD_SECRET_KEY = Deno.env.get("RAPYD_SECRET_KEY")!;
-const RAPYD_BASE_URL =
-  Deno.env.get("RAPYD_API_BASE_URL") || "https://sandboxapi.rapyd.net";
+const RESERVATION_AMOUNT = 50;
+const CURRENCY = "ILS";
+const PLATFORM_FEE = 0;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -32,7 +32,7 @@ serve(async (req) => {
 
     const supabaseAdmin = createSupabaseAdmin();
 
-    // Get the pin details including the owner's user_id
+    // Get pin details
     const { data: pinData, error: pinError } = await supabaseAdmin
       .from("pins")
       .select("user_id, status")
@@ -47,26 +47,25 @@ serve(async (req) => {
       return errorResponse("Pin is not active", 400);
     }
 
-    // Prevent users from reserving their own parking
     if (pinData.user_id === user.id) {
       return errorResponse("Cannot reserve your own parking", 400);
     }
 
-    // Get the current user's (sender) payment info
+    // Get sender's wallet
     const { data: senderData, error: senderError } = await supabaseAdmin
       .from("users")
-      .select("rapyd_customer_id")
+      .select("rapyd_wallet_id")
       .eq("id", user.id)
       .single();
 
-    if (senderError || !senderData || !senderData.rapyd_customer_id) {
+    if (senderError || !senderData || !senderData.rapyd_wallet_id) {
       return errorResponse(
-        "Payment method not set up. Please add a payment method first.",
+        "Wallet not set up. Please complete your wallet setup first.",
         400
       );
     }
 
-    // Get the receiver's (parking owner) wallet info
+    // Get receiver's wallet
     const { data: receiverData, error: receiverError } = await supabaseAdmin
       .from("users")
       .select("rapyd_wallet_id")
@@ -77,122 +76,69 @@ serve(async (req) => {
       return errorResponse("Parking owner's wallet not found", 400);
     }
 
-    // Get the sender's payment methods to find their card
-    const listPaymentMethodsPath = `/v1/customers/${senderData.rapyd_customer_id}/payment_methods`;
-    const listSalt = crypto.randomBytes(12).toString("hex");
-    const listTimestamp = Math.floor(Date.now() / 1000).toString();
-    const listSignature = generateRapydSignature(
-      "get",
-      listPaymentMethodsPath,
-      listSalt,
-      listTimestamp,
-      RAPYD_ACCESS_KEY,
-      RAPYD_SECRET_KEY,
-      ""
+    // Check sender's wallet balance
+    const currentBalance = await checkWalletBalance(
+      senderData.rapyd_wallet_id,
+      CURRENCY
     );
 
-    const paymentMethodsResponse = await fetch(
-      `${RAPYD_BASE_URL}${listPaymentMethodsPath}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          access_key: RAPYD_ACCESS_KEY,
-          salt: listSalt,
-          timestamp: listTimestamp,
-          signature: listSignature,
-        },
-      }
-    );
-
-    const paymentMethodsResult = await paymentMethodsResponse.json();
-
-    if (
-      paymentMethodsResult.status.status !== "SUCCESS" ||
-      !paymentMethodsResult.data ||
-      paymentMethodsResult.data.length === 0
-    ) {
-      return errorResponse(
-        "No payment method found. Please add a card first.",
-        400
-      );
+    // If insufficient balance, add funds
+    if (currentBalance < RESERVATION_AMOUNT) {
+      const amountToAdd = RESERVATION_AMOUNT - currentBalance;
+      await addFundsToWallet(senderData.rapyd_wallet_id, amountToAdd, CURRENCY);
     }
 
-    // Use the first available payment method
-    const cardId = paymentMethodsResult.data[0].id;
-
-    // Create the payment from sender to receiver
-    const amount = 50; // 50 ILS
-    const path = "/v1/payments";
-    const salt = crypto.randomBytes(12).toString("hex");
-    const timestamp = Math.floor(Date.now() / 1000).toString();
-
-    const body = JSON.stringify({
-      amount: amount,
-      currency: "ILS",
-      customer: senderData.rapyd_customer_id,
-      payment_method: cardId,
-      capture: true,
-      ewallets: [
-        {
-          ewallet: receiverData.rapyd_wallet_id,
-          percentage: 100,
-        },
-      ],
-      metadata: {
-        description: `Parking reservation from ${user.email} to pin owner`,
+    // Transfer funds between wallets
+    const transferResult = await transferFundsBetweenWallets(
+      senderData.rapyd_wallet_id,
+      receiverData.rapyd_wallet_id,
+      RESERVATION_AMOUNT,
+      CURRENCY,
+      {
+        description: `Parking reservation from ${user.email}`,
         pin_id: pin_id,
         sender_user_id: user.id,
         receiver_user_id: pinData.user_id,
-      },
-    });
-
-    const signature = generateRapydSignature(
-      "post",
-      path,
-      salt,
-      timestamp,
-      RAPYD_ACCESS_KEY,
-      RAPYD_SECRET_KEY,
-      body
+      }
     );
 
-    const response = await fetch(`${RAPYD_BASE_URL}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        access_key: RAPYD_ACCESS_KEY,
-        salt: salt,
-        timestamp: timestamp,
-        signature: signature,
+    // Calculate amounts
+    const netAmount = RESERVATION_AMOUNT - PLATFORM_FEE;
+
+    // Log transaction to database
+    await logTransaction(supabaseAdmin, {
+      payerId: user.id,
+      receiverId: pinData.user_id,
+      pinId: pin_id,
+      rapydPaymentId: transferResult.transferId,
+      amountIls: RESERVATION_AMOUNT,
+      platformFeeIls: PLATFORM_FEE,
+      netAmountIls: netAmount,
+      status: transferResult.status,
+      metadata: {
+        source_transaction_id: transferResult.sourceTransactionId,
+        destination_transaction_id: transferResult.destinationTransactionId,
       },
-      body: body,
     });
 
-    const result = await response.json();
-
-    if (result.status.status !== "SUCCESS") {
-      return errorResponse(
-        result.status.message || "Payment failed",
-        400
-      );
-    }
-
-    // Update the pin status to "reserved"
+    // Update pin status to reserved
+    console.log("📌 Updating pin status to reserved:", pin_id);
     const { error: updateError } = await supabaseAdmin
       .from("pins")
       .update({ status: "reserved", reserved_by: user.id })
       .eq("id", pin_id);
 
     if (updateError) {
-      console.error("Failed to update pin status:", updateError);
-      // Don't fail the request since payment succeeded
+      console.error("❌ Failed to update pin status:", updateError);
+      throw new Error(`Failed to update pin status: ${updateError.message}`);
     }
+
+    console.log("✅ Pin status updated successfully");
 
     return successResponse({
       success: true,
-      payment_id: result.data.id,
-      amount_paid: amount,
+      transfer_id: transferResult.transferId,
+      amount_paid: RESERVATION_AMOUNT,
       destination_wallet: receiverData.rapyd_wallet_id,
       message: "Parking reserved successfully!",
     });

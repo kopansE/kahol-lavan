@@ -34,6 +34,7 @@ const createCustomIcon = (color = "#ff6b6b", className = "custom-pin") => {
 const userLocationIcon = createCustomIcon("#4ecdc4", "user-location-pin");
 const redPinIcon = createCustomIcon("#ff6b6b", "red-pin"); // User's own pin
 const bluePinIcon = createCustomIcon("#4285F4", "blue-pin"); // Other users' pins
+const orangePinIcon = createCustomIcon("#FF8C00", "orange-pin"); // Reserved pins
 
 // Component to handle map clicks
 function MapClickHandler({ onMapClick }) {
@@ -60,6 +61,7 @@ const MapContainer = ({
   userLocation,
   otherUsersPins,
   userOwnPin,
+  userReservedPins,
   onMapClick,
   onPinClick,
 }) => {
@@ -184,6 +186,14 @@ const MapContainer = ({
                 <strong>Your Parking Spot</strong>
                 <br />
                 Status: {userOwnPin.status}
+                {userOwnPin.status === "reserved" && userOwnPin.reserved_by && (
+                  <>
+                    <br />
+                    <span style={{ color: "#FF8C00", fontWeight: "bold" }}>
+                      Reserved by another user
+                    </span>
+                  </>
+                )}
                 <br />
                 Lat: {userOwnPin.position[0].toFixed(6)}
                 <br />
@@ -214,6 +224,33 @@ const MapContainer = ({
                 },
               }}
             />
+          ))}
+
+        {/* User's reserved pins (ORANGE) */}
+        {userReservedPins &&
+          userReservedPins.length > 0 &&
+          userReservedPins.map((pin) => (
+            <Marker
+              key={`reserved-${pin.id}`}
+              position={pin.position}
+              icon={orangePinIcon}
+            >
+              <Popup>
+                <div>
+                  <strong>Your Reserved Parking</strong>
+                  <br />
+                  Status: {pin.status}
+                  <br />
+                  Lat: {pin.position[0].toFixed(6)}
+                  <br />
+                  Lng: {pin.position[1].toFixed(6)}
+                  <br />
+                  <small>
+                    Reserved: {new Date(pin.timestamp).toLocaleString()}
+                  </small>
+                </div>
+              </Popup>
+            </Marker>
           ))}
 
         {/* Handle map reference and clicks */}

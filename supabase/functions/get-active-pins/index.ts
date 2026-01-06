@@ -62,7 +62,8 @@ serve(async (req) => {
     const radius = url.searchParams.get("radius") || "5"; // default 5km radius
 
     // Build query - use admin client to bypass RLS
-    let query = supabaseAdmin
+    // Get active pins (excluding user's own)
+    let activeQuery = supabaseAdmin
       .from("pins")
       .select(
         `
@@ -72,6 +73,8 @@ serve(async (req) => {
         created_at,
         price,
         user_id,
+        status,
+        reserved_by,
         users (
           email,
           full_name,
@@ -83,22 +86,75 @@ serve(async (req) => {
 
     // Exclude user's own pins if logged in
     if (userId) {
-      query = query.neq("user_id", userId);
+      activeQuery = activeQuery.neq("user_id", userId);
+    }
+
+    // Get reserved pins where user is either the owner or the reserver
+    let reservedQuery = null;
+    if (userId) {
+      reservedQuery = supabaseAdmin
+        .from("pins")
+        .select(
+          `
+          id,
+          position,
+          parking_zone,
+          created_at,
+          price,
+          user_id,
+          status,
+          reserved_by,
+          users (
+            email,
+            full_name,
+            avatar_url
+          )
+        `
+        )
+        .eq("status", "reserved")
+        .or(`user_id.eq.${userId},reserved_by.eq.${userId}`);
     }
 
     // Filter by parking zone if provided
     if (parking_zone) {
-      query = query.eq("parking_zone", parseInt(parking_zone));
+      activeQuery = activeQuery.eq("parking_zone", parseInt(parking_zone));
+      if (reservedQuery) {
+        reservedQuery = reservedQuery.eq(
+          "parking_zone",
+          parseInt(parking_zone)
+        );
+      }
     }
 
-    const { data: pins, error } = await query.order("created_at", {
-      ascending: false,
-    });
+    const { data: activePins, error: activeError } = await activeQuery.order(
+      "created_at",
+      {
+        ascending: false,
+      }
+    );
 
-    if (error) {
-      console.error("❌ Error fetching pins:", error);
+    if (activeError) {
+      console.error("❌ Error fetching active pins:", activeError);
       return errorResponse("Failed to fetch pins", 500);
     }
+
+    let reservedPins = [];
+    if (reservedQuery) {
+      const { data: reserved, error: reservedError } =
+        await reservedQuery.order("created_at", {
+          ascending: false,
+        });
+
+      if (reservedError) {
+        console.error("❌ Error fetching reserved pins:", reservedError);
+        // Don't fail the whole request if reserved pins fail
+      } else {
+        reservedPins = reserved || [];
+      }
+    }
+
+    // Combine active and reserved pins
+    const pins = [...(activePins || []), ...reservedPins];
 
     // If lat/lng provided, filter by distance
     let filteredPins = pins || [];

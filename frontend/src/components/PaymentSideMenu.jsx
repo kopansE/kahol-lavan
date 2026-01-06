@@ -22,7 +22,9 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
       // Fetch payment identifiers from users table (source of truth)
       const { data, error } = await supabase
         .from("users")
-        .select("rapyd_customer_id, rapyd_payment_method_id")
+        .select(
+          "rapyd_customer_id, rapyd_payment_method_id, payment_setup_completed, rapyd_wallet_id"
+        )
         .eq("id", user.id)
         .single();
 
@@ -30,17 +32,57 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
         console.error("Error loading user payment data:", error);
         setPaymentSetupCompleted(false);
       } else {
-        // Payment setup is complete if customer has a payment method saved
-        const hasRapydSetup = Boolean(
-          data?.rapyd_customer_id && data?.rapyd_payment_method_id
-        );
-        setPaymentSetupCompleted(hasRapydSetup);
+        // Check if payment setup is marked as completed
+        const isSetupCompleted = Boolean(data?.payment_setup_completed);
+        setPaymentSetupCompleted(isSetupCompleted);
+
+        // If setup is completed, fetch wallet balance
+        if (isSetupCompleted && data?.rapyd_wallet_id) {
+          await fetchWalletBalance(data.rapyd_wallet_id);
+        }
       }
     } catch (error) {
       console.error("Error loading user payment data:", error);
       setPaymentSetupCompleted(false);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWalletBalance = async (walletId) => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        console.error("No access token found");
+        return;
+      }
+
+      // Call a backend function to get wallet balance
+      const url = `${
+        import.meta.env.VITE_SUPABASE_URL
+      }/functions/v1/get-wallet-balance`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setWalletAmount(result.balance);
+      } else {
+        console.error("Failed to fetch wallet balance:", result.error);
+        setWalletAmount(0);
+      }
+    } catch (error) {
+      console.error("Error fetching wallet balance:", error);
+      setWalletAmount(0);
     }
   };
 

@@ -16,6 +16,7 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [otherUsersPins, setOtherUsersPins] = useState([]);
   const [userOwnPin, setUserOwnPin] = useState(null);
+  const [userReservedPins, setUserReservedPins] = useState([]);
   const [pendingPin, setPendingPin] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pinAddress, setPinAddress] = useState("");
@@ -45,6 +46,7 @@ function App() {
       } else {
         setOtherUsersPins([]);
         setUserOwnPin(null);
+        setUserReservedPins([]);
       }
     });
 
@@ -132,9 +134,9 @@ function App() {
     try {
       const { data, error } = await supabase
         .from("pins")
-        .select("id, position, status, created_at")
+        .select("id, position, status, created_at, reserved_by")
         .eq("user_id", userId)
-        .in("status", ["waiting", "active"])
+        .in("status", ["waiting", "active", "reserved"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -149,6 +151,7 @@ function App() {
           position: data.position,
           status: data.status,
           timestamp: data.created_at,
+          reserved_by: data.reserved_by,
         };
         setUserOwnPin(pin);
       } else {
@@ -189,14 +192,35 @@ function App() {
       }
 
       if (result.pins && result.pins.length > 0) {
-        const pins = result.pins.map((pin) => ({
-          id: pin.id,
-          position: pin.position,
-          timestamp: pin.created_at,
-        }));
-        setOtherUsersPins(pins);
+        // Separate active pins and reserved pins that the user reserved
+        const activePins = [];
+        const reservedByUser = [];
+
+        result.pins.forEach((pin) => {
+          if (pin.status === "reserved" && pin.reserved_by === userId) {
+            // Pin reserved by the current user
+            reservedByUser.push({
+              id: pin.id,
+              position: pin.position,
+              timestamp: pin.created_at,
+              status: pin.status,
+              reserved_by: pin.reserved_by,
+            });
+          } else if (pin.status === "active") {
+            // Active pin from other users
+            activePins.push({
+              id: pin.id,
+              position: pin.position,
+              timestamp: pin.created_at,
+            });
+          }
+        });
+
+        setOtherUsersPins(activePins);
+        setUserReservedPins(reservedByUser);
       } else {
         setOtherUsersPins([]);
+        setUserReservedPins([]);
       }
     } catch (error) {
       console.error("Error loading other users' pins:", error);
@@ -420,6 +444,7 @@ function App() {
       setUserLocation(null);
       setOtherUsersPins([]);
       setUserOwnPin(null);
+      setUserReservedPins([]);
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -495,6 +520,7 @@ function App() {
         userLocation={userLocation}
         otherUsersPins={otherUsersPins}
         userOwnPin={userOwnPin}
+        userReservedPins={userReservedPins}
         onMapClick={handleMapClick}
         onPinClick={handlePinClick}
       />
