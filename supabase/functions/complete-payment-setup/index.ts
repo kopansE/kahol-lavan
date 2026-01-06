@@ -110,6 +110,7 @@ serve(async (req) => {
         rapyd_payment_method_id: paymentMethodId,
         payment_method_last_4: last4,
         payment_method_brand: cardBrand,
+        payment_setup_completed: true, // Mark payment setup as completed
         rapyd_checkout_id: null, // Clear checkout ID after successful completion
       })
       .eq("id", user.id);
