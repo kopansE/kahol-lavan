@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import ReservationNotification from "./ReservationNotification";
 import "./PaymentSideMenu.css";
 
-const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
+const PaymentSideMenu = ({ 
+  isOpen, 
+  onClose, 
+  user, 
+  onSignOut,
+  pendingNotifications = [],
+  onAcceptReservation,
+  onDeclineReservation
+}) => {
   const [paymentSetupCompleted, setPaymentSetupCompleted] = useState(false);
   const [walletAmount, setWalletAmount] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,6 +21,26 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
     if (isOpen && user) {
       loadUserPaymentData();
     }
+  }, [isOpen, user]);
+
+  // Auto-refresh wallet balance every 5 seconds when menu is open
+  useEffect(() => {
+    if (!isOpen || !user) return;
+
+    const interval = setInterval(async () => {
+      // Only refresh balance if payment setup is completed
+      const { data } = await supabase
+        .from("users")
+        .select("rapyd_wallet_id, payment_setup_completed")
+        .eq("id", user.id)
+        .single();
+
+      if (data?.payment_setup_completed && data?.rapyd_wallet_id) {
+        await fetchWalletBalance(data.rapyd_wallet_id);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [isOpen, user]);
 
   const loadUserPaymentData = async () => {
@@ -214,6 +243,20 @@ const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
               >
                 Withdraw to Bank Account
               </button>
+
+              {/* Notifications Section */}
+              {pendingNotifications.length > 0 && (
+                <div className="notifications-section">
+                  {pendingNotifications.map((notification) => (
+                    <ReservationNotification
+                      key={notification.id}
+                      notification={notification}
+                      onAccept={onAcceptReservation}
+                      onDecline={onDeclineReservation}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="payment-not-setup">

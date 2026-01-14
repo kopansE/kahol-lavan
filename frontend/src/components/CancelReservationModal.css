@@ -1,0 +1,138 @@
+.cancel-reservation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cancel-reservation-modal {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.cancel-reservation-header {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.cancel-reservation-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.cancel-reservation-body {
+  padding: 30px 20px;
+}
+
+.cancel-reservation-body p {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #333;
+  margin: 0 0 25px 0;
+  text-align: center;
+}
+
+.cancel-reservation-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cancel-reservation-confirm-button,
+.cancel-reservation-close-button {
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  width: 100%;
+}
+
+.cancel-reservation-confirm-button {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+}
+
+.cancel-reservation-confirm-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4);
+}
+
+.cancel-reservation-confirm-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancel-reservation-close-button {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.cancel-reservation-close-button:hover:not(:disabled) {
+  background: #e8e8e8;
+}
+
+.cancel-reservation-close-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .cancel-reservation-modal {
+    width: 95%;
+    max-width: 400px;
+  }
+
+  .cancel-reservation-body {
+    padding: 20px 15px;
+  }
+
+  .cancel-reservation-body p {
+    font-size: 14px;
+  }
+
+  .cancel-reservation-confirm-button,
+  .cancel-reservation-close-button {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+

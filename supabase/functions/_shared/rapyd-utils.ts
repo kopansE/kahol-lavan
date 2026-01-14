@@ -137,6 +137,41 @@ export async function checkWalletBalance(
 
 /**
  * Add funds to a Rapyd ewallet account
+ *
+ * ⚠️ IMPORTANT: This function currently uses /v1/account/deposit which may NOT
+ * charge the customer's payment method. This is why wallets show 0.00 balance.
+ *
+ * TO FIX THIS:
+ * 1. Run: deno run --allow-all supabase/functions/_testing/investigate-rapyd-funding.ts --user-id="<test-user>" --amount=50
+ * 2. Identify which endpoint actually charges the payment method and adds funds
+ * 3. Update this function with the correct implementation
+ *
+ * ALTERNATIVE IMPLEMENTATIONS TO TEST:
+ *
+ * Option A: Use /v1/payments to charge payment method
+ * const path = "/v1/payments";
+ * const body = {
+ *   amount: amount,
+ *   currency: currency,
+ *   ewallet: ewalletId,
+ *   customer: customerId,  // Need to pass customerId
+ *   payment_method: paymentMethodId,  // Need to pass paymentMethodId
+ *   capture: true,
+ *   description: "Wallet funding for parking reservation"
+ * };
+ *
+ * Option B: Use customer's default payment method
+ * const path = "/v1/payments";
+ * const body = {
+ *   amount: amount,
+ *   currency: currency,
+ *   ewallet: ewalletId,
+ *   customer: customerId,  // Uses customer's default payment method
+ *   capture: true,
+ *   description: "Wallet funding"
+ * };
+ *
+ * Current implementation (likely incorrect):
  * Returns the new balance after deposit
  */
 export async function addFundsToWallet(
@@ -151,21 +186,29 @@ export async function addFundsToWallet(
     ewallet: ewalletId,
   };
 
+  console.log(`⚠️ WARNING: Using ${path} which may not charge payment method`);
+  console.log(`   Run investigate-rapyd-funding.ts to find correct endpoint`);
+
   const response = await makeRapydRequest("POST", path, body);
 
   if (!response.data) {
     throw new Error("Invalid deposit response");
   }
 
+  // Get the actual balance from Rapyd to verify
+  const actualBalance = await checkWalletBalance(ewalletId, currency);
+
   return {
-    balance: response.data.balance || 0,
-    transactionId: response.data.id,
+    balance: actualBalance, // Use actual balance instead of response balance
+    transactionId: response.data.id || "unknown",
   };
 }
 
 /**
  * Transfer funds between two Rapyd ewallets
  * Returns the transfer details including transaction IDs
+ * Note: This initiates the transfer with status "PEN" (pending).
+ * Use acceptTransfer() to complete the transfer.
  */
 export async function transferFundsBetweenWallets(
   sourceEwalletId: string,
@@ -197,11 +240,68 @@ export async function transferFundsBetweenWallets(
     throw new Error("Invalid transfer response");
   }
 
+  // Log the full response for debugging
+  console.log("🔍 Transfer Response:", JSON.stringify(response.data, null, 2));
+
   return {
     transferId: response.data.id,
     sourceTransactionId: response.data.source_transaction_id || "",
     destinationTransactionId: response.data.destination_transaction_id || "",
     status: response.data.status,
+  };
+}
+
+/**
+ * Accept, decline, or cancel a pending transfer
+ * This completes the two-step transfer process initiated by transferFundsBetweenWallets
+ *
+ * @param transferId - The transfer ID returned from transferFundsBetweenWallets
+ * @param status - "accept" to complete, "decline" to reject, or "cancel" to cancel
+ * @param metadata - Optional metadata for the transfer response
+ * @returns Transfer details with updated status (CLO for accepted, DEC for declined, CAN for cancelled)
+ */
+export async function acceptTransfer(
+  transferId: string,
+  status: "accept" | "decline" | "cancel" = "accept",
+  metadata?: Record<string, any>
+): Promise<{
+  transferId: string;
+  status: string;
+  amount: number;
+  currency: string;
+  sourceEwalletId: string;
+  destinationEwalletId: string;
+  sourceTransactionId: string;
+  destinationTransactionId: string;
+}> {
+  const path = "/v1/ewallets/transfer/response";
+  const body: Record<string, any> = {
+    id: transferId,
+    status: status,
+  };
+
+  if (metadata) {
+    body.metadata = metadata;
+  }
+
+  const response = await makeRapydRequest("POST", path, body);
+
+  if (!response.data) {
+    throw new Error("Invalid transfer response");
+  }
+
+  // Log the full response for debugging
+  console.log("🔍 Transfer Response:", JSON.stringify(response.data, null, 2));
+
+  return {
+    transferId: response.data.id,
+    status: response.data.status,
+    amount: response.data.amount,
+    currency: response.data.currency_code,
+    sourceEwalletId: response.data.source_ewallet_id || "",
+    destinationEwalletId: response.data.destination_ewallet_id || "",
+    sourceTransactionId: response.data.source_transaction_id || "",
+    destinationTransactionId: response.data.destination_transaction_id || "",
   };
 }
 

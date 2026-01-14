@@ -64,9 +64,23 @@
   background: white;
   padding: 24px 16px;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   flex: 1;
   align-items: center;
+  gap: 16px;
+}
+
+.reservation-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: #856404;
+  text-align: center;
+  line-height: 1.4;
+  width: 100%;
 }
 
 .reserve-button {
