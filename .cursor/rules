@@ -1,6 +1,6 @@
-Do NOT create Markdown (.md) files unless explicitly requested.
-Do NOT create text (.txt) files unless explicitly requested.
+Do NOT create Markdown (.md) files unless explicitly requested !!!
+Do NOT create text (.txt) files unless explicitly requested !!!
 Do NOT generate documentation files unless explicitly requested.
-Explain all reasoning and changes in chat only.
+Explain all reasoning and changes in chat ONLY.
 Keep explanations concise.
 Modify only necessary code files.

@@ -135,45 +135,6 @@ export async function checkWalletBalance(
   return account.balance || 0;
 }
 
-/**
- * Add funds to a Rapyd ewallet account
- *
- * ⚠️ IMPORTANT: This function currently uses /v1/account/deposit which may NOT
- * charge the customer's payment method. This is why wallets show 0.00 balance.
- *
- * TO FIX THIS:
- * 1. Run: deno run --allow-all supabase/functions/_testing/investigate-rapyd-funding.ts --user-id="<test-user>" --amount=50
- * 2. Identify which endpoint actually charges the payment method and adds funds
- * 3. Update this function with the correct implementation
- *
- * ALTERNATIVE IMPLEMENTATIONS TO TEST:
- *
- * Option A: Use /v1/payments to charge payment method
- * const path = "/v1/payments";
- * const body = {
- *   amount: amount,
- *   currency: currency,
- *   ewallet: ewalletId,
- *   customer: customerId,  // Need to pass customerId
- *   payment_method: paymentMethodId,  // Need to pass paymentMethodId
- *   capture: true,
- *   description: "Wallet funding for parking reservation"
- * };
- *
- * Option B: Use customer's default payment method
- * const path = "/v1/payments";
- * const body = {
- *   amount: amount,
- *   currency: currency,
- *   ewallet: ewalletId,
- *   customer: customerId,  // Uses customer's default payment method
- *   capture: true,
- *   description: "Wallet funding"
- * };
- *
- * Current implementation (likely incorrect):
- * Returns the new balance after deposit
- */
 export async function addFundsToWallet(
   ewalletId: string,
   amount: number,
