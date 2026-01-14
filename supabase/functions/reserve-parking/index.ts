@@ -51,6 +51,30 @@ serve(async (req) => {
       return errorResponse("Cannot reserve your own parking", 400);
     }
 
+    // Check if user already has an active reservation
+    const { data: existingReservation, error: reservationCheckError } =
+      await supabaseAdmin
+        .from("pins")
+        .select("id")
+        .eq("reserved_by", user.id)
+        .eq("status", "reserved")
+        .maybeSingle();
+
+    if (reservationCheckError) {
+      console.error(
+        "Error checking existing reservations:",
+        reservationCheckError
+      );
+      return errorResponse("Failed to check existing reservations", 500);
+    }
+
+    if (existingReservation) {
+      return errorResponse(
+        "You already have an active reservation. Please cancel it before reserving another spot.",
+        400
+      );
+    }
+
     // Get sender's wallet
     const { data: senderData, error: senderError } = await supabaseAdmin
       .from("users")
@@ -82,13 +106,31 @@ serve(async (req) => {
       CURRENCY
     );
 
+    console.log(
+      `💰 Reserver wallet balance: ${currentBalance} ${CURRENCY} (needs ${RESERVATION_AMOUNT} ${CURRENCY})`
+    );
+
     // If insufficient balance, add funds
     if (currentBalance < RESERVATION_AMOUNT) {
       const amountToAdd = RESERVATION_AMOUNT - currentBalance;
+      console.log(`💳 Adding ${amountToAdd} ${CURRENCY} to reserver's wallet`);
       await addFundsToWallet(senderData.rapyd_wallet_id, amountToAdd, CURRENCY);
+      console.log(`✅ Funds added successfully`);
     }
 
+    // Check receiver's initial balance
+    const receiverInitialBalance = await checkWalletBalance(
+      receiverData.rapyd_wallet_id,
+      CURRENCY
+    );
+    console.log(
+      `💼 Owner's wallet balance before transfer: ${receiverInitialBalance} ${CURRENCY}`
+    );
+
     // Transfer funds between wallets
+    console.log(
+      `💸 Transferring ${RESERVATION_AMOUNT} ${CURRENCY} from reserver → owner`
+    );
     const transferResult = await transferFundsBetweenWallets(
       senderData.rapyd_wallet_id,
       receiverData.rapyd_wallet_id,
@@ -100,6 +142,22 @@ serve(async (req) => {
         sender_user_id: user.id,
         receiver_user_id: pinData.user_id,
       }
+    );
+
+    console.log(`✅ Transfer successful:`, {
+      transfer_id: transferResult.transferId,
+      status: transferResult.status,
+    });
+
+    // Check receiver's final balance
+    const receiverFinalBalance = await checkWalletBalance(
+      receiverData.rapyd_wallet_id,
+      CURRENCY
+    );
+    console.log(
+      `💼 Owner's wallet balance after transfer: ${receiverFinalBalance} ${CURRENCY} (expected: ${
+        receiverInitialBalance + RESERVATION_AMOUNT
+      } ${CURRENCY})`
     );
 
     // Calculate amounts

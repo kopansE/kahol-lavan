@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
 import "./ParkingDetailModal.css";
 
-const ParkingDetailModal = ({ parking, onClose }) => {
+const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
   const modalRef = useRef(null);
   const [isReserving, setIsReserving] = useState(false);
+  const hasExistingReservation = userReservedPins && userReservedPins.length > 0;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -26,6 +27,11 @@ const ParkingDetailModal = ({ parking, onClose }) => {
     e.stopPropagation();
 
     if (isReserving) return;
+
+    if (hasExistingReservation) {
+      alert("You already have an active reservation. Please cancel it before reserving another spot.");
+      return;
+    }
 
     try {
       setIsReserving(true);
@@ -83,12 +89,17 @@ const ParkingDetailModal = ({ parking, onClose }) => {
           <div className="parking-address">{parking.address}</div>
         </div>
         <div className="parking-detail-body">
+          {hasExistingReservation && (
+            <div className="reservation-warning">
+              ⚠️ You already have an active reservation. Cancel it first to reserve another spot.
+            </div>
+          )}
           <button
             className="reserve-button"
             onClick={handleReserveClick}
-            disabled={isReserving}
+            disabled={isReserving || hasExistingReservation}
           >
-            <span>{isReserving ? "Processing..." : "Reserve parking"}</span>
+            <span>{isReserving ? "Processing..." : hasExistingReservation ? "Already Reserved" : "Reserve parking"}</span>
             <span>50 ₪</span>
           </button>
         </div>

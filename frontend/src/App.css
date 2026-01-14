@@ -294,6 +294,115 @@
   opacity: 0.9;
 }
 
+/* Cancel Reservation Button (for reserving user) */
+.cancel-reservation-button {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(255, 140, 0, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 220px;
+}
+
+.cancel-reservation-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(255, 140, 0, 0.5);
+}
+
+.cancel-reservation-button:active {
+  transform: translateY(0);
+}
+
+.cancel-reservation-icon {
+  font-size: 28px;
+  animation: shake 2s infinite;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(-5deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+}
+
+.cancel-reservation-text {
+  flex: 1;
+}
+
+.cancel-reservation-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.cancel-reservation-subtitle {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+/* Reserved Parking Button (for parking owner) */
+.reserved-parking-button {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
+  color: white;
+  padding: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(255, 140, 0, 0.4);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 220px;
+}
+
+.reserved-parking-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(255, 140, 0, 0.5);
+}
+
+.reserved-parking-button:active {
+  transform: translateY(0);
+}
+
+.reserved-parking-icon {
+  font-size: 28px;
+  animation: pulse-icon 2s infinite;
+}
+
+.reserved-parking-text {
+  flex: 1;
+}
+
+.reserved-parking-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.reserved-parking-subtitle {
+  font-size: 12px;
+  opacity: 0.9;
+}
+
 /* App Container */
 .app {
   /* Main app container styles if needed */

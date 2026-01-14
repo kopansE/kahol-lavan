@@ -6,6 +6,9 @@ import LoginScreen from "./components/LoginScreen";
 import PinConfirmationModal from "./components/PinConfirmationModal";
 import LeavingParkingButton from "./components/LeavingParkingButton";
 import NotLeavingParkingButton from "./components/NotLeavingParkingButton";
+import CancelReservationButton from "./components/CancelReservationButton";
+import ReservedParkingButton from "./components/ReservedParkingButton";
+import CancelReservationModal from "./components/CancelReservationModal";
 import PaymentSideMenu from "./components/PaymentSideMenu";
 import ParkingDetailModal from "./components/ParkingDetailModal";
 import "./App.css";
@@ -23,6 +26,10 @@ function App() {
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isPaymentMenuOpen, setIsPaymentMenuOpen] = useState(false);
   const [selectedParking, setSelectedParking] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelUserType, setCancelUserType] = useState(null); // 'reserving' or 'owner'
+  const [pinToCancel, setPinToCancel] = useState(null);
+  const [reservedByName, setReservedByName] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -154,11 +161,42 @@ function App() {
           reserved_by: data.reserved_by,
         };
         setUserOwnPin(pin);
+
+        // If pin is reserved, fetch the reserved user's name
+        if (data.status === "reserved" && data.reserved_by) {
+          fetchReservedUserName(data.reserved_by);
+        } else {
+          setReservedByName(null);
+        }
       } else {
         setUserOwnPin(null);
+        setReservedByName(null);
       }
     } catch (error) {
       console.error("Error loading user own pin:", error);
+    }
+  };
+
+  const fetchReservedUserName = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("email, full_name")
+        .eq("id", userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching reserved user name:", error);
+        setReservedByName("Unknown User");
+        return;
+      }
+
+      if (data) {
+        setReservedByName(data.full_name || data.email || "Unknown User");
+      }
+    } catch (error) {
+      console.error("Error fetching reserved user name:", error);
+      setReservedByName("Unknown User");
     }
   };
 
@@ -500,6 +538,65 @@ function App() {
     setSelectedParking(null);
   };
 
+  const handleCancelReservationClick = (pin, userType) => {
+    setPinToCancel(pin);
+    setCancelUserType(userType);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancelReservation = async () => {
+    if (!pinToCancel || !user) return;
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        alert("Authentication error. Please log in again.");
+        setShowCancelModal(false);
+        return;
+      }
+
+      const url = `${
+        import.meta.env.VITE_SUPABASE_URL
+      }/functions/v1/cancel-reservation`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pin_id: pinToCancel.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to cancel reservation");
+      }
+
+      alert(`✅ ${result.message}\nRefund amount: ₪${result.refund_amount}`);
+
+      // Reload data
+      await loadUserOwnPin(user.id);
+      await loadOtherUsersPins(user.id);
+
+      setShowCancelModal(false);
+      setPinToCancel(null);
+      setCancelUserType(null);
+    } catch (error) {
+      console.error("Error canceling reservation:", error);
+      alert(`Failed to cancel reservation: ${error.message}`);
+    }
+  };
+
+  const handleCloseCancelModal = () => {
+    setShowCancelModal(false);
+    setPinToCancel(null);
+    setCancelUserType(null);
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -536,6 +633,23 @@ function App() {
           onDeactivate={deactivateActivePin}
         />
       )}
+      {userOwnPin && userOwnPin.status === "reserved" && (
+        <ReservedParkingButton
+          reservedPin={userOwnPin}
+          reservedByName={reservedByName}
+          onCancelReservation={(pin) =>
+            handleCancelReservationClick(pin, "owner")
+          }
+        />
+      )}
+      {userReservedPins && userReservedPins.length > 0 && (
+        <CancelReservationButton
+          reservedPin={userReservedPins[0]}
+          onCancelReservation={(pin) =>
+            handleCancelReservationClick(pin, "reserving")
+          }
+        />
+      )}
       {showConfirmModal && (
         <PinConfirmationModal
           address={pinAddress}
@@ -554,6 +668,14 @@ function App() {
         <ParkingDetailModal
           parking={selectedParking}
           onClose={handleCloseParkingDetail}
+          userReservedPins={userReservedPins}
+        />
+      )}
+      {showCancelModal && (
+        <CancelReservationModal
+          onConfirm={handleConfirmCancelReservation}
+          onClose={handleCloseCancelModal}
+          userType={cancelUserType}
         />
       )}
     </div>
