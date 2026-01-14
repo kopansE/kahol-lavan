@@ -115,6 +115,94 @@ serve(async (req) => {
       console.error("❌ Failed to update transaction:", transactionError);
     }
 
+    // ========== PARKING SPOT EXCHANGE LOGIC ==========
+    console.log("🔄 Starting parking spot exchange...");
+
+    // Step 1: Get pin details
+    const { data: pinData, error: pinError } = await supabaseAdmin
+      .from("pins")
+      .select("position, parking_zone, user_id")
+      .eq("id", transferRequest.pin_id)
+      .single();
+
+    if (pinError || !pinData) {
+      console.error("❌ Failed to fetch pin details:", pinError);
+      throw new Error(`Failed to fetch pin details: ${pinError?.message}`);
+    }
+
+    console.log(`📍 Pin details fetched for pin ${transferRequest.pin_id}`);
+
+    // Step 2: Delete User B's existing pins (User B is giving up their spot)
+    const { error: deleteError } = await supabaseAdmin
+      .from("pins")
+      .delete()
+      .eq("user_id", transferRequest.sender_id);
+
+    if (deleteError) {
+      console.error("❌ Failed to delete User B's existing pins:", deleteError);
+      throw new Error(`Failed to delete User B's pins: ${deleteError.message}`);
+    }
+
+    console.log(`🗑️ Deleted User B's existing pins (user: ${transferRequest.sender_id})`);
+
+    // Step 3: Transfer pin ownership to User B
+    const { error: transferPinError } = await supabaseAdmin
+      .from("pins")
+      .update({
+        user_id: transferRequest.sender_id, // User B takes ownership
+        reserved_by: null, // Clear reservation
+        status: "waiting", // User B is now parked there
+      })
+      .eq("id", transferRequest.pin_id);
+
+    if (transferPinError) {
+      console.error("❌ Failed to transfer pin ownership:", transferPinError);
+      throw new Error(`Failed to transfer pin ownership: ${transferPinError.message}`);
+    }
+
+    console.log(`✅ Pin ownership transferred to User B (pin: ${transferRequest.pin_id})`);
+
+    // Step 4: Update User B's current location
+    const { error: updateUserBError } = await supabaseAdmin
+      .from("users")
+      .update({
+        current_pin_id: transferRequest.pin_id,
+        last_pin_location: {
+          id: transferRequest.pin_id,
+          position: pinData.position,
+          parking_zone: pinData.parking_zone,
+          timestamp: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", transferRequest.sender_id);
+
+    if (updateUserBError) {
+      console.error("❌ Failed to update User B's location:", updateUserBError);
+      throw new Error(`Failed to update User B's location: ${updateUserBError.message}`);
+    }
+
+    console.log(`📍 Updated User B's current_pin_id to ${transferRequest.pin_id}`);
+
+    // Step 5: Clear User A's current location (they no longer have a parking spot)
+    const { error: updateUserAError } = await supabaseAdmin
+      .from("users")
+      .update({
+        current_pin_id: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", transferRequest.receiver_id);
+
+    if (updateUserAError) {
+      console.error("❌ Failed to clear User A's location:", updateUserAError);
+      throw new Error(`Failed to clear User A's location: ${updateUserAError.message}`);
+    }
+
+    console.log(`🚗 Cleared User A's current_pin_id (user: ${transferRequest.receiver_id})`);
+    console.log("✅ Parking spot exchange completed successfully!");
+
+    // ========== END PARKING SPOT EXCHANGE ==========
+
     console.log("✅ Reservation accepted successfully");
 
     return successResponse({
@@ -123,7 +211,8 @@ serve(async (req) => {
       amount_received: transferRequest.amount,
       new_balance: balanceAfter,
       balance_increase: balanceAfter - balanceBefore,
-      message: "Reservation accepted! Funds transferred to your wallet.",
+      parking_exchanged: true,
+      message: "Reservation accepted! User has taken over your parking spot.",
     });
   } catch (err) {
     console.error("Error in accept-reservation:", err);
