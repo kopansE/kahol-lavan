@@ -127,9 +127,9 @@ serve(async (req) => {
       `💼 Owner's wallet balance before transfer: ${receiverInitialBalance} ${CURRENCY}`
     );
 
-    // Transfer funds between wallets
+    // Initiate transfer between wallets (status will be PEN - pending)
     console.log(
-      `💸 Transferring ${RESERVATION_AMOUNT} ${CURRENCY} from reserver → owner`
+      `💸 Initiating transfer of ${RESERVATION_AMOUNT} ${CURRENCY} from reserver → owner (PENDING approval)`
     );
     const transferResult = await transferFundsBetweenWallets(
       senderData.rapyd_wallet_id,
@@ -144,26 +144,44 @@ serve(async (req) => {
       }
     );
 
-    console.log(`✅ Transfer successful:`, {
+    console.log(`✅ Transfer initiated:`, {
       transfer_id: transferResult.transferId,
       status: transferResult.status,
     });
 
-    // Check receiver's final balance
-    const receiverFinalBalance = await checkWalletBalance(
-      receiverData.rapyd_wallet_id,
-      CURRENCY
-    );
-    console.log(
-      `💼 Owner's wallet balance after transfer: ${receiverFinalBalance} ${CURRENCY} (expected: ${
-        receiverInitialBalance + RESERVATION_AMOUNT
-      } ${CURRENCY})`
-    );
+    // Calculate expiration (24 hours from now)
+    const expirationDate = new Date();
+    expirationDate.setHours(expirationDate.getHours() + 24);
+
+    // Create transfer request record for notification
+    const { error: transferRequestError } = await supabaseAdmin
+      .from("transfer_requests")
+      .insert({
+        transfer_id: transferResult.transferId,
+        pin_id: pin_id,
+        sender_id: user.id,
+        receiver_id: pinData.user_id,
+        amount: RESERVATION_AMOUNT,
+        currency: CURRENCY,
+        status: "pending",
+        sender_wallet_id: senderData.rapyd_wallet_id,
+        receiver_wallet_id: receiverData.rapyd_wallet_id,
+        expiration: expirationDate.toISOString(),
+        metadata: {
+          source_transaction_id: transferResult.sourceTransactionId,
+          destination_transaction_id: transferResult.destinationTransactionId,
+        },
+      });
+
+    if (transferRequestError) {
+      console.error("❌ Failed to create transfer request:", transferRequestError);
+      throw new Error(`Failed to create transfer request: ${transferRequestError.message}`);
+    }
 
     // Calculate amounts
     const netAmount = RESERVATION_AMOUNT - PLATFORM_FEE;
 
-    // Log transaction to database
+    // Log transaction to database with pending status
     await logTransaction(supabaseAdmin, {
       payerId: user.id,
       receiverId: pinData.user_id,
@@ -179,8 +197,8 @@ serve(async (req) => {
       },
     });
 
-    // Update pin status to reserved
-    console.log("📌 Updating pin status to reserved:", pin_id);
+    // Update pin status to reserved with reserved_by
+    console.log("📌 Updating pin status to reserved (pending approval):", pin_id);
     const { error: updateError } = await supabaseAdmin
       .from("pins")
       .update({ status: "reserved", reserved_by: user.id })
@@ -191,14 +209,14 @@ serve(async (req) => {
       throw new Error(`Failed to update pin status: ${updateError.message}`);
     }
 
-    console.log("✅ Pin status updated successfully");
+    console.log("✅ Reservation request created - waiting for owner approval");
 
     return successResponse({
       success: true,
       transfer_id: transferResult.transferId,
-      amount_paid: RESERVATION_AMOUNT,
-      destination_wallet: receiverData.rapyd_wallet_id,
-      message: "Parking reserved successfully!",
+      amount: RESERVATION_AMOUNT,
+      status: "pending_approval",
+      message: "Reservation request sent! Waiting for parking owner to accept.",
     });
   } catch (err) {
     console.error("Error in reserve-parking:", err);

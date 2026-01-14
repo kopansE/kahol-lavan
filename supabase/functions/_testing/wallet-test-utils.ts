@@ -170,7 +170,9 @@ export function logWalletState(
   state: WalletState,
   label: string = "Wallet State"
 ): void {
-  console.log(`\n${colors.bright}${colors.cyan}═══ ${label} ═══${colors.reset}`);
+  console.log(
+    `\n${colors.bright}${colors.cyan}═══ ${label} ═══${colors.reset}`
+  );
   console.log(
     `${emoji.clock} Timestamp: ${colors.yellow}${state.timestamp}${colors.reset}`
   );
@@ -198,19 +200,23 @@ export function logWalletState(
 /**
  * Compare two wallet states and log the differences
  */
-export function compareStates(
-  initial: WalletState,
-  final: WalletState
-): void {
+export function compareStates(initial: WalletState, final: WalletState): void {
   console.log(
     `\n${colors.bright}${colors.magenta}═══ State Comparison ═══${colors.reset}`
   );
 
   const balanceChange = final.balance - initial.balance;
-  const balanceColor = balanceChange > 0 ? colors.green : balanceChange < 0 ? colors.red : colors.yellow;
+  const balanceColor =
+    balanceChange > 0
+      ? colors.green
+      : balanceChange < 0
+      ? colors.red
+      : colors.yellow;
 
   console.log(
-    `${emoji.money} Balance Change: ${balanceColor}${balanceChange > 0 ? "+" : ""}${balanceChange} ${final.currency}${colors.reset}`
+    `${emoji.money} Balance Change: ${balanceColor}${
+      balanceChange > 0 ? "+" : ""
+    }${balanceChange} ${final.currency}${colors.reset}`
   );
   console.log(
     `   ${colors.white}${initial.balance} ${initial.currency}${colors.reset} → ${colors.white}${final.balance} ${final.currency}${colors.reset}`
@@ -223,8 +229,7 @@ export function compareStates(
   );
 
   const timeDiff =
-    new Date(final.timestamp).getTime() -
-    new Date(initial.timestamp).getTime();
+    new Date(final.timestamp).getTime() - new Date(initial.timestamp).getTime();
   console.log(
     `${emoji.clock} Time Elapsed: ${colors.white}${timeDiff}ms${colors.reset}`
   );
@@ -242,16 +247,29 @@ export function logTestResult(result: TestResult): void {
   console.log(
     `\n${colors.bright}${statusColor}${statusEmoji} Test Result: ${result.operation}${colors.reset}`
   );
-  console.log(`${colors.white}Status: ${statusColor}${result.success ? "SUCCESS" : "FAILED"}${colors.reset}`);
+  console.log(
+    `${colors.white}Status: ${statusColor}${
+      result.success ? "SUCCESS" : "FAILED"
+    }${colors.reset}`
+  );
 
   if (result.error) {
-    console.log(`${emoji.error} Error: ${colors.red}${result.error}${colors.reset}`);
+    console.log(
+      `${emoji.error} Error: ${colors.red}${result.error}${colors.reset}`
+    );
   }
 
   if (result.balanceChange !== undefined) {
-    const changeColor = result.balanceChange > 0 ? colors.green : result.balanceChange < 0 ? colors.red : colors.yellow;
+    const changeColor =
+      result.balanceChange > 0
+        ? colors.green
+        : result.balanceChange < 0
+        ? colors.red
+        : colors.yellow;
     console.log(
-      `${emoji.money} Balance Change: ${changeColor}${result.balanceChange > 0 ? "+" : ""}${result.balanceChange}${colors.reset}`
+      `${emoji.money} Balance Change: ${changeColor}${
+        result.balanceChange > 0 ? "+" : ""
+      }${result.balanceChange}${colors.reset}`
     );
   }
 
@@ -329,4 +347,3 @@ export function printSection(sectionName: string): void {
     `\n${colors.bright}${colors.cyan}▶ ${sectionName}${colors.reset}\n`
   );
 }
-
