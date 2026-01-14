@@ -162,11 +162,10 @@ serve(async (req) => {
 
     console.log(`✅ Pin ownership transferred to User B (pin: ${transferRequest.pin_id})`);
 
-    // Step 4: Update User B's current location
+    // Step 4: Update User B's last known location
     const { error: updateUserBError } = await supabaseAdmin
       .from("users")
       .update({
-        current_pin_id: transferRequest.pin_id,
         last_pin_location: {
           id: transferRequest.pin_id,
           position: pinData.position,
@@ -182,23 +181,22 @@ serve(async (req) => {
       throw new Error(`Failed to update User B's location: ${updateUserBError.message}`);
     }
 
-    console.log(`📍 Updated User B's current_pin_id to ${transferRequest.pin_id}`);
+    console.log(`📍 Updated User B's last_pin_location to ${transferRequest.pin_id}`);
 
-    // Step 5: Clear User A's current location (they no longer have a parking spot)
+    // Step 5: Update User A's timestamp (they no longer have a parking spot)
     const { error: updateUserAError } = await supabaseAdmin
       .from("users")
       .update({
-        current_pin_id: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", transferRequest.receiver_id);
 
     if (updateUserAError) {
-      console.error("❌ Failed to clear User A's location:", updateUserAError);
-      throw new Error(`Failed to clear User A's location: ${updateUserAError.message}`);
+      console.error("❌ Failed to update User A's timestamp:", updateUserAError);
+      throw new Error(`Failed to update User A's timestamp: ${updateUserAError.message}`);
     }
 
-    console.log(`🚗 Cleared User A's current_pin_id (user: ${transferRequest.receiver_id})`);
+    console.log(`🚗 Updated User A's timestamp (user: ${transferRequest.receiver_id})`);
     console.log("✅ Parking spot exchange completed successfully!");
 
     // ========== END PARKING SPOT EXCHANGE ==========

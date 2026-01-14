@@ -42,11 +42,10 @@ serve(async (req) => {
       return errorResponse(`Failed to save pin: ${insertError.message}`, 500);
     }
 
-    // Update user's current_pin_id
+    // Update user's last pin location
     await supabaseAdmin
       .from("users")
       .update({
-        current_pin_id: pin.id,
         last_pin_location: {
           id: pin.id,
           position: position,
