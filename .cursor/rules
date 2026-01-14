@@ -1,6 +1,19 @@
-Do NOT create Markdown (.md) files unless explicitly requested !!!
-Do NOT create text (.txt) files unless explicitly requested !!!
-Do NOT generate documentation files unless explicitly requested.
-Explain all reasoning and changes in chat ONLY.
-Keep explanations concise.
-Modify only necessary code files.
+You have access to the Supabase database schema in:
+.cursor/context/db-schema.sql
+
+Rules:
+
+- Treat the schema as authoritative and read-only
+- Never restate or recreate the schema unless explicitly requested
+- Do NOT generate markdown schema explanations
+- Use the schema silently when writing SQL, backend logic, or Supabase queries
+- Explain reasoning only in chat
+
+Other important Rules:
+
+- Do NOT create Markdown (.md) files unless explicitly requested !!!
+- Do NOT create text (.txt) files unless explicitly requested !!!
+- Do NOT generate documentation files unless explicitly requested.
+- Explain all reasoning and changes in chat ONLY.
+- Keep explanations concise.
+- Modify only necessary code files.
