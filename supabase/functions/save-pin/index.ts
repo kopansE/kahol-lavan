@@ -42,19 +42,7 @@ serve(async (req) => {
       return errorResponse(`Failed to save pin: ${insertError.message}`, 500);
     }
 
-    // Update user's last pin location
-    await supabaseAdmin
-      .from("users")
-      .update({
-        last_pin_location: {
-          id: pin.id,
-          position: position,
-          address: address,
-          timestamp: new Date().toISOString(),
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", user.id);
+    console.log(`📍 Created new pin ${pin.id} for user ${user.id}`);
 
     return successResponse({ success: true, pin });
   } catch (error) {

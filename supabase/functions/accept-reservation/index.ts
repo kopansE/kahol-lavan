@@ -6,10 +6,7 @@ import {
   errorResponse,
   successResponse,
 } from "../_shared/auth-utils.ts";
-import {
-  acceptTransfer,
-  checkWalletBalance,
-} from "../_shared/rapyd-utils.ts";
+import { acceptTransfer, checkWalletBalance } from "../_shared/rapyd-utils.ts";
 
 const CURRENCY = "ILS";
 
@@ -41,12 +38,18 @@ serve(async (req) => {
 
     // Verify user is the receiver
     if (transferRequest.receiver_id !== user.id) {
-      return errorResponse("You are not authorized to accept this reservation", 403);
+      return errorResponse(
+        "You are not authorized to accept this reservation",
+        403
+      );
     }
 
     // Verify transfer is still pending
     if (transferRequest.status !== "pending") {
-      return errorResponse(`Transfer request is already ${transferRequest.status}`, 400);
+      return errorResponse(
+        `Transfer request is already ${transferRequest.status}`,
+        400
+      );
     }
 
     // Check if transfer has expired
@@ -102,7 +105,9 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("❌ Failed to update transfer request:", updateError);
-      throw new Error(`Failed to update transfer request: ${updateError.message}`);
+      throw new Error(
+        `Failed to update transfer request: ${updateError.message}`
+      );
     }
 
     // Update transaction status to completed
@@ -143,7 +148,9 @@ serve(async (req) => {
       throw new Error(`Failed to delete User B's pins: ${deleteError.message}`);
     }
 
-    console.log(`🗑️ Deleted User B's existing pins (user: ${transferRequest.sender_id})`);
+    console.log(
+      `🗑️ Deleted User B's existing pins (user: ${transferRequest.sender_id})`
+    );
 
     // Step 3: Transfer pin ownership to User B
     const { error: transferPinError } = await supabaseAdmin
@@ -157,46 +164,17 @@ serve(async (req) => {
 
     if (transferPinError) {
       console.error("❌ Failed to transfer pin ownership:", transferPinError);
-      throw new Error(`Failed to transfer pin ownership: ${transferPinError.message}`);
+      throw new Error(
+        `Failed to transfer pin ownership: ${transferPinError.message}`
+      );
     }
 
-    console.log(`✅ Pin ownership transferred to User B (pin: ${transferRequest.pin_id})`);
-
-    // Step 4: Update User B's last known location
-    const { error: updateUserBError } = await supabaseAdmin
-      .from("users")
-      .update({
-        last_pin_location: {
-          id: transferRequest.pin_id,
-          position: pinData.position,
-          parking_zone: pinData.parking_zone,
-          timestamp: new Date().toISOString(),
-        },
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", transferRequest.sender_id);
-
-    if (updateUserBError) {
-      console.error("❌ Failed to update User B's location:", updateUserBError);
-      throw new Error(`Failed to update User B's location: ${updateUserBError.message}`);
-    }
-
-    console.log(`📍 Updated User B's last_pin_location to ${transferRequest.pin_id}`);
-
-    // Step 5: Update User A's timestamp (they no longer have a parking spot)
-    const { error: updateUserAError } = await supabaseAdmin
-      .from("users")
-      .update({
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", transferRequest.receiver_id);
-
-    if (updateUserAError) {
-      console.error("❌ Failed to update User A's timestamp:", updateUserAError);
-      throw new Error(`Failed to update User A's timestamp: ${updateUserAError.message}`);
-    }
-
-    console.log(`🚗 Updated User A's timestamp (user: ${transferRequest.receiver_id})`);
+    console.log(
+      `✅ Pin ownership transferred to User B (pin: ${transferRequest.pin_id})`
+    );
+    console.log(
+      `📍 User B now has pin at location: ${JSON.stringify(pinData.position)}`
+    );
     console.log("✅ Parking spot exchange completed successfully!");
 
     // ========== END PARKING SPOT EXCHANGE ==========
