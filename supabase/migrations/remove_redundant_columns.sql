@@ -10,6 +10,7 @@ DROP VIEW IF EXISTS user_transaction_summary CASCADE;
 -- Drop unused columns from users table
 ALTER TABLE public.users 
 DROP COLUMN IF EXISTS kyc_status,
+DROP COLUMN IF EXISTS kyc_verified_at,
 DROP COLUMN IF EXISTS wallet_balance_ils,
 DROP COLUMN IF EXISTS payment_method_type,
 DROP COLUMN IF EXISTS current_pin_id;

@@ -62,25 +62,11 @@ serve(async (req) => {
     const radius = url.searchParams.get("radius") || "5"; // default 5km radius
 
     // Build query - use admin client to bypass RLS
-    // Get active pins (excluding user's own)
+    // Get active pins (excluding user's own) - FETCH PINS ONLY
     let activeQuery = supabaseAdmin
       .from("pins")
       .select(
-        `
-        id,
-        position,
-        parking_zone,
-        created_at,
-        price,
-        user_id,
-        status,
-        reserved_by,
-        users (
-          email,
-          full_name,
-          avatar_url
-        )
-      `
+        "id, position, parking_zone, created_at, price, user_id, status, reserved_by"
       )
       .eq("status", "active");
 
@@ -95,21 +81,7 @@ serve(async (req) => {
       reservedQuery = supabaseAdmin
         .from("pins")
         .select(
-          `
-          id,
-          position,
-          parking_zone,
-          created_at,
-          price,
-          user_id,
-          status,
-          reserved_by,
-          users (
-            email,
-            full_name,
-            avatar_url
-          )
-        `
+          "id, position, parking_zone, created_at, price, user_id, status, reserved_by"
         )
         .eq("status", "reserved")
         .or(`user_id.eq.${userId},reserved_by.eq.${userId}`);
@@ -154,7 +126,51 @@ serve(async (req) => {
     }
 
     // Combine active and reserved pins
-    const pins = [...(activePins || []), ...reservedPins];
+    const allPins = [...(activePins || []), ...reservedPins];
+
+    // Get unique user IDs from pins
+    const userIds = [
+      ...new Set(allPins.map((pin) => pin.user_id).filter(Boolean)),
+    ];
+
+    // Fetch user data for all users in one query from user_profiles VIEW
+    let usersData = [];
+    if (userIds.length > 0) {
+      console.log("🔍 Fetching user data for IDs:", userIds);
+      const { data: users, error: usersError } = await supabaseAdmin
+        .from("user_profiles")
+        .select(
+          "id, full_name, car_license_plate, car_make, car_model, car_color"
+        )
+        .in("id", userIds);
+
+      if (usersError) {
+        console.error(
+          "❌ Error fetching users from user_profiles:",
+          usersError
+        );
+        // Continue without user data rather than failing
+      } else {
+        usersData = users || [];
+        console.log("✅ Fetched user data from user_profiles:", usersData);
+      }
+    }
+
+    // Create a map of user data by user ID for quick lookup
+    const usersMap = new Map(usersData.map((u) => [u.id, u]));
+
+    // Join pins with user data
+    const pins = allPins.map((pin) => {
+      const userData = usersMap.get(pin.user_id);
+      console.log(
+        `🔍 Pin ${pin.id} - user_id: ${pin.user_id}, userData:`,
+        userData
+      );
+      return {
+        ...pin,
+        user: userData || null,
+      };
+    });
 
     // If lat/lng provided, filter by distance
     let filteredPins = pins || [];

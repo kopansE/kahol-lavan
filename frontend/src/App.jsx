@@ -11,6 +11,8 @@ import ReservedParkingButton from "./components/ReservedParkingButton";
 import CancelReservationModal from "./components/CancelReservationModal";
 import PaymentSideMenu from "./components/PaymentSideMenu";
 import ParkingDetailModal from "./components/ParkingDetailModal";
+import CarDataBanner from "./components/CarDataBanner";
+import CarDataFormModal from "./components/CarDataFormModal";
 import "./App.css";
 
 function App() {
@@ -31,6 +33,8 @@ function App() {
   const [pinToCancel, setPinToCancel] = useState(null);
   const [reservedByName, setReservedByName] = useState(null);
   const [pendingNotifications, setPendingNotifications] = useState([]);
+  const [userDataComplete, setUserDataComplete] = useState(true); // Assume true initially
+  const [showCarDataModal, setShowCarDataModal] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -41,6 +45,7 @@ function App() {
         loadUserOwnPin(session.user.id);
         loadOtherUsersPins(session.user.id);
         loadPendingNotifications();
+        loadUserProfile();
       }
     });
 
@@ -53,11 +58,13 @@ function App() {
         loadUserOwnPin(session.user.id);
         loadOtherUsersPins(session.user.id);
         loadPendingNotifications();
+        loadUserProfile();
       } else {
         setOtherUsersPins([]);
         setUserOwnPin(null);
         setUserReservedPins([]);
         setPendingNotifications([]);
+        setUserDataComplete(true);
       }
     });
 
@@ -258,6 +265,7 @@ function App() {
               timestamp: pin.created_at,
               status: pin.status,
               reserved_by: pin.reserved_by,
+              user: pin.user,
             });
           } else if (pin.status === "active") {
             // Active pin from other users
@@ -265,6 +273,7 @@ function App() {
               id: pin.id,
               position: pin.position,
               timestamp: pin.created_at,
+              user: pin.user,
             });
           }
         });
@@ -641,6 +650,35 @@ function App() {
     }
   };
 
+  const loadUserProfile = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) return;
+
+      const url = `${
+        import.meta.env.VITE_SUPABASE_URL
+      }/functions/v1/get-user-profile`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setUserDataComplete(result.profile?.user_data_complete ?? true);
+      }
+    } catch (error) {
+      console.error("Error loading user profile:", error);
+    }
+  };
+
   const handleAcceptReservation = async (notificationId) => {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -725,6 +763,19 @@ function App() {
     }
   };
 
+  const handleCarDataBannerClick = () => {
+    setShowCarDataModal(true);
+  };
+
+  const handleCarDataModalClose = () => {
+    setShowCarDataModal(false);
+  };
+
+  const handleCarDataSuccess = async () => {
+    setUserDataComplete(true);
+    await loadUserProfile();
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -733,7 +784,10 @@ function App() {
     return <LoginScreen onGoogleSignIn={handleGoogleSignIn} />;
   }
   return (
-    <div className="app">
+    <div className={`app ${!userDataComplete ? "app-with-banner" : ""}`}>
+      {!userDataComplete && (
+        <CarDataBanner onClickBanner={handleCarDataBannerClick} />
+      )}
       <button
         className="payment-menu-toggle-button"
         onClick={() => setIsPaymentMenuOpen(true)}
@@ -807,6 +861,12 @@ function App() {
           onConfirm={handleConfirmCancelReservation}
           onClose={handleCloseCancelModal}
           userType={cancelUserType}
+        />
+      )}
+      {showCarDataModal && (
+        <CarDataFormModal
+          onClose={handleCarDataModalClose}
+          onSuccess={handleCarDataSuccess}
         />
       )}
     </div>

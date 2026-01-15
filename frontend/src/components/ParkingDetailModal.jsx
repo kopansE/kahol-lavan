@@ -5,7 +5,8 @@ import "./ParkingDetailModal.css";
 const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
   const modalRef = useRef(null);
   const [isReserving, setIsReserving] = useState(false);
-  const hasExistingReservation = userReservedPins && userReservedPins.length > 0;
+  const hasExistingReservation =
+    userReservedPins && userReservedPins.length > 0;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -29,7 +30,9 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
     if (isReserving) return;
 
     if (hasExistingReservation) {
-      alert("You already have an active reservation. Please cancel it before reserving another spot.");
+      alert(
+        "You already have an active reservation. Please cancel it before reserving another spot."
+      );
       return;
     }
 
@@ -82,6 +85,27 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
 
   if (!parking) return null;
 
+  // Debug: Log the parking object to see what we're receiving
+  console.log("🔍 Parking object:", parking);
+
+  // Extract user data (could be nested as 'user', 'users', or at parking level)
+  const userData = parking.user || parking.users || parking;
+  console.log("🔍 User data:", userData);
+
+  const ownerName = userData?.full_name || "Unknown Owner";
+  const carMake = userData?.car_make;
+  const carModel = userData?.car_model;
+  const carColor = userData?.car_color;
+  const licensePlate = userData?.car_license_plate;
+
+  console.log("🔍 Extracted data:", {
+    ownerName,
+    carMake,
+    carModel,
+    carColor,
+    licensePlate,
+  });
+
   return (
     <div className="parking-detail-overlay">
       <div className="parking-detail-modal" ref={modalRef}>
@@ -89,9 +113,48 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
           <div className="parking-address">{parking.address}</div>
         </div>
         <div className="parking-detail-body">
+          {/* Owner Information */}
+          <div className="parking-info-section">
+            <h3 className="info-section-title">Owner</h3>
+            <div className="info-item">
+              <span className="info-icon">👤</span>
+              <span className="info-text">{ownerName}</span>
+            </div>
+          </div>
+
+          {/* Car Information */}
+          {(carMake || carModel || carColor || licensePlate) && (
+            <div className="parking-info-section">
+              <h3 className="info-section-title">Vehicle Details</h3>
+              {(carMake || carModel) && (
+                <div className="info-item">
+                  <span className="info-icon">🚗</span>
+                  <span className="info-text">
+                    {carMake} {carModel}
+                  </span>
+                </div>
+              )}
+              {carColor && (
+                <div className="info-item">
+                  <span className="info-icon">🎨</span>
+                  <span className="info-text">{carColor}</span>
+                </div>
+              )}
+              {licensePlate && (
+                <div className="info-item">
+                  <span className="info-icon">🔢</span>
+                  <span className="info-text license-plate">
+                    {licensePlate}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {hasExistingReservation && (
             <div className="reservation-warning">
-              ⚠️ You already have an active reservation. Cancel it first to reserve another spot.
+              ⚠️ You already have an active reservation. Cancel it first to
+              reserve another spot.
             </div>
           )}
           <button
@@ -99,7 +162,13 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
             onClick={handleReserveClick}
             disabled={isReserving || hasExistingReservation}
           >
-            <span>{isReserving ? "Processing..." : hasExistingReservation ? "Already Reserved" : "Reserve parking"}</span>
+            <span>
+              {isReserving
+                ? "Processing..."
+                : hasExistingReservation
+                ? "Already Reserved"
+                : "Reserve parking"}
+            </span>
             <span>50 ₪</span>
           </button>
         </div>
