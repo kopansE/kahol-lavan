@@ -28,8 +28,10 @@
   border-radius: 16px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
   overflow: hidden;
-  width: 300px;
+  width: 380px;
   min-height: 260px;
+  max-height: 90vh;
+  overflow-y: auto;
   animation: slideUp 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -123,4 +125,89 @@
 .reserve-button:disabled:hover {
   transform: none;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Parking Information Sections */
+.parking-info-section {
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 1px solid #dee2e6;
+}
+
+.info-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #495057;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  font-size: 15px;
+  color: #333;
+}
+
+.info-icon {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
+}
+
+.info-text {
+  font-weight: 500;
+  flex: 1;
+}
+
+.license-plate {
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  font-size: 16px;
+  color: #2c3e50;
+  letter-spacing: 1px;
+}
+
+/* Scrollbar for modal */
+.parking-detail-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.parking-detail-modal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.parking-detail-modal::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.parking-detail-modal::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+@media (max-width: 480px) {
+  .parking-detail-modal {
+    width: 90%;
+    max-width: 350px;
+  }
+
+  .parking-info-section {
+    padding: 12px;
+  }
+
+  .info-item {
+    font-size: 14px;
+  }
+
+  .info-icon {
+    font-size: 18px;
+    width: 24px;
+  }
 }

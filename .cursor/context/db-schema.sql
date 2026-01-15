@@ -7,19 +7,37 @@ table users {
   email text
   full_name text
   avatar_url text
-  last_pin_location jsonb
   created_at timestamptz
   updated_at timestamptz
 
   rapyd_customer_id text
   rapyd_wallet_id text
   rapyd_payment_method_id text
-  rapyd_checkout_id text
-
   payment_method_last4 text
   payment_method_brand text
   payment_setup_completed bool
-  kyc_verified_at timestamptz
+  rapyd_checkout_id text
+
+
+
+  car_license_plate text
+  car_make text
+  car_model text
+  car_color text
+  user_data_complete bool
+}
+
+view user_profiles {
+  -- Public view of users table for safe querying
+  -- Original 3 columns plus car information
+  id uuid
+  full_name text
+  created_at timestamptz
+  car_license_plate text
+  car_make text
+  car_model text
+  car_color text
+  user_data_complete bool
 }
 
 table pins {
@@ -29,6 +47,7 @@ table pins {
   parking_zone int4
   status text
   created_at timestamptz
+  expires_at timestamptz
 
   matched_with_user_id uuid fk -> users.id
   matched_at timestamptz
@@ -96,4 +115,8 @@ table transactions {
   metadata jsonb
 }
 
--- users.id is linked to auth.users.id (Supabase auth)
+-- Notes:
+-- 1. users.id is linked to auth.users.id (Supabase auth)
+-- 2. user_profiles is a VIEW that mirrors the users table
+-- 3. Car information (license_plate, make, model, color) is used for vehicle identification during parking exchanges
+-- 4. user_data_complete flags when all required user data has been collected
