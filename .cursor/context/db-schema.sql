@@ -110,3 +110,32 @@ table transactions {
 
   metadata jsonb
 }
+
+table chat_sessions {
+id uuid pk
+pin_id uuid fk -> pins.id
+holder_id uuid fk -> users.id
+tracker_id uuid fk -> users.id
+stream_channel_id text unique
+-- Timer management
+started_at timestamptz
+expires_at timestamptz
+extended_at timestamptz null
+-- Status tracking
+status text  -- active, completed, cancelled, expired
+holder_approved bool
+tracker_approved bool
+holder_cancelled bool
+tracker_cancelled bool
+-- Extension tracking
+extension_requested_by uuid fk -> users.id null
+extension_granted bool
+-- Completion timestamps
+approved_at timestamptz null
+cancelled_at timestamptz null
+created_at timestamptz
+updated_at timestamptz
+-- Out of time tracking (automatic approval due to timeout)
+holder_out_of_time bool null
+tracker_out_of_time bool null
+}
