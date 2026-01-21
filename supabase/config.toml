@@ -33,3 +33,21 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/handle-redirect/deno.json"
 entrypoint = "./functions/handle-redirect/index.ts"
+
+[functions.get-stream-token]
+enabled = true
+verify_jwt = true
+import_map = "./functions/get-stream-token/deno.json"
+entrypoint = "./functions/get-stream-token/index.ts"
+
+[functions.create-chat-channel]
+enabled = true
+verify_jwt = false
+import_map = "./functions/create-chat-channel/deno.json"
+entrypoint = "./functions/create-chat-channel/index.ts"
+
+[functions.get-user-channels]
+enabled = true
+verify_jwt = true
+import_map = "./functions/get-user-channels/deno.json"
+entrypoint = "./functions/get-user-channels/index.ts"

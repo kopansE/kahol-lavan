@@ -211,6 +211,38 @@ serve(async (req) => {
 
     console.log("✅ Reservation request created - waiting for owner approval");
 
+    // Create chat channel for the reservation
+    try {
+      console.log("💬 Creating chat channel for reservation");
+      const createChannelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/create-chat-channel`;
+      const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+      const channelResponse = await fetch(createChannelUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({
+          pin_id: pin_id,
+          holder_id: user.id, // Parker (person reserving)
+          tracker_id: pinData.user_id, // Spot owner
+        }),
+      });
+
+      if (channelResponse.ok) {
+        const channelData = await channelResponse.json();
+        console.log(`✅ Chat channel created: ${channelData.channel_id}`);
+      } else {
+        const errorText = await channelResponse.text();
+        console.error("⚠️ Failed to create chat channel:", errorText);
+        // Don't fail the reservation if chat creation fails
+      }
+    } catch (chatError) {
+      console.error("⚠️ Error creating chat channel:", chatError);
+      // Don't fail the reservation if chat creation fails
+    }
+
     return successResponse({
       success: true,
       transfer_id: transferResult.transferId,

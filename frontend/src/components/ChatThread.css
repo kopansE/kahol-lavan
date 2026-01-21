@@ -1,0 +1,114 @@
+.chat-thread-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1001;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.chat-thread-container {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 800px;
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.chat-thread-header {
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-thread-back-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.chat-thread-back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.chat-thread-user-info {
+  flex: 1;
+}
+
+.chat-thread-user-name {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.chat-thread-user-details {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Stream Chat React Component Overrides */
+.chat-thread-container .str-chat {
+  height: 100%;
+}
+
+.chat-thread-container .str-chat__container {
+  height: 100%;
+}
+
+.chat-thread-container .str-chat-channel {
+  height: 100%;
+}
+
+.chat-thread-container .str-chat__main-panel {
+  height: 100%;
+  padding: 0;
+}
+
+.chat-thread-container .str-chat__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f9f9f9;
+}
+
+.chat-thread-container .str-chat__input-flat {
+  padding: 20px;
+  border-top: 1px solid #e0e0e0;
+  background: white;
+}
+
+/* Make message bubbles look better */
+.chat-thread-container .str-chat__message--me .str-chat__message-inner {
+  background: #667eea;
+  color: white;
+}
+
+.chat-thread-container .str-chat__message:not(.str-chat__message--me) .str-chat__message-inner {
+  background: white;
+  color: #333;
+}
+
+.chat-thread-container .str-chat__message-text-inner {
+  word-wrap: break-word;
+}
