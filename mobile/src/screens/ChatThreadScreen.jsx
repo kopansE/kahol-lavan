@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Chat, Channel, MessageList, MessageInput } from 'stream-chat-expo';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { Chat, Channel, MessageList, MessageInput, OverlayProvider } from 'stream-chat-expo';
 import { useStreamChat } from '../contexts/StreamChatContext';
-import { colors } from '../styles/colors';
+import ChatTimer from '../components/ChatTimer';
+import ChatActionButtons from '../components/ChatActionButtons';
+import { customChatTheme } from '../styles/chatTheme';
 
 const ChatThreadScreen = ({ route, navigation }) => {
   const { channel, channelData } = route.params;
@@ -13,8 +15,14 @@ const ChatThreadScreen = ({ route, navigation }) => {
     return null;
   }
 
+  const handleTimerExpire = () => {
+    Alert.alert('Time Expired', 'The reservation time has expired.');
+  };
+
   return (
     <View style={styles.container}>
+      <ChatTimer initialMinutes={20} onExpire={handleTimerExpire} />
+
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>←</Text>
@@ -36,14 +44,18 @@ const ChatThreadScreen = ({ route, navigation }) => {
         </View>
       </View>
 
-      <Chat client={chatClient}>
-        <Channel channel={channel}>
-          <View style={styles.chatContainer}>
-            <MessageList />
-            <MessageInput />
-          </View>
-        </Channel>
-      </Chat>
+      <OverlayProvider>
+        <Chat client={chatClient} style={customChatTheme}>
+          <Channel channel={channel}>
+            <View style={styles.chatContainer}>
+              <MessageList />
+              <MessageInput />
+            </View>
+          </Channel>
+        </Chat>
+      </OverlayProvider>
+
+      <ChatActionButtons />
     </View>
   );
 };
@@ -56,26 +68,28 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    backgroundColor: colors.primary,
+    padding: 12,
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   backButton: {
     fontSize: 28,
-    color: 'white',
+    color: '#333',
     marginRight: 12,
   },
   userInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 2,
   },
   userDetails: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 12,
+    color: '#666',
   },
   chatContainer: {
     flex: 1,

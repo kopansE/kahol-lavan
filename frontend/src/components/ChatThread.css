@@ -17,7 +17,7 @@
   border-radius: 12px;
   width: 100%;
   max-width: 800px;
-  height: 80vh;
+  height: 85vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
@@ -25,18 +25,20 @@
 }
 
 .chat-thread-header {
-  padding: 15px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  flex-shrink: 0;
+  padding: 12px 20px;
+  background: #f5f5f5;
+  color: #333;
   display: flex;
   align-items: center;
   gap: 12px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .chat-thread-back-button {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.05);
   border: none;
-  color: white;
+  color: #333;
   font-size: 20px;
   width: 36px;
   height: 36px;
@@ -49,7 +51,7 @@
 }
 
 .chat-thread-back-button:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .chat-thread-user-info {
@@ -57,58 +59,127 @@
 }
 
 .chat-thread-user-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  margin: 0 0 4px 0;
+  margin: 0 0 2px 0;
+  color: #333;
 }
 
 .chat-thread-user-details {
-  font-size: 13px;
+  font-size: 12px;
+  color: #666;
   opacity: 0.9;
 }
 
 /* Stream Chat React Component Overrides */
 .chat-thread-container .str-chat {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-thread-container .str-chat__container {
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-thread-container .str-chat-channel {
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-thread-container .str-chat__main-panel {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-thread-container .str-chat__list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px;
-  background: #f9f9f9;
+  background: #f5f5f5;
 }
 
 .chat-thread-container .str-chat__input-flat {
-  padding: 20px;
+  flex-shrink: 0;
+  padding: 15px 20px;
   border-top: 1px solid #e0e0e0;
   background: white;
+  border-bottom: 1px solid #e0e0e0;
 }
 
-/* Make message bubbles look better */
-.chat-thread-container .str-chat__message--me .str-chat__message-inner {
-  background: #667eea;
+.chat-thread-container .str-chat__input-flat-wrapper {
+  border-radius: 24px;
+  background: #f5f5f5;
+  padding: 8px 16px;
+}
+
+.chat-thread-container .str-chat__textarea textarea {
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  color: #333;
+}
+
+.chat-thread-container .str-chat__textarea textarea::placeholder {
+  color: #999;
+}
+
+/* Custom message bubbles to match design */
+.chat-thread-container .str-chat__message-simple__inner {
+  max-width: 70%;
+}
+
+/* Current user's messages - right aligned with purple gradient */
+.chat-thread-container .str-chat__message--me {
+  justify-content: flex-end;
+}
+
+.chat-thread-container .str-chat__message--me .str-chat__message-bubble {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 18px 18px 4px 18px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.chat-thread-container .str-chat__message--me .str-chat__message-text-inner {
   color: white;
 }
 
-.chat-thread-container .str-chat__message:not(.str-chat__message--me) .str-chat__message-inner {
+/* Other user's messages - left aligned with white background */
+.chat-thread-container .str-chat__message:not(.str-chat__message--me) {
+  justify-content: flex-start;
+}
+
+.chat-thread-container .str-chat__message:not(.str-chat__message--me) .str-chat__message-bubble {
   background: white;
+  color: #333;
+  border-radius: 18px 18px 18px 4px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chat-thread-container .str-chat__message:not(.str-chat__message--me) .str-chat__message-text-inner {
   color: #333;
 }
 
 .chat-thread-container .str-chat__message-text-inner {
   word-wrap: break-word;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Timestamp styling */
+.chat-thread-container .str-chat__message-data {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-top: 4px;
 }

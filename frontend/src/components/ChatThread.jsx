@@ -1,6 +1,8 @@
 import React from 'react';
 import { Chat, Channel, Window, MessageList, MessageInput } from 'stream-chat-react';
 import { useStreamChat } from '../contexts/StreamChatContext';
+import ChatTimer from './ChatTimer';
+import ChatActionButtons from './ChatActionButtons';
 import 'stream-chat-react/dist/css/v2/index.css';
 import './ChatThread.css';
 
@@ -11,9 +13,15 @@ const ChatThread = ({ channel, otherUser, onClose, onBack }) => {
     return null;
   }
 
+  const handleTimerExpire = () => {
+    alert('Time expired!');
+  };
+
   return (
     <div className="chat-thread-overlay" onClick={onClose}>
       <div className="chat-thread-container" onClick={(e) => e.stopPropagation()}>
+        <ChatTimer initialMinutes={20} onExpire={handleTimerExpire} />
+
         <div className="chat-thread-header">
           <button className="chat-thread-back-button" onClick={onBack}>
             ←
@@ -44,6 +52,8 @@ const ChatThread = ({ channel, otherUser, onClose, onBack }) => {
             </Window>
           </Channel>
         </Chat>
+
+        <ChatActionButtons />
       </div>
     </div>
   );

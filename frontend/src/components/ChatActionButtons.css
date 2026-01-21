@@ -1,0 +1,95 @@
+.chat-action-buttons {
+  flex-shrink: 0;
+  display: flex;
+  gap: 15px;
+  padding: 20px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
+
+.chat-action-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 10px;
+  border: none;
+  border-radius: 16px;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chat-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chat-action-btn:active {
+  transform: translateY(0);
+}
+
+.chat-action-icon {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chat-action-label {
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
+/* Cancel Button */
+.cancel-btn {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+  color: white;
+}
+
+.cancel-btn:hover {
+  background: linear-gradient(135deg, #ff5252 0%, #e04857 100%);
+}
+
+/* Approve Button */
+.approve-btn {
+  background: linear-gradient(135deg, #51cf66 0%, #37b24d 100%);
+  color: white;
+}
+
+.approve-btn:hover {
+  background: linear-gradient(135deg, #40c057 0%, #2f9e44 100%);
+}
+
+/* Extension Button */
+.extension-btn {
+  background: linear-gradient(135deg, #ffd43b 0%, #fab005 100%);
+  color: #333;
+}
+
+.extension-btn:hover {
+  background: linear-gradient(135deg, #fcc419 0%, #f59f00 100%);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .chat-action-buttons {
+    gap: 10px;
+    padding: 15px;
+  }
+
+  .chat-action-btn {
+    padding: 15px 8px;
+  }
+
+  .chat-action-icon {
+    font-size: 28px;
+  }
+
+  .chat-action-label {
+    font-size: 14px;
+  }
+}
