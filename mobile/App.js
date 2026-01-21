@@ -1,10 +1,18 @@
+import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, StyleSheet } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 import { supabase } from './src/config/supabase';
+import { StreamChatProvider } from './src/contexts/StreamChatContext';
 import LoginScreen from './src/screens/LoginScreen';
 import MainScreen from './src/screens/MainScreen';
+import ChatChannelListScreen from './src/screens/ChatChannelListScreen';
+import ChatThreadScreen from './src/screens/ChatThreadScreen';
 import LoadingSpinner from './src/components/LoadingSpinner';
+
+const Stack = createStackNavigator();
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -43,11 +51,23 @@ export default function App() {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      {user ? (
-        <MainScreen user={user} onSignOut={handleSignOut} />
-      ) : (
-        <LoginScreen />
-      )}
+      <NavigationContainer>
+        {user ? (
+          <StreamChatProvider user={user}>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="Main">
+                {(props) => <MainScreen {...props} user={user} onSignOut={handleSignOut} />}
+              </Stack.Screen>
+              <Stack.Screen name="ChatChannelList" component={ChatChannelListScreen} />
+              <Stack.Screen name="ChatThread" component={ChatThreadScreen} />
+            </Stack.Navigator>
+          </StreamChatProvider>
+        ) : (
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Login" component={LoginScreen} />
+          </Stack.Navigator>
+        )}
+      </NavigationContainer>
     </SafeAreaView>
   );
 }

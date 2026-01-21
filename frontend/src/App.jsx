@@ -13,6 +13,8 @@ import PaymentSideMenu from "./components/PaymentSideMenu";
 import ParkingDetailModal from "./components/ParkingDetailModal";
 import CarDataBanner from "./components/CarDataBanner";
 import CarDataFormModal from "./components/CarDataFormModal";
+import ChatButton from "./components/ChatButton";
+import { StreamChatProvider } from "./contexts/StreamChatContext";
 import "./App.css";
 
 function App() {
@@ -784,92 +786,95 @@ function App() {
     return <LoginScreen onGoogleSignIn={handleGoogleSignIn} />;
   }
   return (
-    <div className={`app ${!userDataComplete ? "app-with-banner" : ""}`}>
-      {!userDataComplete && (
-        <CarDataBanner onClickBanner={handleCarDataBannerClick} />
-      )}
-      <button
-        className="payment-menu-toggle-button"
-        onClick={() => setIsPaymentMenuOpen(true)}
-        title="Payment Settings"
-      >
-        💳
-      </button>
-      <MapContainer
-        userLocation={userLocation}
-        otherUsersPins={otherUsersPins}
-        userOwnPin={userOwnPin}
-        userReservedPins={userReservedPins}
-        onMapClick={handleMapClick}
-        onPinClick={handlePinClick}
-      />
-      {userOwnPin && userOwnPin.status === "waiting" && (
-        <LeavingParkingButton
-          waitingPin={userOwnPin}
-          onActivate={activateWaitingPin}
-        />
-      )}
-      {userOwnPin && userOwnPin.status === "active" && (
-        <NotLeavingParkingButton
-          activePin={userOwnPin}
-          onDeactivate={deactivateActivePin}
-        />
-      )}
-      {userOwnPin && userOwnPin.status === "reserved" && (
-        <ReservedParkingButton
-          reservedPin={userOwnPin}
-          reservedByName={reservedByName}
-          onCancelReservation={(pin) =>
-            handleCancelReservationClick(pin, "owner")
-          }
-        />
-      )}
-      {userReservedPins && userReservedPins.length > 0 && (
-        <CancelReservationButton
-          reservedPin={userReservedPins[0]}
-          onCancelReservation={(pin) =>
-            handleCancelReservationClick(pin, "reserving")
-          }
-        />
-      )}
-      {showConfirmModal && (
-        <PinConfirmationModal
-          address={pinAddress}
-          isLoading={isLoadingAddress}
-          onConfirm={handleConfirmPin}
-          onCancel={handleCancelPin}
-        />
-      )}
-      <PaymentSideMenu
-        isOpen={isPaymentMenuOpen}
-        onClose={() => setIsPaymentMenuOpen(false)}
-        user={user}
-        onSignOut={handleSignOut}
-        pendingNotifications={pendingNotifications}
-        onAcceptReservation={handleAcceptReservation}
-        onDeclineReservation={handleDeclineReservation}
-      />
-      {selectedParking && (
-        <ParkingDetailModal
-          parking={selectedParking}
-          onClose={handleCloseParkingDetail}
+    <StreamChatProvider user={user}>
+      <div className={`app ${!userDataComplete ? "app-with-banner" : ""}`}>
+        {!userDataComplete && (
+          <CarDataBanner onClickBanner={handleCarDataBannerClick} />
+        )}
+        <button
+          className="payment-menu-toggle-button"
+          onClick={() => setIsPaymentMenuOpen(true)}
+          title="Payment Settings"
+        >
+          💳
+        </button>
+        <ChatButton />
+        <MapContainer
+          userLocation={userLocation}
+          otherUsersPins={otherUsersPins}
+          userOwnPin={userOwnPin}
           userReservedPins={userReservedPins}
+          onMapClick={handleMapClick}
+          onPinClick={handlePinClick}
         />
-      )}
-      {showCancelModal && (
-        <CancelReservationModal
-          onConfirm={handleConfirmCancelReservation}
-          onClose={handleCloseCancelModal}
-          userType={cancelUserType}
+        {userOwnPin && userOwnPin.status === "waiting" && (
+          <LeavingParkingButton
+            waitingPin={userOwnPin}
+            onActivate={activateWaitingPin}
+          />
+        )}
+        {userOwnPin && userOwnPin.status === "active" && (
+          <NotLeavingParkingButton
+            activePin={userOwnPin}
+            onDeactivate={deactivateActivePin}
+          />
+        )}
+        {userOwnPin && userOwnPin.status === "reserved" && (
+          <ReservedParkingButton
+            reservedPin={userOwnPin}
+            reservedByName={reservedByName}
+            onCancelReservation={(pin) =>
+              handleCancelReservationClick(pin, "owner")
+            }
+          />
+        )}
+        {userReservedPins && userReservedPins.length > 0 && (
+          <CancelReservationButton
+            reservedPin={userReservedPins[0]}
+            onCancelReservation={(pin) =>
+              handleCancelReservationClick(pin, "reserving")
+            }
+          />
+        )}
+        {showConfirmModal && (
+          <PinConfirmationModal
+            address={pinAddress}
+            isLoading={isLoadingAddress}
+            onConfirm={handleConfirmPin}
+            onCancel={handleCancelPin}
+          />
+        )}
+        <PaymentSideMenu
+          isOpen={isPaymentMenuOpen}
+          onClose={() => setIsPaymentMenuOpen(false)}
+          user={user}
+          onSignOut={handleSignOut}
+          pendingNotifications={pendingNotifications}
+          onAcceptReservation={handleAcceptReservation}
+          onDeclineReservation={handleDeclineReservation}
         />
-      )}
-      {showCarDataModal && (
-        <CarDataFormModal
-          onClose={handleCarDataModalClose}
-          onSuccess={handleCarDataSuccess}
-        />
-      )}
-    </div>
+        {selectedParking && (
+          <ParkingDetailModal
+            parking={selectedParking}
+            onClose={handleCloseParkingDetail}
+            userReservedPins={userReservedPins}
+          />
+        )}
+        {showCancelModal && (
+          <CancelReservationModal
+            onConfirm={handleConfirmCancelReservation}
+            onClose={handleCloseCancelModal}
+            userType={cancelUserType}
+          />
+        )}
+        {showCarDataModal && (
+          <CarDataFormModal
+            onClose={handleCarDataModalClose}
+            onSuccess={handleCarDataSuccess}
+          />
+        )}
+      </div>
+    </StreamChatProvider>
   );
 }
 

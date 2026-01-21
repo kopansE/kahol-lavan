@@ -15,6 +15,7 @@ import NotLeavingParkingButton from '../components/NotLeavingParkingButton';
 import ReservedParkingButton from '../components/ReservedParkingButton';
 import CancelReservationButton from '../components/CancelReservationButton';
 import CarDataBanner from '../components/CarDataBanner';
+import ChatButton from '../components/ChatButton';
 import { colors } from '../styles/colors';
 import { reverseGeocode } from '../utils/geocoding';
 import {
@@ -30,7 +31,7 @@ import {
   completePaymentSetup,
 } from '../utils/edgeFunctions';
 
-const MainScreen = ({ user, onSignOut }) => {
+const MainScreen = ({ user, onSignOut, navigation }) => {
   const [userLocation, setUserLocation] = useState(null);
   const [otherUsersPins, setOtherUsersPins] = useState([]);
   const [userOwnPin, setUserOwnPin] = useState(null);
@@ -491,6 +492,8 @@ const MainScreen = ({ user, onSignOut }) => {
         onClose={handleCarDataModalClose}
         onSuccess={handleCarDataSuccess}
       />
+
+      <ChatButton onPress={() => navigation.navigate('ChatChannelList')} />
     </View>
   );
 };

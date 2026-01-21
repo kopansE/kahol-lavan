@@ -34,35 +34,20 @@ verify_jwt = false
 import_map = "./functions/handle-redirect/deno.json"
 entrypoint = "./functions/handle-redirect/index.ts"
 
-[functions.create-stream-token]
+[functions.get-stream-token]
 enabled = true
 verify_jwt = true
-import_map = "./functions/create-stream-token/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/create-stream-token/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/create-stream-token/*.html" ]
+import_map = "./functions/get-stream-token/deno.json"
+entrypoint = "./functions/get-stream-token/index.ts"
 
-[functions.handle-chat-action]
+[functions.create-chat-channel]
 enabled = true
-verify_jwt = true
-import_map = "./functions/handle-chat-action/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/handle-chat-action/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/handle-chat-action/*.html" ]
+verify_jwt = false
+import_map = "./functions/create-chat-channel/deno.json"
+entrypoint = "./functions/create-chat-channel/index.ts"
 
-[functions.initialize-chat]
+[functions.get-user-channels]
 enabled = true
 verify_jwt = true
-import_map = "./functions/initialize-chat/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/initialize-chat/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/initialize-chat/*.html" ]
+import_map = "./functions/get-user-channels/deno.json"
+entrypoint = "./functions/get-user-channels/index.ts"
