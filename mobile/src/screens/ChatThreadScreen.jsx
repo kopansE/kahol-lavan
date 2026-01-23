@@ -21,7 +21,7 @@ const ChatThreadScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <ChatTimer initialMinutes={20} onExpire={handleTimerExpire} />
+      <ChatTimer startedAt={channelData?.started_at} initialMinutes={20} onExpire={handleTimerExpire} />
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>

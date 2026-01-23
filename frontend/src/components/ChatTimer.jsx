@@ -1,8 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import './ChatTimer.css';
 
-const ChatTimer = ({ initialMinutes = 20, onExpire }) => {
-  const [timeRemaining, setTimeRemaining] = useState(initialMinutes * 60); // Convert to seconds
+const ChatTimer = ({ startedAt, initialMinutes = 20, onExpire }) => {
+  const calculateTimeRemaining = () => {
+    if (!startedAt) {
+      return initialMinutes * 60;
+    }
+    
+    const now = new Date();
+    const started = new Date(startedAt);
+    const elapsedSeconds = Math.floor((now - started) / 1000);
+    const totalSeconds = initialMinutes * 60;
+    const remaining = totalSeconds - elapsedSeconds;
+    
+    return Math.max(0, remaining);
+  };
+
+  const [timeRemaining, setTimeRemaining] = useState(calculateTimeRemaining());
+
+  useEffect(() => {
+    // Recalculate on mount in case component remounts
+    setTimeRemaining(calculateTimeRemaining());
+  }, [startedAt]);
 
   useEffect(() => {
     if (timeRemaining <= 0) {
@@ -11,7 +30,7 @@ const ChatTimer = ({ initialMinutes = 20, onExpire }) => {
     }
 
     const interval = setInterval(() => {
-      setTimeRemaining((prev) => prev - 1);
+      setTimeRemaining((prev) => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearInterval(interval);

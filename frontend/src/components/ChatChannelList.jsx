@@ -89,16 +89,60 @@ const ChatChannelList = ({ onClose }) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
+  const renderChannelItem = (channelData) => {
+    const channel = channelData.streamChannel;
+    const otherUser = channelData.other_user;
+    const unreadCount = channel.countUnread();
+    const lastMessage = channel.state.messages[channel.state.messages.length - 1];
+
+    return (
+      <div
+        key={channelData.id}
+        className="chat-channel-item"
+        onClick={() => setSelectedChannel(channel)}
+      >
+        <div className="chat-channel-avatar">
+          {getInitials(otherUser.full_name)}
+        </div>
+        <div className="chat-channel-info">
+          <div className="chat-channel-name">
+            {otherUser.full_name}
+            {otherUser.car_license_plate && ` • ${otherUser.car_license_plate}`}
+          </div>
+          <div className="chat-channel-preview">
+            {lastMessage?.text || 'No messages yet'}
+          </div>
+        </div>
+        <div className="chat-channel-meta">
+          <div className="chat-channel-time">
+            {formatTime(lastMessage?.created_at || channelData.created_at)}
+          </div>
+          {unreadCount > 0 && (
+            <div className="chat-channel-unread">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (selectedChannel) {
+    const selectedChannelData = channels.find(c => c.streamChannel === selectedChannel);
     return (
       <ChatThread
         channel={selectedChannel}
-        otherUser={channels.find(c => c.streamChannel === selectedChannel)?.other_user}
+        otherUser={selectedChannelData?.other_user}
+        channelData={selectedChannelData}
         onClose={() => setSelectedChannel(null)}
         onBack={() => setSelectedChannel(null)}
       />
     );
   }
+
+  // Separate channels into active and history
+  const activeChannels = channels.filter(c => c.status === 'active');
+  const historyChannels = channels.filter(c => c.status !== 'active');
 
   return (
     <div className="chat-channel-list-overlay" onClick={onClose}>
@@ -123,43 +167,25 @@ const ChatChannelList = ({ onClose }) => {
               <p>Reserve a parking spot to start chatting with other users!</p>
             </div>
           ) : (
-            channels.map((channelData) => {
-              const channel = channelData.streamChannel;
-              const otherUser = channelData.other_user;
-              const unreadCount = channel.countUnread();
-              const lastMessage = channel.state.messages[channel.state.messages.length - 1];
+            <>
+              <div className="chat-section">
+                <div className="chat-section-header">Active</div>
+                {activeChannels.length > 0 ? (
+                  activeChannels.map(renderChannelItem)
+                ) : (
+                  <div className="chat-section-empty">No active chats</div>
+                )}
+              </div>
 
-              return (
-                <div
-                  key={channelData.id}
-                  className="chat-channel-item"
-                  onClick={() => setSelectedChannel(channel)}
-                >
-                  <div className="chat-channel-avatar">
-                    {getInitials(otherUser.full_name)}
-                  </div>
-                  <div className="chat-channel-info">
-                    <div className="chat-channel-name">
-                      {otherUser.full_name}
-                      {otherUser.car_license_plate && ` • ${otherUser.car_license_plate}`}
-                    </div>
-                    <div className="chat-channel-preview">
-                      {lastMessage?.text || 'No messages yet'}
-                    </div>
-                  </div>
-                  <div className="chat-channel-meta">
-                    <div className="chat-channel-time">
-                      {formatTime(lastMessage?.created_at || channelData.created_at)}
-                    </div>
-                    {unreadCount > 0 && (
-                      <div className="chat-channel-unread">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
+              <div className="chat-section">
+                <div className="chat-section-header">History</div>
+                {historyChannels.length > 0 ? (
+                  historyChannels.map(renderChannelItem)
+                ) : (
+                  <div className="chat-section-empty">No chat history</div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>

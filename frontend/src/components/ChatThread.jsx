@@ -6,7 +6,7 @@ import ChatActionButtons from './ChatActionButtons';
 import 'stream-chat-react/dist/css/v2/index.css';
 import './ChatThread.css';
 
-const ChatThread = ({ channel, otherUser, onClose, onBack }) => {
+const ChatThread = ({ channel, otherUser, channelData, onClose, onBack }) => {
   const { chatClient } = useStreamChat();
 
   if (!chatClient || !channel) {
@@ -14,13 +14,13 @@ const ChatThread = ({ channel, otherUser, onClose, onBack }) => {
   }
 
   const handleTimerExpire = () => {
-    alert('Time expired!');
+    console.log('Time expired!');
   };
 
   return (
     <div className="chat-thread-overlay" onClick={onClose}>
       <div className="chat-thread-container" onClick={(e) => e.stopPropagation()}>
-        <ChatTimer initialMinutes={20} onExpire={handleTimerExpire} />
+        <ChatTimer startedAt={channelData?.started_at} initialMinutes={20} onExpire={handleTimerExpire} />
 
         <div className="chat-thread-header">
           <button className="chat-thread-back-button" onClick={onBack}>

@@ -88,6 +88,7 @@ serve(async (req) => {
 
     // 4. Save to Database
     const now = new Date().toISOString();
+    const twentyMinutesInMs = 20 * 60 * 1000; // 20 minutes = 1,200,000ms
     const { error: insertError } = await supabaseAdmin
       .from("chat_sessions")
       .insert({
@@ -97,7 +98,7 @@ serve(async (req) => {
         stream_channel_id: channelId,
         status: "active",
         started_at: now,
-        expires_at: new Date(Date.now() + 86400000).toISOString(),
+        expires_at: new Date(Date.now() + twentyMinutesInMs).toISOString(),
         created_at: now,
         updated_at: now,
       });

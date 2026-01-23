@@ -44,6 +44,28 @@ serve(async (req) => {
       .or(`holder_id.eq.${user.id},tracker_id.eq.${user.id}`)
       .order("created_at", { ascending: false });
 
+    // Update expired sessions
+    if (sessions) {
+      const now = new Date();
+      const expiredSessionIds = sessions
+        .filter((s) => s.status === 'active' && new Date(s.expires_at) < now)
+        .map((s) => s.id);
+
+      if (expiredSessionIds.length > 0) {
+        await supabaseAdmin
+          .from("chat_sessions")
+          .update({ status: "expired", updated_at: now.toISOString() })
+          .in("id", expiredSessionIds);
+
+        // Update the status in the sessions array
+        sessions.forEach((session) => {
+          if (expiredSessionIds.includes(session.id)) {
+            session.status = "expired";
+          }
+        });
+      }
+    }
+
     if (sessionsError) {
       console.error("Failed to fetch channels:", sessionsError);
       return errorResponse(`Failed to fetch channels: ${JSON.stringify(sessionsError)}`, 500);
@@ -79,6 +101,8 @@ serve(async (req) => {
         stream_channel_type: "messaging",
         pin_id: session.pin_id,
         created_at: session.created_at,
+        started_at: session.started_at,
+        expires_at: session.expires_at,
         last_message_at: session.updated_at,
         status: session.status,
         pin: session.pins,
@@ -98,6 +122,6 @@ serve(async (req) => {
     return successResponse({ channels: enrichedChannels });
   } catch (err) {
     console.error("Error in get-user-channels:", err);
-    return errorResponse(err.message || "Internal server error");
+    return errorResponse(err instanceof Error ? err.message : "Internal server error");
   }
 });
