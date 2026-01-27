@@ -1,0 +1,123 @@
+/* Wallet Page */
+.wallet-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Wallet Balance Card */
+.wallet-balance-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 24px;
+  border-radius: 16px;
+  color: white;
+  text-align: center;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.balance-icon {
+  margin-bottom: 12px;
+  opacity: 0.9;
+}
+
+.balance-icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.balance-label {
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.9;
+  margin-bottom: 8px;
+}
+
+.balance-amount {
+  font-size: 42px;
+  font-weight: 700;
+}
+
+.balance-amount.loading {
+  opacity: 0.6;
+}
+
+/* Wallet Setup Section */
+.wallet-setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Wallet Buttons */
+.wallet-button {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.wallet-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.update-button {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.update-button:hover:not(:disabled) {
+  background: #e5e5e5;
+}
+
+.withdraw-button {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+}
+
+.withdraw-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(78, 205, 196, 0.4);
+}
+
+.withdraw-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Not Setup State */
+.wallet-not-setup {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  padding: 24px;
+  border-radius: 16px;
+  text-align: center;
+  color: #856404;
+}
+
+.not-setup-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.wallet-not-setup p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  font-size: 14px;
+}

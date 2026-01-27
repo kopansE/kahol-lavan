@@ -10,6 +10,8 @@ import LoginScreen from './src/screens/LoginScreen';
 import MainScreen from './src/screens/MainScreen';
 import ChatChannelListScreen from './src/screens/ChatChannelListScreen';
 import ChatThreadScreen from './src/screens/ChatThreadScreen';
+import WalletScreen from './src/screens/WalletScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 import LoadingSpinner from './src/components/LoadingSpinner';
 
 const Stack = createStackNavigator();
@@ -60,6 +62,8 @@ export default function App() {
               </Stack.Screen>
               <Stack.Screen name="ChatChannelList" component={ChatChannelListScreen} />
               <Stack.Screen name="ChatThread" component={ChatThreadScreen} />
+              <Stack.Screen name="Wallet" component={WalletScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
             </Stack.Navigator>
           </StreamChatProvider>
         ) : (

@@ -7,6 +7,11 @@
   border-radius: 12px 12px 0 0;
 }
 
+/* Timer in side menu - no border radius */
+.chat-thread-side-menu .chat-timer {
+  border-radius: 0;
+}
+
 .chat-timer-display {
   font-size: 48px;
   font-weight: 700;
