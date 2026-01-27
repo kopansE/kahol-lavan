@@ -10,12 +10,10 @@ import {
   checkWalletBalance,
   addFundsToWallet,
   transferFundsBetweenWallets,
-  logTransaction,
 } from "../_shared/rapyd-utils.ts";
 
 const RESERVATION_AMOUNT = 50;
 const CURRENCY = "ILS";
-const PLATFORM_FEE = 0;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -154,7 +152,7 @@ serve(async (req) => {
     expirationDate.setHours(expirationDate.getHours() + 24);
 
     // Create transfer request record for notification
-    const { error: transferRequestError } = await supabaseAdmin
+    const { data: transferRequestData, error: transferRequestError } = await supabaseAdmin
       .from("transfer_requests")
       .insert({
         transfer_id: transferResult.transferId,
@@ -171,31 +169,20 @@ serve(async (req) => {
           source_transaction_id: transferResult.sourceTransactionId,
           destination_transaction_id: transferResult.destinationTransactionId,
         },
-      });
+      })
+      .select("id")
+      .single();
 
-    if (transferRequestError) {
+    if (transferRequestError || !transferRequestData) {
       console.error("❌ Failed to create transfer request:", transferRequestError);
-      throw new Error(`Failed to create transfer request: ${transferRequestError.message}`);
+      throw new Error(`Failed to create transfer request: ${transferRequestError?.message || "No data returned"}`);
     }
 
-    // Calculate amounts
-    const netAmount = RESERVATION_AMOUNT - PLATFORM_FEE;
+    const transferRequestId = transferRequestData.id;
+    console.log(`✅ Transfer request created with ID: ${transferRequestId}`);
 
-    // Log transaction to database with pending status
-    await logTransaction(supabaseAdmin, {
-      payerId: user.id,
-      receiverId: pinData.user_id,
-      pinId: pin_id,
-      rapydPaymentId: transferResult.transferId,
-      amountIls: RESERVATION_AMOUNT,
-      platformFeeIls: PLATFORM_FEE,
-      netAmountIls: netAmount,
-      status: transferResult.status,
-      metadata: {
-        source_transaction_id: transferResult.sourceTransactionId,
-        destination_transaction_id: transferResult.destinationTransactionId,
-      },
-    });
+    // Note: Transaction record is NOT created here
+    // It will be created by approve-in-chat when both users approve (success only)
 
     // Update pin status to reserved with reserved_by
     console.log("📌 Updating pin status to reserved (pending approval):", pin_id);
@@ -227,6 +214,7 @@ serve(async (req) => {
           pin_id: pin_id,
           holder_id: user.id, // Parker (person reserving)
           tracker_id: pinData.user_id, // Spot owner
+          transfer_request_id: transferRequestId, // Link session to this specific reservation
         }),
       });
 

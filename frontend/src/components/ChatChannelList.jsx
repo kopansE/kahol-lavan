@@ -8,7 +8,7 @@ const ChatChannelList = ({ onClose }) => {
   const { chatClient, isReady } = useStreamChat();
   const [channels, setChannels] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedChannel, setSelectedChannel] = useState(null);
+  const [selectedSessionId, setSelectedSessionId] = useState(null); // Track by session ID, not Stream channel
 
   useEffect(() => {
     if (!isReady) return;
@@ -99,7 +99,7 @@ const ChatChannelList = ({ onClose }) => {
       <div
         key={channelData.id}
         className="chat-channel-item"
-        onClick={() => setSelectedChannel(channel)}
+        onClick={() => setSelectedSessionId(channelData.id)} // Use session ID, not Stream channel
       >
         <div className="chat-channel-avatar">
           {getInitials(otherUser.full_name)}
@@ -127,15 +127,19 @@ const ChatChannelList = ({ onClose }) => {
     );
   };
 
-  if (selectedChannel) {
-    const selectedChannelData = channels.find(c => c.streamChannel === selectedChannel);
+  // Find selected session by ID (ensures correct session even when multiple share same Stream channel)
+  const selectedChannelData = selectedSessionId 
+    ? channels.find(c => c.id === selectedSessionId) 
+    : null;
+
+  if (selectedChannelData) {
     return (
       <ChatThread
-        channel={selectedChannel}
-        otherUser={selectedChannelData?.other_user}
+        channel={selectedChannelData.streamChannel}
+        otherUser={selectedChannelData.other_user}
         channelData={selectedChannelData}
-        onClose={() => setSelectedChannel(null)}
-        onBack={() => setSelectedChannel(null)}
+        onClose={() => setSelectedSessionId(null)}
+        onBack={() => setSelectedSessionId(null)}
       />
     );
   }

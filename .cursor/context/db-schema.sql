@@ -113,10 +113,10 @@ table transactions {
 
 table chat_sessions {
 id uuid pk
-pin_id uuid fk -> pins.id
 holder_id uuid fk -> users.id
 tracker_id uuid fk -> users.id
-stream_channel_id text unique
+transfer_request_id uuid fk -> transfer_requests.id unique  -- 1:1 mapping to reservation
+stream_channel_id text  -- Stream channel can be reused across sessions for same pin
 -- Timer management
 started_at timestamptz
 expires_at timestamptz

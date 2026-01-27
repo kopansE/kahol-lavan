@@ -10,6 +10,8 @@ import {
 /**
  * Get all chat sessions for the authenticated user
  * Returns sessions with metadata about the other user and the associated pin
+ * 
+ * Pin data is now accessed through: chat_sessions → transfer_requests → pins
  */
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,24 +23,31 @@ serve(async (req) => {
     const supabaseAdmin = createSupabaseAdmin();
 
     // Get all chat sessions where user is a participant
+    // Join through transfer_requests to get pin data
     const { data: sessions, error: sessionsError } = await supabaseAdmin
       .from("chat_sessions")
       .select(`
         id,
-        pin_id,
         holder_id,
         tracker_id,
+        transfer_request_id,
         stream_channel_id,
         started_at,
         expires_at,
         status,
         created_at,
         updated_at,
-        pins (
+        transfer_requests (
           id,
+          pin_id,
+          amount,
           status,
-          parking_zone,
-          position
+          pins (
+            id,
+            status,
+            parking_zone,
+            position
+          )
         )
       `)
       .or(`holder_id.eq.${user.id},tracker_id.eq.${user.id}`)
@@ -91,21 +100,28 @@ serve(async (req) => {
     }
 
     // Combine session data with user details
+    // Extract pin data from transfer_requests → pins
     const enrichedChannels = sessions.map((session) => {
       const otherUserId = session.holder_id === user.id ? session.tracker_id : session.holder_id;
       const otherUser = otherUsers?.find((u) => u.id === otherUserId);
+      
+      // Get pin data through transfer_requests
+      const transferRequest = session.transfer_requests;
+      const pin = transferRequest?.pins || null;
+      const pinId = transferRequest?.pin_id || null;
 
       return {
         id: session.id,
         stream_channel_id: session.stream_channel_id,
         stream_channel_type: "messaging",
-        pin_id: session.pin_id,
+        pin_id: pinId,
+        transfer_request_id: session.transfer_request_id,
         created_at: session.created_at,
         started_at: session.started_at,
         expires_at: session.expires_at,
         last_message_at: session.updated_at,
         status: session.status,
-        pin: session.pins,
+        pin: pin,
         other_user: {
           id: otherUserId,
           full_name: otherUser?.full_name || "Unknown User",
