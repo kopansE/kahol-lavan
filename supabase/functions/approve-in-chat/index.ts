@@ -240,7 +240,7 @@ serve(async (req) => {
         .update({
           user_id: buyerId,       // Buyer now owns this pin
           reserved_by: null,      // Clear reservation
-          status: "waiting",       // Pin is active (buyer might leave later)
+          status: "waiting",      // Pin is in waiting state, not posted to other users yet
         })
         .eq("id", pinId);
 

@@ -7,7 +7,7 @@ import ChatActionButtons from './ChatActionButtons';
 import 'stream-chat-react/dist/css/v2/index.css';
 import './ChatThread.css';
 
-const ChatThread = ({ channel, otherUser, channelData, onClose, onBack }) => {
+const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMenu = false }) => {
   const { chatClient } = useStreamChat();
   const [isProcessing, setIsProcessing] = useState(false);
   const [approvalState, setApprovalState] = useState({
@@ -152,6 +152,68 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack }) => {
     }
   };
 
+  // Render inside side menu (no overlay, fill container)
+  if (inSideMenu) {
+    return (
+      <div className="chat-thread-side-menu">
+        <ChatTimer startedAt={channelData?.started_at} initialMinutes={20} onExpire={handleTimerExpire} />
+
+        <div className="chat-thread-header-side-menu">
+          <button type="button" className="chat-thread-back-button-side-menu" onClick={onBack}>
+            ←
+          </button>
+          <div className="chat-thread-user-info">
+            <h3 className="chat-thread-user-name">
+              {otherUser?.full_name || 'User'}
+            </h3>
+            {otherUser && (
+              <div className="chat-thread-user-details">
+                {otherUser.car_make && otherUser.car_model && (
+                  <>
+                    {otherUser.car_make} {otherUser.car_model}
+                    {otherUser.car_color && ` • ${otherUser.car_color}`}
+                    {otherUser.car_license_plate && ` • ${otherUser.car_license_plate}`}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <Chat client={chatClient} theme="str-chat__theme-light">
+          <Channel channel={channel}>
+            <Window>
+              <MessageList />
+              {isActive ? (
+                <MessageInput />
+              ) : (
+                <div style={{ 
+                  padding: '16px', 
+                  textAlign: 'center', 
+                  backgroundColor: '#f5f5f5',
+                  color: '#666',
+                  borderTop: '1px solid #e0e0e0'
+                }}>
+                  Chat session is {chatStatus}. No new messages can be sent.
+                </div>
+              )}
+            </Window>
+          </Channel>
+        </Chat>
+
+        {isActive && (
+          <ChatActionButtons
+            onApprove={handleApprove}
+            onCancel={handleCancel}
+            isProcessing={isProcessing}
+            approvalState={approvalState}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Render as overlay (original behavior)
   return (
     <div className="chat-thread-overlay" onClick={onClose}>
       <div className="chat-thread-container" onClick={(e) => e.stopPropagation()}>

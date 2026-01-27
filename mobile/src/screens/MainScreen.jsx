@@ -9,13 +9,12 @@ import PinConfirmationModal from '../components/PinConfirmationModal';
 import ParkingDetailModal from '../components/ParkingDetailModal';
 import CancelReservationModal from '../components/CancelReservationModal';
 import CarDataFormModal from '../components/CarDataFormModal';
-import PaymentSideMenu from '../components/PaymentSideMenu';
+import SideMenu from '../components/SideMenu';
 import LeavingParkingButton from '../components/LeavingParkingButton';
 import NotLeavingParkingButton from '../components/NotLeavingParkingButton';
 import ReservedParkingButton from '../components/ReservedParkingButton';
 import CancelReservationButton from '../components/CancelReservationButton';
 import CarDataBanner from '../components/CarDataBanner';
-import ChatButton from '../components/ChatButton';
 import { colors } from '../styles/colors';
 import { reverseGeocode } from '../utils/geocoding';
 import {
@@ -407,10 +406,14 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
       )}
 
       <TouchableOpacity
-        style={styles.paymentButton}
+        style={styles.menuButton}
         onPress={() => setIsPaymentMenuOpen(true)}
       >
-        <Text style={styles.paymentButtonText}>💳</Text>
+        <View style={styles.menuIcon}>
+          <View style={styles.menuLine} />
+          <View style={styles.menuLine} />
+          <View style={styles.menuLine} />
+        </View>
       </TouchableOpacity>
 
       <MapContainer
@@ -463,14 +466,14 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         onCancel={handleCancelPin}
       />
 
-      <PaymentSideMenu
+      <SideMenu
         visible={isPaymentMenuOpen}
         onClose={() => setIsPaymentMenuOpen(false)}
         user={user}
         onSignOut={onSignOut}
-        pendingNotifications={pendingNotifications}
-        onAcceptReservation={handleAcceptReservation}
-        onDeclineReservation={handleDeclineReservation}
+        onNavigateToWallet={() => navigation.navigate('Wallet', { user })}
+        onNavigateToChats={() => navigation.navigate('ChatChannelList')}
+        onNavigateToSettings={() => navigation.navigate('Settings', { user })}
       />
 
       <ParkingDetailModal
@@ -492,8 +495,6 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         onClose={handleCarDataModalClose}
         onSuccess={handleCarDataSuccess}
       />
-
-      <ChatButton onPress={() => navigation.navigate('ChatChannelList')} />
     </View>
   );
 };
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
   containerWithBanner: {
     paddingTop: 50,
   },
-  paymentButton: {
+  menuButton: {
     position: 'absolute',
     top: 20,
     left: 20,
@@ -522,8 +523,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  paymentButtonText: {
-    fontSize: 20,
+  menuIcon: {
+    width: 24,
+    height: 18,
+    justifyContent: 'space-between',
+  },
+  menuLine: {
+    width: 24,
+    height: 2,
+    backgroundColor: colors.white,
+    borderRadius: 1,
   },
 });
 

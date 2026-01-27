@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 import ChatThread from './ChatThread';
 import './ChatChannelList.css';
 
-const ChatChannelList = ({ onClose }) => {
+const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
   const { chatClient, isReady } = useStreamChat();
   const [channels, setChannels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -138,8 +138,9 @@ const ChatChannelList = ({ onClose }) => {
         channel={selectedChannelData.streamChannel}
         otherUser={selectedChannelData.other_user}
         channelData={selectedChannelData}
-        onClose={() => setSelectedSessionId(null)}
+        onClose={inSideMenu ? onClose : () => setSelectedSessionId(null)}
         onBack={() => setSelectedSessionId(null)}
+        inSideMenu={inSideMenu}
       />
     );
   }
@@ -148,6 +149,58 @@ const ChatChannelList = ({ onClose }) => {
   const activeChannels = channels.filter(c => c.status === 'active');
   const historyChannels = channels.filter(c => c.status !== 'active');
 
+  // Render inside side menu
+  if (inSideMenu) {
+    return (
+      <div className="chat-channel-list-side-menu">
+        <div className="page-header">
+          <button className="back-button" onClick={onBack}>
+            ‹
+          </button>
+          <h2 className="page-title">Chats</h2>
+          <button className="page-close-button" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="chat-channel-list-content side-menu-content">
+          {loading ? (
+            <div className="chat-loading-state">
+              <div className="chat-loading-spinner"></div>
+              <p>Loading conversations...</p>
+            </div>
+          ) : channels.length === 0 ? (
+            <div className="chat-empty-state">
+              <div className="chat-empty-state-icon">💬</div>
+              <h3>No conversations yet</h3>
+              <p>Reserve a parking spot to start chatting with other users!</p>
+            </div>
+          ) : (
+            <>
+              <div className="chat-section">
+                <div className="chat-section-header">Active</div>
+                {activeChannels.length > 0 ? (
+                  activeChannels.map(renderChannelItem)
+                ) : (
+                  <div className="chat-section-empty">No active chats</div>
+                )}
+              </div>
+
+              <div className="chat-section">
+                <div className="chat-section-header">History</div>
+                {historyChannels.length > 0 ? (
+                  historyChannels.map(renderChannelItem)
+                ) : (
+                  <div className="chat-section-empty">No chat history</div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Render as overlay (original behavior)
   return (
     <div className="chat-channel-list-overlay" onClick={onClose}>
       <div className="chat-channel-list-container" onClick={(e) => e.stopPropagation()}>

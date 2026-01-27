@@ -6,14 +6,12 @@ import LoginScreen from "./components/LoginScreen";
 import PinConfirmationModal from "./components/PinConfirmationModal";
 import LeavingParkingButton from "./components/LeavingParkingButton";
 import NotLeavingParkingButton from "./components/NotLeavingParkingButton";
-import CancelReservationButton from "./components/CancelReservationButton";
 import ReservedParkingButton from "./components/ReservedParkingButton";
 import CancelReservationModal from "./components/CancelReservationModal";
-import PaymentSideMenu from "./components/PaymentSideMenu";
+import SideMenu from "./components/SideMenu";
 import ParkingDetailModal from "./components/ParkingDetailModal";
 import CarDataBanner from "./components/CarDataBanner";
 import CarDataFormModal from "./components/CarDataFormModal";
-import ChatButton from "./components/ChatButton";
 import { StreamChatProvider } from "./contexts/StreamChatContext";
 import "./App.css";
 
@@ -664,13 +662,16 @@ function App() {
           <CarDataBanner onClickBanner={handleCarDataBannerClick} />
         )}
         <button
-          className="payment-menu-toggle-button"
+          className="menu-toggle-button"
           onClick={() => setIsPaymentMenuOpen(true)}
-          title="Payment Settings"
+          title="Menu"
         >
-          💳
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
         </button>
-        <ChatButton />
         <MapContainer
           userLocation={userLocation}
           otherUsersPins={otherUsersPins}
@@ -700,14 +701,6 @@ function App() {
             }
           />
         )}
-        {userReservedPins && userReservedPins.length > 0 && (
-          <CancelReservationButton
-            reservedPin={userReservedPins[0]}
-            onCancelReservation={(pin) =>
-              handleCancelReservationClick(pin, "reserving")
-            }
-          />
-        )}
         {showConfirmModal && (
           <PinConfirmationModal
             address={pinAddress}
@@ -716,7 +709,7 @@ function App() {
             onCancel={handleCancelPin}
           />
         )}
-        <PaymentSideMenu
+        <SideMenu
           isOpen={isPaymentMenuOpen}
           onClose={() => setIsPaymentMenuOpen(false)}
           user={user}

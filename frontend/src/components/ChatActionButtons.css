@@ -138,3 +138,23 @@
     font-size: 14px;
   }
 }
+
+/* Side menu version - compact */
+.chat-thread-side-menu .chat-action-buttons {
+  gap: 8px;
+  padding: 12px;
+}
+
+.chat-thread-side-menu .chat-action-btn {
+  padding: 14px 8px;
+  border-radius: 12px;
+}
+
+.chat-thread-side-menu .chat-action-icon {
+  font-size: 24px;
+}
+
+.chat-thread-side-menu .chat-action-label {
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
