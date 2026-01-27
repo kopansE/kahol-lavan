@@ -5,30 +5,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 const ChatActionButtons = ({ onCancel, onApprove, onExtension, isProcessing = false, approvalState = {} }) => {
   const { userApproved, otherUserApproved, bothApproved } = approvalState;
 
-  console.log('ChatActionButtons rendered with:', { 
-    hasOnApprove: !!onApprove, 
-    hasOnCancel: !!onCancel, 
-    isProcessing, 
-    approvalState 
-  });
-
   const handleCancel = () => {
-    console.log('ChatActionButtons: Cancel button pressed');
     if (onCancel && !isProcessing && !bothApproved) {
-      console.log('ChatActionButtons: Calling onCancel handler');
       onCancel();
-    } else {
-      console.log('ChatActionButtons: Cancel blocked -', { hasOnCancel: !!onCancel, isProcessing, bothApproved });
     }
   };
 
   const handleApprove = () => {
-    console.log('ChatActionButtons: Approve button pressed');
     if (onApprove && !isProcessing && !bothApproved) {
-      console.log('ChatActionButtons: Calling onApprove handler');
       onApprove();
-    } else {
-      console.log('ChatActionButtons: Approve blocked -', { hasOnApprove: !!onApprove, isProcessing, bothApproved });
     }
   };
 
