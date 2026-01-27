@@ -9,6 +9,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { formatParkingZone } from "../utils/parkingZoneUtils";
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -195,6 +196,8 @@ const MapContainer = ({
                   </>
                 )}
                 <br />
+                Parking: {formatParkingZone(userOwnPin.parking_zone)}
+                <br />
                 Lat: {userOwnPin.position[0].toFixed(6)}
                 <br />
                 Lng: {userOwnPin.position[1].toFixed(6)}
@@ -240,6 +243,8 @@ const MapContainer = ({
                   <strong>Your Reserved Parking</strong>
                   <br />
                   Status: {pin.status}
+                  <br />
+                  Parking: {formatParkingZone(pin.parking_zone)}
                   <br />
                   Lat: {pin.position[0].toFixed(6)}
                   <br />

@@ -1,7 +1,8 @@
 import React from "react";
+import { formatParkingZone } from "../utils/parkingZoneUtils";
 import "./PinConfirmationModal.css";
 
-const PinConfirmationModal = ({ address, isLoading, onConfirm, onCancel }) => {
+const PinConfirmationModal = ({ address, parkingZone, isLoading, onConfirm, onCancel }) => {
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -21,6 +22,12 @@ const PinConfirmationModal = ({ address, isLoading, onConfirm, onCancel }) => {
             <strong>{address}</strong>
           )}
         </div>
+
+        {!isLoading && (
+          <div style={{ fontSize: "0.9em", marginTop: "8px", color: "#666" }}>
+            🅿️ {formatParkingZone(parkingZone)}
+          </div>
+        )}
 
         <p className="modal-question">Did you park here? 🙂</p>
 

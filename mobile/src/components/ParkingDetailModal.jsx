@@ -12,6 +12,7 @@ import {
 import { commonStyles } from '../styles/common';
 import { colors } from '../styles/colors';
 import { reserveParking } from '../utils/edgeFunctions';
+import { formatParkingZone } from '../utils/parkingZoneUtils';
 
 const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => {
   const [isReserving, setIsReserving] = useState(false);
@@ -67,6 +68,14 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
               <Text style={styles.address}>{parking.address}</Text>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Location</Text>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoIcon}>🅿️</Text>
+                <Text style={styles.infoText}>{formatParkingZone(parking.parking_zone)}</Text>
+              </View>
             </View>
 
             <View style={styles.section}>

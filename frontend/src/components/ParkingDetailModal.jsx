@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { formatParkingZone } from "../utils/parkingZoneUtils";
 import "./ParkingDetailModal.css";
 
 const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
@@ -101,6 +102,15 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
           <div className="parking-address">{parking.address}</div>
         </div>
         <div className="parking-detail-body">
+          {/* Parking Zone */}
+          <div className="parking-info-section">
+            <h3 className="info-section-title">Location</h3>
+            <div className="info-item">
+              <span className="info-icon">🅿️</span>
+              <span className="info-text">{formatParkingZone(parking.parking_zone)}</span>
+            </div>
+          </div>
+
           {/* Owner Information */}
           <div className="parking-info-section">
             <h3 className="info-section-title">Owner</h3>

@@ -17,6 +17,7 @@ import CancelReservationButton from '../components/CancelReservationButton';
 import CarDataBanner from '../components/CarDataBanner';
 import { colors } from '../styles/colors';
 import { reverseGeocode } from '../utils/geocoding';
+import { getParkingZone } from '../utils/parkingZoneUtils';
 import {
   savePin,
   activatePin,
@@ -131,7 +132,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
     try {
       const { data, error } = await supabase
         .from('pins')
-        .select('id, position, status, created_at, reserved_by')
+        .select('id, position, parking_zone, status, created_at, reserved_by')
         .eq('user_id', userId)
         .in('status', ['waiting', 'active', 'reserved'])
         .order('created_at', { ascending: false })
@@ -147,6 +148,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         const pin = {
           id: data.id,
           position: data.position,
+          parking_zone: data.parking_zone,
           status: data.status,
           timestamp: data.created_at,
           reserved_by: data.reserved_by,
@@ -203,6 +205,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
             reservedByUser.push({
               id: pin.id,
               position: pin.position,
+              parking_zone: pin.parking_zone,
               timestamp: pin.created_at,
               status: pin.status,
               reserved_by: pin.reserved_by,
@@ -212,6 +215,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
             activePins.push({
               id: pin.id,
               position: pin.position,
+              parking_zone: pin.parking_zone,
               timestamp: pin.created_at,
               user: pin.user,
             });
@@ -230,10 +234,14 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
   };
 
   const handleMapPress = async (coordinate) => {
+    // Calculate parking zone
+    const parkingZoneInfo = getParkingZone(coordinate.latitude, coordinate.longitude);
+    
     const newPin = {
       id: Date.now(),
       position: [coordinate.latitude, coordinate.longitude],
       timestamp: new Date().toISOString(),
+      parking_zone: parkingZoneInfo ? parkingZoneInfo.zone : null,
     };
 
     setPendingPin(newPin);
@@ -461,6 +469,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
       <PinConfirmationModal
         visible={showConfirmModal}
         address={pinAddress}
+        parkingZone={pendingPin?.parking_zone}
         isLoading={isLoadingAddress}
         onConfirm={handleConfirmPin}
         onCancel={handleCancelPin}
