@@ -86,6 +86,19 @@ export const declineReservation = async (transferRequestId) => {
   });
 };
 
+// Chat-based reservation operations
+export const approveInChat = async (sessionId) => {
+  return callEdgeFunction('approve-in-chat', {
+    body: { session_id: sessionId },
+  });
+};
+
+export const cancelInChat = async (sessionId) => {
+  return callEdgeFunction('cancel-in-chat', {
+    body: { session_id: sessionId },
+  });
+};
+
 // Data fetching operations
 export const getActivePins = async () => {
   return callEdgeFunction('get-active-pins', {

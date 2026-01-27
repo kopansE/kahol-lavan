@@ -63,6 +63,32 @@
   padding: 20px;
 }
 
+.chat-section {
+  margin-bottom: 24px;
+}
+
+.chat-section:last-child {
+  margin-bottom: 0;
+}
+
+.chat-section-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #667eea;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-left: 4px;
+}
+
+.chat-section-empty {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+  font-size: 14px;
+  font-style: italic;
+}
+
 .chat-channel-item {
   display: flex;
   align-items: center;

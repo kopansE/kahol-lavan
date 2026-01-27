@@ -1,0 +1,23 @@
+.chat-timer {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  text-align: center;
+  color: white;
+  border-radius: 12px 12px 0 0;
+}
+
+.chat-timer-display {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+
+.chat-timer-label {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  opacity: 0.95;
+}

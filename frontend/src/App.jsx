@@ -34,7 +34,6 @@ function App() {
   const [cancelUserType, setCancelUserType] = useState(null); // 'reserving' or 'owner'
   const [pinToCancel, setPinToCancel] = useState(null);
   const [reservedByName, setReservedByName] = useState(null);
-  const [pendingNotifications, setPendingNotifications] = useState([]);
   const [userDataComplete, setUserDataComplete] = useState(true); // Assume true initially
   const [showCarDataModal, setShowCarDataModal] = useState(false);
 
@@ -46,7 +45,6 @@ function App() {
       if (session?.user) {
         loadUserOwnPin(session.user.id);
         loadOtherUsersPins(session.user.id);
-        loadPendingNotifications();
         loadUserProfile();
       }
     });
@@ -59,30 +57,17 @@ function App() {
       if (session?.user) {
         loadUserOwnPin(session.user.id);
         loadOtherUsersPins(session.user.id);
-        loadPendingNotifications();
         loadUserProfile();
       } else {
         setOtherUsersPins([]);
         setUserOwnPin(null);
         setUserReservedPins([]);
-        setPendingNotifications([]);
         setUserDataComplete(true);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
-
-  // Poll for pending notifications every 10 seconds
-  useEffect(() => {
-    if (!user) return;
-
-    const interval = setInterval(() => {
-      loadPendingNotifications();
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [user]);
 
   // Handle payment setup completion callback
   useEffect(() => {
@@ -623,35 +608,6 @@ function App() {
     setCancelUserType(null);
   };
 
-  const loadPendingNotifications = async () => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (!token) return;
-
-      const url = `${
-        import.meta.env.VITE_SUPABASE_URL
-      }/functions/v1/get-pending-notifications`;
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        setPendingNotifications(result.notifications || []);
-      }
-    } catch (error) {
-      console.error("Error loading notifications:", error);
-    }
-  };
-
   const loadUserProfile = async () => {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -678,90 +634,6 @@ function App() {
       }
     } catch (error) {
       console.error("Error loading user profile:", error);
-    }
-  };
-
-  const handleAcceptReservation = async (notificationId) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (!token) {
-        alert("Authentication error. Please log in again.");
-        return;
-      }
-
-      const url = `${
-        import.meta.env.VITE_SUPABASE_URL
-      }/functions/v1/accept-reservation`;
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ transfer_request_id: notificationId }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to accept reservation");
-      }
-
-      alert(
-        `✅ ${result.message}\nAmount received: ₪${result.amount_received}\nNew balance: ₪${result.new_balance}`
-      );
-
-      // Reload data
-      await loadUserOwnPin(user.id);
-      await loadOtherUsersPins(user.id);
-      await loadPendingNotifications();
-    } catch (error) {
-      console.error("Error accepting reservation:", error);
-      alert(`Failed to accept reservation: ${error.message}`);
-    }
-  };
-
-  const handleDeclineReservation = async (notificationId) => {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (!token) {
-        alert("Authentication error. Please log in again.");
-        return;
-      }
-
-      const url = `${
-        import.meta.env.VITE_SUPABASE_URL
-      }/functions/v1/decline-reservation`;
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ transfer_request_id: notificationId }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Failed to decline reservation");
-      }
-
-      alert(`✅ ${result.message}`);
-
-      // Reload data
-      await loadUserOwnPin(user.id);
-      await loadOtherUsersPins(user.id);
-      await loadPendingNotifications();
-    } catch (error) {
-      console.error("Error declining reservation:", error);
-      alert(`Failed to decline reservation: ${error.message}`);
     }
   };
 
@@ -849,9 +721,6 @@ function App() {
           onClose={() => setIsPaymentMenuOpen(false)}
           user={user}
           onSignOut={handleSignOut}
-          pendingNotifications={pendingNotifications}
-          onAcceptReservation={handleAcceptReservation}
-          onDeclineReservation={handleDeclineReservation}
         />
         {selectedParking && (
           <ParkingDetailModal

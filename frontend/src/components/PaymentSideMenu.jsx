@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
-import ReservationNotification from "./ReservationNotification";
 import "./PaymentSideMenu.css";
 
 const PaymentSideMenu = ({ 
   isOpen, 
   onClose, 
   user, 
-  onSignOut,
-  pendingNotifications = [],
-  onAcceptReservation,
-  onDeclineReservation
+  onSignOut
 }) => {
   const [paymentSetupCompleted, setPaymentSetupCompleted] = useState(false);
   const [walletAmount, setWalletAmount] = useState(null);
@@ -243,20 +239,6 @@ const PaymentSideMenu = ({
               >
                 Withdraw to Bank Account
               </button>
-
-              {/* Notifications Section */}
-              {pendingNotifications.length > 0 && (
-                <div className="notifications-section">
-                  {pendingNotifications.map((notification) => (
-                    <ReservationNotification
-                      key={notification.id}
-                      notification={notification}
-                      onAccept={onAcceptReservation}
-                      onDecline={onDeclineReservation}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
           ) : (
             <div className="payment-not-setup">

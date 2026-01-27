@@ -144,6 +144,12 @@ const ChatChannelListScreen = ({ navigation }) => {
     );
   };
 
+  const renderSectionHeader = ({ section }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionHeaderText}>{section.title}</Text>
+    </View>
+  );
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -157,6 +163,16 @@ const ChatChannelListScreen = ({ navigation }) => {
       </View>
     );
   }
+
+  // Separate channels into active and history
+  const activeChannels = channels.filter((c) => c.status === 'active');
+  const historyChannels = channels.filter((c) => c.status !== 'active');
+
+  // Always show both sections
+  const sections = [
+    { title: 'Active', data: activeChannels, isEmpty: activeChannels.length === 0 },
+    { title: 'History', data: historyChannels, isEmpty: historyChannels.length === 0 },
+  ];
 
   return (
     <View style={styles.container}>
@@ -178,9 +194,34 @@ const ChatChannelListScreen = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
-          data={channels}
-          renderItem={renderChannel}
-          keyExtractor={(item) => item.id}
+          data={sections.flatMap((section) => [
+            { isHeader: true, title: section.title },
+            ...(section.isEmpty
+              ? [{ isEmpty: true, sectionTitle: section.title }]
+              : section.data),
+          ])}
+          renderItem={({ item }) =>
+            item.isHeader ? (
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>{item.title}</Text>
+              </View>
+            ) : item.isEmpty ? (
+              <View style={styles.sectionEmpty}>
+                <Text style={styles.sectionEmptyText}>
+                  {item.sectionTitle === 'Active' ? 'No active chats' : 'No chat history'}
+                </Text>
+              </View>
+            ) : (
+              renderChannel({ item })
+            )
+          }
+          keyExtractor={(item, index) =>
+            item.isHeader
+              ? `header-${item.title}`
+              : item.isEmpty
+              ? `empty-${item.sectionTitle}`
+              : item.id
+          }
           contentContainerStyle={styles.listContent}
         />
       )}
@@ -242,6 +283,28 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 10,
+  },
+  sectionHeader: {
+    paddingTop: 16,
+    paddingBottom: 8,
+    paddingHorizontal: 5,
+  },
+  sectionHeaderText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  sectionEmpty: {
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+  },
+  sectionEmptyText: {
+    fontSize: 14,
+    color: '#999',
+    fontStyle: 'italic',
   },
   channelItem: {
     flexDirection: 'row',
