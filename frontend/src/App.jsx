@@ -74,8 +74,6 @@ function App() {
       const paymentSetup = urlParams.get("payment_setup");
 
       if (paymentSetup === "complete" && user) {
-        console.log("🔄 Payment setup completed, fetching payment method...");
-
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           const token = sessionData?.session?.access_token;
@@ -99,7 +97,6 @@ function App() {
           const result = await response.json();
 
           if (response.ok && result.success) {
-            console.log("✅ Payment method saved:", result.payment_method);
             alert(
               `Payment method added successfully! Last 4 digits: ${result.payment_method.last4}`
             );
@@ -121,7 +118,6 @@ function App() {
           );
         }
       } else if (paymentSetup === "cancelled") {
-        console.log("⚠️ Payment setup cancelled");
         alert("Payment setup was cancelled.");
         window.history.replaceState(
           {},

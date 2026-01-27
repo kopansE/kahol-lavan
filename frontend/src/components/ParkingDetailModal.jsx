@@ -85,26 +85,14 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
 
   if (!parking) return null;
 
-  // Debug: Log the parking object to see what we're receiving
-  console.log("🔍 Parking object:", parking);
-
   // Extract user data (could be nested as 'user', 'users', or at parking level)
   const userData = parking.user || parking.users || parking;
-  console.log("🔍 User data:", userData);
 
   const ownerName = userData?.full_name || "Unknown Owner";
   const carMake = userData?.car_make;
   const carModel = userData?.car_model;
   const carColor = userData?.car_color;
   const licensePlate = userData?.car_license_plate;
-
-  console.log("🔍 Extracted data:", {
-    ownerName,
-    carMake,
-    carModel,
-    carColor,
-    licensePlate,
-  });
 
   return (
     <div className="parking-detail-overlay">

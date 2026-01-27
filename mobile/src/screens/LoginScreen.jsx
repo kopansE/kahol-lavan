@@ -49,8 +49,6 @@ const LoginScreen = () => {
         path: 'auth/callback',
       });
 
-      console.log('Redirect URL:', redirectUrl);
-
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

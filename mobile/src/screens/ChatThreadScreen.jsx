@@ -18,11 +18,6 @@ const ChatThreadScreen = ({ route, navigation }) => {
     bothApproved: false,
   });
 
-  // Debug log to verify session id is available
-  console.log('ChatThreadScreen - channelData:', channelData);
-  console.log('ChatThreadScreen - session_id:', channelData?.id);
-  console.log('ChatThreadScreen - status:', channelData?.status);
-
   if (!chatClient || !channel) {
     return null;
   }
@@ -43,8 +38,6 @@ const ChatThreadScreen = ({ route, navigation }) => {
   const handleApprove = async () => {
     if (isProcessing) return;
 
-    console.log('Approve button clicked! session_id:', channelData?.id);
-
     if (!channelData?.id) {
       Alert.alert('Error', 'Chat session data is missing. Please try again.');
       return;
@@ -52,9 +45,7 @@ const ChatThreadScreen = ({ route, navigation }) => {
 
     try {
       setIsProcessing(true);
-      console.log('Calling approveInChat with session_id:', channelData.id);
       const result = await approveInChat(channelData.id);
-      console.log('approveInChat result:', result);
       
       setApprovalState({
         userApproved: result.user_approved,
@@ -92,8 +83,6 @@ const ChatThreadScreen = ({ route, navigation }) => {
   const handleCancel = async () => {
     if (isProcessing) return;
 
-    console.log('Cancel button clicked! session_id:', channelData?.id);
-
     if (!channelData?.id) {
       Alert.alert('Error', 'Chat session data is missing. Please try again.');
       return;
@@ -113,9 +102,7 @@ const ChatThreadScreen = ({ route, navigation }) => {
           onPress: async () => {
             try {
               setIsProcessing(true);
-              console.log('Calling cancelInChat with session_id:', channelData.id);
               const result = await cancelInChat(channelData.id);
-              console.log('cancelInChat result:', result);
 
               Alert.alert(
                 'Cancelled',

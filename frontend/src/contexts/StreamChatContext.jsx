@@ -69,7 +69,6 @@ export const StreamChatProvider = ({ children, user }) => {
           data.token
         );
 
-        console.log('✅ Connected to Stream Chat');
         setChatClient(client);
       } catch (err) {
         console.error('Failed to connect to Stream Chat:', err);

@@ -16,10 +16,6 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
     bothApproved: false,
   });
 
-  console.log('ChatThread - channelData:', channelData);
-  console.log('ChatThread - session_id:', channelData?.id);
-  console.log('ChatThread - status:', channelData?.status);
-
   if (!chatClient || !channel) {
     return null;
   }
@@ -33,13 +29,10 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
   const chatStatus = channelData?.status || 'unknown';
 
   const handleTimerExpire = () => {
-    console.log('Time expired!');
   };
 
   const handleApprove = async () => {
     if (isProcessing) return;
-
-    console.log('Approve button clicked! session_id:', channelData?.id);
 
     if (!channelData?.id) {
       alert('Chat session data is missing. Please try again.');
@@ -59,7 +52,6 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/approve-in-chat`;
 
-      console.log('Calling approve-in-chat with session_id:', channelData.id);
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -70,7 +62,6 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
       });
 
       const result = await response.json();
-      console.log('approve-in-chat result:', result);
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to approve');
@@ -101,8 +92,6 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
   const handleCancel = async () => {
     if (isProcessing) return;
 
-    console.log('Cancel button clicked! session_id:', channelData?.id);
-
     if (!channelData?.id) {
       alert('Chat session data is missing. Please try again.');
       return;
@@ -125,7 +114,6 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cancel-in-chat`;
 
-      console.log('Calling cancel-in-chat with session_id:', channelData.id);
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -136,7 +124,6 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
       });
 
       const result = await response.json();
-      console.log('cancel-in-chat result:', result);
 
       if (!response.ok || !result.success) {
         throw new Error(result.error || 'Failed to cancel');
