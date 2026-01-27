@@ -1,5 +1,6 @@
 import { supabase } from '../config/supabase';
 import { SUPABASE_URL } from '@env';
+import { getParkingZone } from './parkingZoneUtils';
 
 const getAuthToken = async () => {
   const { data: sessionData, error } = await supabase.auth.getSession();
@@ -40,10 +41,15 @@ const callEdgeFunction = async (functionName, options = {}) => {
 
 // Pin operations
 export const savePin = async (position, address) => {
+  // Calculate parking zone from position
+  const [lat, lng] = position;
+  const parkingZoneInfo = getParkingZone(lat, lng);
+  const parkingZoneNumber = parkingZoneInfo ? parkingZoneInfo.zone : null;
+
   return callEdgeFunction('save-pin', {
     body: {
       position: position,
-      parking_zone: null,
+      parking_zone: parkingZoneNumber,
       address: address,
     },
   });

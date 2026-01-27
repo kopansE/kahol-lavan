@@ -13,6 +13,7 @@ import ParkingDetailModal from "./components/ParkingDetailModal";
 import CarDataBanner from "./components/CarDataBanner";
 import CarDataFormModal from "./components/CarDataFormModal";
 import { StreamChatProvider } from "./contexts/StreamChatContext";
+import { getParkingZone } from "./utils/parkingZoneUtils";
 import "./App.css";
 
 function App() {
@@ -144,7 +145,7 @@ function App() {
     try {
       const { data, error } = await supabase
         .from("pins")
-        .select("id, position, status, created_at, reserved_by")
+        .select("id, position, parking_zone, status, created_at, reserved_by")
         .eq("user_id", userId)
         .in("status", ["waiting", "active", "reserved"])
         .order("created_at", { ascending: false })
@@ -159,6 +160,7 @@ function App() {
         const pin = {
           id: data.id,
           position: data.position,
+          parking_zone: data.parking_zone,
           status: data.status,
           timestamp: data.created_at,
           reserved_by: data.reserved_by,
@@ -243,6 +245,7 @@ function App() {
             reservedByUser.push({
               id: pin.id,
               position: pin.position,
+              parking_zone: pin.parking_zone,
               timestamp: pin.created_at,
               status: pin.status,
               reserved_by: pin.reserved_by,
@@ -253,6 +256,7 @@ function App() {
             activePins.push({
               id: pin.id,
               position: pin.position,
+              parking_zone: pin.parking_zone,
               timestamp: pin.created_at,
               user: pin.user,
             });
@@ -328,10 +332,15 @@ function App() {
         return false;
       }
 
+      // Calculate parking zone from position
+      const [lat, lng] = pin.position;
+      const parkingZoneInfo = getParkingZone(lat, lng);
+      const parkingZoneNumber = parkingZoneInfo ? parkingZoneInfo.zone : null;
+
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/save-pin`;
       const payload = {
         position: pin.position,
-        parking_zone: null,
+        parking_zone: parkingZoneNumber,
         address: address,
       };
       const response = await fetch(url, {
@@ -494,10 +503,14 @@ function App() {
   };
 
   const handleMapClick = async (latlng) => {
+    // Calculate parking zone
+    const parkingZoneInfo = getParkingZone(latlng.lat, latlng.lng);
+    
     const newPin = {
       id: Date.now(),
       position: [latlng.lat, latlng.lng],
       timestamp: new Date().toISOString(),
+      parking_zone: parkingZoneInfo ? parkingZoneInfo.zone : null,
     };
 
     setPendingPin(newPin);
@@ -700,6 +713,7 @@ function App() {
         {showConfirmModal && (
           <PinConfirmationModal
             address={pinAddress}
+            parkingZone={pendingPin?.parking_zone}
             isLoading={isLoadingAddress}
             onConfirm={handleConfirmPin}
             onCancel={handleCancelPin}

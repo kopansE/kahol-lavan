@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { commonStyles } from '../styles/common';
 import { colors } from '../styles/colors';
+import { formatParkingZone } from '../utils/parkingZoneUtils';
 
-const PinConfirmationModal = ({ visible, address, isLoading, onConfirm, onCancel }) => {
+const PinConfirmationModal = ({ visible, address, parkingZone, isLoading, onConfirm, onCancel }) => {
   return (
     <Modal
       visible={visible}
@@ -31,7 +32,12 @@ const PinConfirmationModal = ({ visible, address, isLoading, onConfirm, onCancel
                 <Text style={styles.loadingText}>Finding address...</Text>
               </View>
             ) : (
-              <Text style={styles.address}>{address}</Text>
+              <>
+                <Text style={styles.address}>{address}</Text>
+                <Text style={styles.parkingZone}>
+                  🅿️ {formatParkingZone(parkingZone)}
+                </Text>
+              </>
             )}
           </View>
 
@@ -83,6 +89,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.darkGray,
     textAlign: 'center',
+  },
+  parkingZone: {
+    fontSize: 14,
+    color: colors.gray,
+    textAlign: 'center',
+    marginTop: 8,
   },
   question: {
     marginTop: 8,
