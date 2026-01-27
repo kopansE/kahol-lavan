@@ -6,7 +6,6 @@ import LoginScreen from "./components/LoginScreen";
 import PinConfirmationModal from "./components/PinConfirmationModal";
 import LeavingParkingButton from "./components/LeavingParkingButton";
 import NotLeavingParkingButton from "./components/NotLeavingParkingButton";
-import CancelReservationButton from "./components/CancelReservationButton";
 import ReservedParkingButton from "./components/ReservedParkingButton";
 import CancelReservationModal from "./components/CancelReservationModal";
 import PaymentSideMenu from "./components/PaymentSideMenu";
@@ -697,14 +696,6 @@ function App() {
             reservedByName={reservedByName}
             onCancelReservation={(pin) =>
               handleCancelReservationClick(pin, "owner")
-            }
-          />
-        )}
-        {userReservedPins && userReservedPins.length > 0 && (
-          <CancelReservationButton
-            reservedPin={userReservedPins[0]}
-            onCancelReservation={(pin) =>
-              handleCancelReservationClick(pin, "reserving")
             }
           />
         )}
