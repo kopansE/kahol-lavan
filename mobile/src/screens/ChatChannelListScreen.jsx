@@ -26,18 +26,23 @@ const ChatChannelListScreen = ({ navigation }) => {
     try {
       setLoading(true);
 
-      // Get channels from our database
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-
-      if (!token) {
-        throw new Error('No authentication token');
+      // Get channels from our database with automatic token refresh
+      // First ensure session is valid, then refresh if needed
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        // Token might be expired, try to refresh
+        console.log('Token validation failed, refreshing session...');
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          throw new Error('Session expired. Please log in again.');
+        }
       }
 
       const { data, error } = await supabase.functions.invoke('get-user-channels');
 
       if (error || !data || !data.channels) {
-        throw new Error('Failed to load channels');
+        throw new Error(error?.message || 'Failed to load channels');
       }
 
       // Get Stream channels with their state

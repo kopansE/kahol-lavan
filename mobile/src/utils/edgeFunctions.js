@@ -2,41 +2,112 @@ import { supabase } from '../config/supabase';
 import { SUPABASE_URL } from '@env';
 import { getParkingZone } from './parkingZoneUtils';
 
-const getAuthToken = async () => {
-  const { data: sessionData, error } = await supabase.auth.getSession();
+/**
+ * Ensures we have a valid, fresh token before making API calls.
+ * Validates the token server-side and refreshes if needed.
+ */
+const ensureValidToken = async () => {
+  // Get current session
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (error || !sessionData?.session?.access_token) {
+  if (sessionError || !session) {
     throw new Error('Authentication required. Please log in again.');
   }
+
+  // Validate the token by calling getUser() - this checks with the server
+  const { error: userError } = await supabase.auth.getUser();
   
-  return sessionData.session.access_token;
+  if (userError) {
+    // Token might be expired, try to refresh
+    console.log('Token validation failed, attempting refresh...');
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    
+    if (refreshError || !refreshData.session) {
+      throw new Error('Session expired. Please log in again.');
+    }
+    
+    return refreshData.session.access_token;
+  }
+  
+  return session.access_token;
 };
 
-const callEdgeFunction = async (functionName, options = {}) => {
-  const token = await getAuthToken();
-  const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
+/**
+ * Check if an error is authentication-related and might be fixed by token refresh
+ */
+const isAuthError = (error, response) => {
+  if (response && (response.status === 401 || response.status === 403)) {
+    return true;
+  }
+  const errorMsg = error?.message || error?.toString() || '';
+  return errorMsg.includes('User not found') || 
+         errorMsg.includes('JWT') ||
+         errorMsg.includes('token') ||
+         errorMsg.includes('authorization') ||
+         errorMsg.includes('expired');
+};
+
+/**
+ * Call an edge function with automatic token refresh and retry logic
+ */
+const callEdgeFunction = async (functionName, options = {}, maxRetries = 2) => {
+  let lastError;
   
-  const config = {
-    method: options.method || 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
-    },
-  };
-  
-  if (options.body) {
-    config.body = JSON.stringify(options.body);
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      // Get fresh token (validates and refreshes if needed)
+      const token = await ensureValidToken();
+      const url = `${SUPABASE_URL}/functions/v1/${functionName}`;
+      
+      const config = {
+        method: options.method || 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...options.headers,
+        },
+      };
+      
+      if (options.body) {
+        config.body = JSON.stringify(options.body);
+      }
+      
+      const response = await fetch(url, config);
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        const error = new Error(result.error || result.message || 'Request failed');
+        
+        // If it's an auth error and we have retries left, try again
+        if (isAuthError(error, response) && attempt < maxRetries - 1) {
+          console.log(`Auth error on attempt ${attempt + 1} for ${functionName}, refreshing and retrying...`);
+          // Force session refresh before next attempt
+          await supabase.auth.refreshSession();
+          lastError = error;
+          continue;
+        }
+        
+        throw error;
+      }
+      
+      return result;
+    } catch (err) {
+      lastError = err;
+      
+      // If it's an auth error and we have retries left, try again
+      if (isAuthError(err) && attempt < maxRetries - 1) {
+        console.log(`Error on attempt ${attempt + 1} for ${functionName}, refreshing and retrying...`);
+        await supabase.auth.refreshSession();
+        continue;
+      }
+      
+      if (attempt === maxRetries - 1) {
+        break;
+      }
+    }
   }
   
-  const response = await fetch(url, config);
-  const result = await response.json();
-  
-  if (!response.ok || !result.success) {
-    throw new Error(result.error || result.message || 'Request failed');
-  }
-  
-  return result;
+  throw lastError;
 };
 
 // Pin operations
@@ -175,24 +246,53 @@ export const getStreetGeometry = async (streetName, lat, lng, viewport) => {
   return callEdgeFunctionGet(url);
 };
 
-// Helper function for GET requests with query params
-const callEdgeFunctionGet = async (pathWithParams) => {
-  const token = await getAuthToken();
-  const url = `${SUPABASE_URL}/functions/v1/${pathWithParams}`;
+// Helper function for GET requests with query params (uses same retry logic)
+const callEdgeFunctionGet = async (pathWithParams, maxRetries = 2) => {
+  let lastError;
   
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  
-  const result = await response.json();
-  
-  if (!response.ok || !result.success) {
-    throw new Error(result.error || result.message || 'Request failed');
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const token = await ensureValidToken();
+      const url = `${SUPABASE_URL}/functions/v1/${pathWithParams}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok || !result.success) {
+        const error = new Error(result.error || result.message || 'Request failed');
+        
+        if (isAuthError(error, response) && attempt < maxRetries - 1) {
+          console.log(`Auth error on GET attempt ${attempt + 1}, refreshing and retrying...`);
+          await supabase.auth.refreshSession();
+          lastError = error;
+          continue;
+        }
+        
+        throw error;
+      }
+      
+      return result;
+    } catch (err) {
+      lastError = err;
+      
+      if (isAuthError(err) && attempt < maxRetries - 1) {
+        console.log(`Error on GET attempt ${attempt + 1}, refreshing and retrying...`);
+        await supabase.auth.refreshSession();
+        continue;
+      }
+      
+      if (attempt === maxRetries - 1) {
+        break;
+      }
+    }
   }
   
-  return result;
+  throw lastError;
 };

@@ -1,15 +1,11 @@
 import React from 'react';
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../styles/colors';
 
-const ReservedParkingButton = ({ reservedPin, reservedByName, onCancelReservation }) => {
+const ReservedParkingButton = ({ reservedPin, reservedByName }) => {
   return (
-    <TouchableOpacity
-      style={styles.container}
-      onPress={() => onCancelReservation(reservedPin)}
-      activeOpacity={0.8}
-    >
+    <View style={styles.container}>
       <LinearGradient
         colors={[colors.orange, colors.orangeDark]}
         style={styles.gradient}
@@ -22,7 +18,7 @@ const ReservedParkingButton = ({ reservedPin, reservedByName, onCancelReservatio
           </Text>
         </View>
       </LinearGradient>
-    </TouchableOpacity>
+    </View>
   );
 };
 

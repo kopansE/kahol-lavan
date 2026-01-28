@@ -9,13 +9,11 @@ import PinConfirmationModal from '../components/PinConfirmationModal';
 import ParkingDetailModal from '../components/ParkingDetailModal';
 import ReservedParkingDetailModal from '../components/ReservedParkingDetailModal';
 import OwnParkingDetailModal from '../components/OwnParkingDetailModal';
-import CancelReservationModal from '../components/CancelReservationModal';
 import CarDataFormModal from '../components/CarDataFormModal';
 import SideMenu from '../components/SideMenu';
 import LeavingParkingButton from '../components/LeavingParkingButton';
 import NotLeavingParkingButton from '../components/NotLeavingParkingButton';
 import ReservedParkingButton from '../components/ReservedParkingButton';
-import CancelReservationButton from '../components/CancelReservationButton';
 import CarDataBanner from '../components/CarDataBanner';
 import SearchBar from '../components/SearchBar';
 import { colors } from '../styles/colors';
@@ -28,7 +26,6 @@ import {
   getActivePins,
   getPendingNotifications,
   getUserProfile,
-  cancelReservation,
   acceptReservation,
   declineReservation,
   completePaymentSetup,
@@ -47,9 +44,6 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
   const [selectedParking, setSelectedParking] = useState(null);
   const [selectedReservedParking, setSelectedReservedParking] = useState(null);
   const [selectedOwnParking, setSelectedOwnParking] = useState(null);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [cancelUserType, setCancelUserType] = useState(null);
-  const [pinToCancel, setPinToCancel] = useState(null);
   const [reservedByName, setReservedByName] = useState(null);
   const [pendingNotifications, setPendingNotifications] = useState([]);
   const [userDataComplete, setUserDataComplete] = useState(true);
@@ -333,37 +327,6 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
     setSelectedOwnParking(pin);
   };
 
-  const handleCancelReservationClick = (pin, userType) => {
-    setPinToCancel(pin);
-    setCancelUserType(userType);
-    setShowCancelModal(true);
-  };
-
-  const handleConfirmCancelReservation = async () => {
-    if (!pinToCancel || !user) return;
-
-    try {
-      const result = await cancelReservation(pinToCancel.id);
-      Alert.alert('Success', `${result.message}\nRefund amount: ₪${result.refund_amount}`);
-
-      await loadUserOwnPin(user.id);
-      await loadOtherUsersPins(user.id);
-
-      setShowCancelModal(false);
-      setPinToCancel(null);
-      setCancelUserType(null);
-    } catch (error) {
-      console.error('Error canceling reservation:', error);
-      Alert.alert('Error', `Failed to cancel reservation: ${error.message}`);
-    }
-  };
-
-  const handleCloseCancelModal = () => {
-    setShowCancelModal(false);
-    setPinToCancel(null);
-    setCancelUserType(null);
-  };
-
   const loadPendingNotifications = async () => {
     try {
       const result = await getPendingNotifications();
@@ -489,18 +452,6 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         <ReservedParkingButton
           reservedPin={userOwnPin}
           reservedByName={reservedByName}
-          onCancelReservation={(pin) =>
-            handleCancelReservationClick(pin, 'owner')
-          }
-        />
-      )}
-
-      {userReservedPins && userReservedPins.length > 0 && (
-        <CancelReservationButton
-          reservedPin={userReservedPins[0]}
-          onCancelReservation={(pin) =>
-            handleCancelReservationClick(pin, 'reserving')
-          }
         />
       )}
 
@@ -540,13 +491,6 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         visible={!!selectedOwnParking}
         parking={selectedOwnParking}
         onClose={() => setSelectedOwnParking(null)}
-      />
-
-      <CancelReservationModal
-        visible={showCancelModal}
-        onConfirm={handleConfirmCancelReservation}
-        onClose={handleCloseCancelModal}
-        userType={cancelUserType}
       />
 
       <CarDataFormModal
