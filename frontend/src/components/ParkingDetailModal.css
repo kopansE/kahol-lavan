@@ -127,6 +127,56 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
+/* Navigate Button */
+.navigate-button {
+  background: white;
+  color: #4caf50;
+  border: 2px solid #4caf50;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.navigate-button:hover {
+  background: #e8f5e9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.2);
+}
+
+.navigate-button:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.navigate-button-disabled {
+  background: #f5f5f5;
+  color: #999;
+  border-color: #ddd;
+  cursor: not-allowed;
+}
+
+.navigate-button-disabled:hover {
+  transform: none;
+  box-shadow: none;
+  background: #f5f5f5;
+}
+
+.navigate-icon {
+  font-size: 18px;
+}
+
+.navigate-loading {
+  color: #4caf50;
+}
+
 /* Parking Information Sections */
 .parking-info-section {
   width: 100%;
@@ -209,5 +259,14 @@
   .info-icon {
     font-size: 18px;
     width: 24px;
+  }
+
+  .navigate-button {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+
+  .navigate-icon {
+    font-size: 16px;
   }
 }

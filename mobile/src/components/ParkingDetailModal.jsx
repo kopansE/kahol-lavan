@@ -8,15 +8,118 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
+  Linking,
 } from 'react-native';
 import { commonStyles } from '../styles/common';
 import { colors } from '../styles/colors';
 import { reserveParking } from '../utils/edgeFunctions';
 import { formatParkingZone } from '../utils/parkingZoneUtils';
 
+/**
+ * Opens the device's default navigation app with directions to the specified coordinates
+ * @param {number} lat - Latitude of the destination
+ * @param {number} lng - Longitude of the destination
+ * @param {string} address - Address label for the destination (optional)
+ */
+const openNavigation = async (lat, lng, address = '') => {
+  const destination = `${lat},${lng}`;
+  const label = encodeURIComponent(address || 'Parking Location');
+  
+  if (Platform.OS === 'ios') {
+    // Try Google Maps first, then Apple Maps
+    const googleMapsUrl = `comgooglemaps://?daddr=${destination}&directionsmode=driving`;
+    const appleMapsUrl = `maps://?daddr=${destination}&dirflg=d`;
+    
+    try {
+      const canOpenGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
+      if (canOpenGoogleMaps) {
+        await Linking.openURL(googleMapsUrl);
+        return true;
+      }
+    } catch (error) {
+      console.log('Google Maps not available, trying Apple Maps');
+    }
+    
+    try {
+      await Linking.openURL(appleMapsUrl);
+      return true;
+    } catch (error) {
+      console.error('Failed to open Apple Maps:', error);
+    }
+  } else if (Platform.OS === 'android') {
+    // Try Google Maps intent first, then geo URI
+    const googleMapsUrl = `google.navigation:q=${destination}`;
+    const geoUrl = `geo:${destination}?q=${destination}(${label})`;
+    
+    try {
+      const canOpenGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
+      if (canOpenGoogleMaps) {
+        await Linking.openURL(googleMapsUrl);
+        return true;
+      }
+    } catch (error) {
+      console.log('Google Maps navigation not available, trying geo URI');
+    }
+    
+    try {
+      await Linking.openURL(geoUrl);
+      return true;
+    } catch (error) {
+      console.error('Failed to open geo URI:', error);
+    }
+  }
+  
+  // Fallback to web Google Maps
+  const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+  try {
+    await Linking.openURL(webUrl);
+    return true;
+  } catch (error) {
+    console.error('Failed to open Google Maps web:', error);
+    return false;
+  }
+};
+
 const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => {
   const [isReserving, setIsReserving] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const hasExistingReservation = userReservedPins && userReservedPins.length > 0;
+
+  // Check if we have valid coordinates
+  const hasValidCoordinates = parking?.position && 
+    Array.isArray(parking.position) && 
+    parking.position.length >= 2 &&
+    typeof parking.position[0] === 'number' &&
+    typeof parking.position[1] === 'number';
+
+  const handleNavigateClick = async () => {
+    if (isNavigating || !hasValidCoordinates) return;
+
+    try {
+      setIsNavigating(true);
+      const [lat, lng] = parking.position;
+      const success = await openNavigation(lat, lng, parking.address);
+      
+      if (!success) {
+        Alert.alert(
+          'Navigation Error',
+          `Could not open navigation app. The parking address is:\n\n${parking.address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`}`,
+          [
+            { text: 'OK' }
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error opening navigation:', error);
+      Alert.alert(
+        'Error',
+        'Failed to open navigation. Please try again.'
+      );
+    } finally {
+      setIsNavigating(false);
+    }
+  };
 
   const handleReserveClick = async () => {
     if (isReserving) return;
@@ -145,6 +248,28 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
                   </>
                 )}
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.navigateButton,
+                  (!hasValidCoordinates || isNavigating) && styles.navigateButtonDisabled,
+                ]}
+                onPress={handleNavigateClick}
+                disabled={!hasValidCoordinates || isNavigating}
+              >
+                {isNavigating ? (
+                  <ActivityIndicator color={colors.primaryGradientStart} />
+                ) : (
+                  <View style={styles.navigateButtonContent}>
+                    <Text style={styles.navigateIcon}>🧭</Text>
+                    <Text style={[
+                      styles.navigateButtonText,
+                      !hasValidCoordinates && styles.navigateButtonTextDisabled,
+                    ]}>
+                      {hasValidCoordinates ? 'Navigate to Parking' : 'Location unavailable'}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
                 <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
@@ -231,6 +356,36 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 18,
     fontWeight: '700',
+  },
+  navigateButton: {
+    backgroundColor: colors.white,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.primaryGradientStart,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navigateButtonDisabled: {
+    borderColor: colors.mediumGray,
+    backgroundColor: colors.lightGray,
+  },
+  navigateButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  navigateIcon: {
+    fontSize: 18,
+  },
+  navigateButtonText: {
+    color: colors.primaryGradientStart,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  navigateButtonTextDisabled: {
+    color: colors.gray,
   },
   closeButton: {
     backgroundColor: colors.lightGray,
