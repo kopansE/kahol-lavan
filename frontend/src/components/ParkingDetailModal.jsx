@@ -3,11 +3,133 @@ import { supabase } from "../supabaseClient";
 import { formatParkingZone } from "../utils/parkingZoneUtils";
 import "./ParkingDetailModal.css";
 
+/**
+ * Detects if the user is on a mobile device
+ */
+const isMobileDevice = () => {
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+};
+
+/**
+ * Detects if the user is on iOS
+ */
+const isIOS = () => {
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  return /iphone|ipad|ipod/i.test(userAgent.toLowerCase());
+};
+
+/**
+ * Detects if the user is on Android
+ */
+const isAndroid = () => {
+  const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+  return /android/i.test(userAgent.toLowerCase());
+};
+
+/**
+ * Opens the device's default navigation app with directions to the specified coordinates
+ * @param {number} lat - Latitude of the destination
+ * @param {number} lng - Longitude of the destination
+ * @param {string} address - Address label for the destination (optional)
+ * @returns {Promise<boolean>} - Whether navigation was successfully opened
+ */
+const openNavigation = async (lat, lng, address = '') => {
+  const destination = `${lat},${lng}`;
+  const label = encodeURIComponent(address || 'Parking Location');
+  
+  // Google Maps web URL (universal fallback)
+  const googleMapsWebUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
+  
+  if (isMobileDevice()) {
+    if (isIOS()) {
+      // Try Google Maps app first, then Apple Maps
+      const googleMapsUrl = `comgooglemaps://?daddr=${destination}&directionsmode=driving`;
+      const appleMapsUrl = `maps://?daddr=${destination}&dirflg=d`;
+      
+      // Create hidden iframe to try deep link
+      const tryDeepLink = (url, fallbackUrl) => {
+        return new Promise((resolve) => {
+          const startTime = Date.now();
+          const timeout = setTimeout(() => {
+            // If we're still here after 500ms, the app likely didn't open
+            window.open(fallbackUrl, '_blank');
+            resolve(true);
+          }, 500);
+          
+          window.location.href = url;
+          
+          // If the app opens, the page will lose focus
+          const handleBlur = () => {
+            clearTimeout(timeout);
+            window.removeEventListener('blur', handleBlur);
+            resolve(true);
+          };
+          window.addEventListener('blur', handleBlur);
+        });
+      };
+      
+      // Try to open Apple Maps (more reliable on iOS)
+      window.location.href = appleMapsUrl;
+      return true;
+    } else if (isAndroid()) {
+      // Try Google Maps intent
+      const geoUrl = `geo:${destination}?q=${destination}(${label})`;
+      
+      // Try geo URI first
+      window.location.href = geoUrl;
+      
+      // Set a timeout to fallback to web if geo URI doesn't work
+      setTimeout(() => {
+        window.open(googleMapsWebUrl, '_blank');
+      }, 1000);
+      
+      return true;
+    }
+  }
+  
+  // Desktop or fallback: open Google Maps in new tab
+  window.open(googleMapsWebUrl, '_blank');
+  return true;
+};
+
 const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
   const modalRef = useRef(null);
   const [isReserving, setIsReserving] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const hasExistingReservation =
     userReservedPins && userReservedPins.length > 0;
+
+  // Check if we have valid coordinates
+  const hasValidCoordinates = parking?.position && 
+    Array.isArray(parking.position) && 
+    parking.position.length >= 2 &&
+    typeof parking.position[0] === 'number' &&
+    typeof parking.position[1] === 'number';
+
+  const handleNavigateClick = async (e) => {
+    e.stopPropagation();
+    
+    if (isNavigating || !hasValidCoordinates) return;
+
+    try {
+      setIsNavigating(true);
+      const [lat, lng] = parking.position;
+      const success = await openNavigation(lat, lng, parking.address);
+      
+      if (!success) {
+        const coordinates = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        const message = `Could not open navigation app.\n\nParking address:\n${parking.address || coordinates}\n\nCoordinates:\n${coordinates}`;
+        alert(message);
+      }
+    } catch (error) {
+      console.error('Error opening navigation:', error);
+      alert('Failed to open navigation. Please try again.');
+    } finally {
+      // Brief delay to show loading state
+      setTimeout(() => setIsNavigating(false), 500);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -168,6 +290,22 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
                 : "Reserve parking"}
             </span>
             <span>50 ₪</span>
+          </button>
+          <button
+            className={`navigate-button ${(!hasValidCoordinates || isNavigating) ? 'navigate-button-disabled' : ''}`}
+            onClick={handleNavigateClick}
+            disabled={!hasValidCoordinates || isNavigating}
+          >
+            {isNavigating ? (
+              <span className="navigate-loading">Opening navigation...</span>
+            ) : (
+              <>
+                <span className="navigate-icon">🧭</span>
+                <span>
+                  {hasValidCoordinates ? 'Navigate to Parking' : 'Location unavailable'}
+                </span>
+              </>
+            )}
           </button>
         </div>
       </div>
