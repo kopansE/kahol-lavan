@@ -149,3 +149,50 @@ export const updateUserCarData = async (carData) => {
     body: carData,
   });
 };
+
+// Search/Maps operations
+export const placesAutocomplete = async (input, sessionToken) => {
+  let url = `places-autocomplete?input=${encodeURIComponent(input)}`;
+  if (sessionToken) {
+    url += `&sessionToken=${sessionToken}`;
+  }
+  return callEdgeFunctionGet(url);
+};
+
+export const geocodeAddress = async (placeId, sessionToken) => {
+  let url = `geocode-address?placeId=${encodeURIComponent(placeId)}`;
+  if (sessionToken) {
+    url += `&sessionToken=${sessionToken}`;
+  }
+  return callEdgeFunctionGet(url);
+};
+
+export const getStreetGeometry = async (streetName, lat, lng, viewport) => {
+  let url = `get-street-geometry?streetName=${encodeURIComponent(streetName)}&lat=${lat}&lng=${lng}`;
+  if (viewport) {
+    url += `&viewport=${encodeURIComponent(JSON.stringify(viewport))}`;
+  }
+  return callEdgeFunctionGet(url);
+};
+
+// Helper function for GET requests with query params
+const callEdgeFunctionGet = async (pathWithParams) => {
+  const token = await getAuthToken();
+  const url = `${SUPABASE_URL}/functions/v1/${pathWithParams}`;
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  
+  const result = await response.json();
+  
+  if (!response.ok || !result.success) {
+    throw new Error(result.error || result.message || 'Request failed');
+  }
+  
+  return result;
+};

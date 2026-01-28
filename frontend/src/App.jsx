@@ -12,6 +12,7 @@ import SideMenu from "./components/SideMenu";
 import ParkingDetailModal from "./components/ParkingDetailModal";
 import CarDataBanner from "./components/CarDataBanner";
 import CarDataFormModal from "./components/CarDataFormModal";
+import SearchBar from "./components/SearchBar";
 import { StreamChatProvider } from "./contexts/StreamChatContext";
 import { getParkingZone } from "./utils/parkingZoneUtils";
 import "./App.css";
@@ -35,6 +36,7 @@ function App() {
   const [reservedByName, setReservedByName] = useState(null);
   const [userDataComplete, setUserDataComplete] = useState(true); // Assume true initially
   const [showCarDataModal, setShowCarDataModal] = useState(false);
+  const [searchResult, setSearchResult] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -657,6 +659,14 @@ function App() {
     await loadUserProfile();
   };
 
+  const handleSearchResult = (result) => {
+    setSearchResult(result);
+  };
+
+  const handleClearSearch = () => {
+    setSearchResult(null);
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -688,6 +698,11 @@ function App() {
           userReservedPins={userReservedPins}
           onMapClick={handleMapClick}
           onPinClick={handlePinClick}
+          searchResult={searchResult}
+        />
+        <SearchBar
+          onSearchResult={handleSearchResult}
+          onClearSearch={handleClearSearch}
         />
         {userOwnPin && userOwnPin.status === "waiting" && (
           <LeavingParkingButton

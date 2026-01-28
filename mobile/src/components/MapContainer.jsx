@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   Text,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../styles/colors';
 import * as Location from 'expo-location';
@@ -18,9 +18,41 @@ const MapContainer = ({
   userReservedPins,
   onMapPress,
   onPinClick,
+  searchResult,
 }) => {
   const mapRef = useRef(null);
   const [isGpsLoading, setIsGpsLoading] = useState(false);
+
+  // Handle search result navigation
+  useEffect(() => {
+    if (searchResult && mapRef.current) {
+      if (searchResult.isStreet && searchResult.viewport) {
+        // For streets, fit to viewport bounds
+        const { northeast, southwest } = searchResult.viewport;
+        mapRef.current.fitToCoordinates(
+          [
+            { latitude: northeast.lat, longitude: northeast.lng },
+            { latitude: southwest.lat, longitude: southwest.lng },
+          ],
+          {
+            edgePadding: { top: 100, right: 50, bottom: 150, left: 50 },
+            animated: true,
+          }
+        );
+      } else {
+        // For specific addresses, zoom in close
+        mapRef.current.animateToRegion(
+          {
+            latitude: searchResult.lat,
+            longitude: searchResult.lng,
+            latitudeDelta: 0.002,
+            longitudeDelta: 0.002,
+          },
+          800
+        );
+      }
+    }
+  }, [searchResult]);
 
   const handleGpsClick = useCallback(async () => {
     try {
@@ -144,6 +176,36 @@ const MapContainer = ({
               description={`Reserved at ${new Date(pin.timestamp).toLocaleString()}`}
             />
           ))}
+
+        {/* Search result marker (red pin) */}
+        {searchResult && (
+          <Marker
+            coordinate={{
+              latitude: searchResult.lat,
+              longitude: searchResult.lng,
+            }}
+            pinColor="#EA4335"
+            title={searchResult.name || 'Search Result'}
+            description={searchResult.formattedAddress}
+          />
+        )}
+
+        {/* Street highlight polylines (multiple segments) */}
+        {searchResult?.isStreet && searchResult?.streetGeometry?.segments &&
+          searchResult.streetGeometry.segments.map((segment, index) => (
+            <Polyline
+              key={`street-segment-${index}`}
+              coordinates={segment.map(([lat, lng]) => ({
+                latitude: lat,
+                longitude: lng,
+              }))}
+              strokeColor="#4285F4"
+              strokeWidth={6}
+              lineCap="round"
+              lineJoin="round"
+            />
+          ))
+        }
       </MapView>
 
       {/* GPS button overlay */}
