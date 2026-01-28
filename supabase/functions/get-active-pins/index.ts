@@ -66,7 +66,7 @@ serve(async (req) => {
     let activeQuery = supabaseAdmin
       .from("pins")
       .select(
-        "id, position, parking_zone, created_at, price, user_id, status, reserved_by"
+        "id, position, parking_zone, created_at, price, user_id, status, reserved_by, address"
       )
       .eq("status", "active");
 
@@ -81,7 +81,7 @@ serve(async (req) => {
       reservedQuery = supabaseAdmin
         .from("pins")
         .select(
-          "id, position, parking_zone, created_at, price, user_id, status, reserved_by"
+          "id, position, parking_zone, created_at, price, user_id, status, reserved_by, address"
         )
         .eq("status", "reserved")
         .or(`user_id.eq.${userId},reserved_by.eq.${userId}`);

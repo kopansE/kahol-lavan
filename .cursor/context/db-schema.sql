@@ -44,6 +44,7 @@ table pins {
   parking_zone int4
   status text
   created_at timestamptz
+  address text
 
   matched_with_user_id uuid fk -> users.id
   matched_at timestamptz

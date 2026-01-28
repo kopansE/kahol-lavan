@@ -10,6 +10,8 @@ import ReservedParkingButton from "./components/ReservedParkingButton";
 import CancelReservationModal from "./components/CancelReservationModal";
 import SideMenu from "./components/SideMenu";
 import ParkingDetailModal from "./components/ParkingDetailModal";
+import ReservedParkingDetailModal from "./components/ReservedParkingDetailModal";
+import OwnParkingDetailModal from "./components/OwnParkingDetailModal";
 import CarDataBanner from "./components/CarDataBanner";
 import CarDataFormModal from "./components/CarDataFormModal";
 import SearchBar from "./components/SearchBar";
@@ -30,6 +32,8 @@ function App() {
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isPaymentMenuOpen, setIsPaymentMenuOpen] = useState(false);
   const [selectedParking, setSelectedParking] = useState(null);
+  const [selectedReservedParking, setSelectedReservedParking] = useState(null);
+  const [selectedOwnParking, setSelectedOwnParking] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelUserType, setCancelUserType] = useState(null); // 'reserving' or 'owner'
   const [pinToCancel, setPinToCancel] = useState(null);
@@ -147,7 +151,7 @@ function App() {
     try {
       const { data, error } = await supabase
         .from("pins")
-        .select("id, position, parking_zone, status, created_at, reserved_by")
+        .select("id, position, parking_zone, status, created_at, reserved_by, address")
         .eq("user_id", userId)
         .in("status", ["waiting", "active", "reserved"])
         .order("created_at", { ascending: false })
@@ -166,6 +170,7 @@ function App() {
           status: data.status,
           timestamp: data.created_at,
           reserved_by: data.reserved_by,
+          address: data.address,
         };
         setUserOwnPin(pin);
 
@@ -188,7 +193,7 @@ function App() {
     try {
       const { data, error } = await supabase
         .from("user_profiles")
-        .select("full_name")
+        .select("full_name, car_make, car_model, car_color, car_license_plate")
         .eq("id", userId)
         .single();
 
@@ -200,6 +205,13 @@ function App() {
 
       if (data) {
         setReservedByName(data.full_name || "Unknown User");
+        // Store the full user data for display
+        if (userOwnPin) {
+          setUserOwnPin(prev => ({
+            ...prev,
+            reserved_by_user: data
+          }));
+        }
       }
     } catch (error) {
       console.error("Error fetching reserved user name:", error);
@@ -252,6 +264,7 @@ function App() {
               status: pin.status,
               reserved_by: pin.reserved_by,
               user: pin.user,
+              address: pin.address,
             });
           } else if (pin.status === "active") {
             // Active pin from other users
@@ -261,6 +274,7 @@ function App() {
               parking_zone: pin.parking_zone,
               timestamp: pin.created_at,
               user: pin.user,
+              address: pin.address,
             });
           }
         });
@@ -545,17 +559,34 @@ function App() {
     setPinAddress("");
   };
 
-  const handlePinClick = async (pin) => {
+  const handlePinClick = async (pin, pinType) => {
     // Add address if not already present
     if (!pin.address && pin.position) {
       const address = await reverseGeocode(pin.position[0], pin.position[1]);
       pin.address = address;
     }
-    setSelectedParking(pin);
+    
+    if (pinType === 'reserved') {
+      setSelectedReservedParking(pin);
+    } else {
+      setSelectedParking(pin);
+    }
   };
 
   const handleCloseParkingDetail = () => {
     setSelectedParking(null);
+  };
+
+  const handleCloseReservedParkingDetail = () => {
+    setSelectedReservedParking(null);
+  };
+
+  const handleOwnPinClick = (pin) => {
+    setSelectedOwnParking(pin);
+  };
+
+  const handleCloseOwnParkingDetail = () => {
+    setSelectedOwnParking(null);
   };
 
   const handleCancelReservationClick = (pin, userType) => {
@@ -698,6 +729,7 @@ function App() {
           userReservedPins={userReservedPins}
           onMapClick={handleMapClick}
           onPinClick={handlePinClick}
+          onOwnPinClick={handleOwnPinClick}
           searchResult={searchResult}
         />
         <SearchBar
@@ -745,6 +777,18 @@ function App() {
             parking={selectedParking}
             onClose={handleCloseParkingDetail}
             userReservedPins={userReservedPins}
+          />
+        )}
+        {selectedReservedParking && (
+          <ReservedParkingDetailModal
+            parking={selectedReservedParking}
+            onClose={handleCloseReservedParkingDetail}
+          />
+        )}
+        {selectedOwnParking && (
+          <OwnParkingDetailModal
+            parking={selectedOwnParking}
+            onClose={handleCloseOwnParkingDetail}
           />
         )}
         {showCancelModal && (

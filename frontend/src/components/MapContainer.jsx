@@ -10,7 +10,6 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { formatParkingZone } from "../utils/parkingZoneUtils";
 
 // Fix for default markers in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -104,6 +103,7 @@ const MapContainer = ({
   userReservedPins,
   onMapClick,
   onPinClick,
+  onOwnPinClick,
   searchResult,
 }) => {
   const mapRef = useRef();
@@ -221,33 +221,15 @@ const MapContainer = ({
             key={`own-${userOwnPin.id}`}
             position={userOwnPin.position}
             icon={redPinIcon}
-          >
-            <Popup>
-              <div>
-                <strong>Your Parking Spot</strong>
-                <br />
-                Status: {userOwnPin.status}
-                {userOwnPin.status === "reserved" && userOwnPin.reserved_by && (
-                  <>
-                    <br />
-                    <span style={{ color: "#FF8C00", fontWeight: "bold" }}>
-                      Reserved by another user
-                    </span>
-                  </>
-                )}
-                <br />
-                Parking: {formatParkingZone(userOwnPin.parking_zone)}
-                <br />
-                Lat: {userOwnPin.position[0].toFixed(6)}
-                <br />
-                Lng: {userOwnPin.position[1].toFixed(6)}
-                <br />
-                <small>
-                  Added: {new Date(userOwnPin.timestamp).toLocaleString()}
-                </small>
-              </div>
-            </Popup>
-          </Marker>
+            eventHandlers={{
+              click: (e) => {
+                e.originalEvent.stopPropagation();
+                if (onOwnPinClick) {
+                  onOwnPinClick(userOwnPin);
+                }
+              },
+            }}
+          />
         )}
 
         {/* Other users' pins (BLUE) */}
@@ -277,25 +259,15 @@ const MapContainer = ({
               key={`reserved-${pin.id}`}
               position={pin.position}
               icon={orangePinIcon}
-            >
-              <Popup>
-                <div>
-                  <strong>Your Reserved Parking</strong>
-                  <br />
-                  Status: {pin.status}
-                  <br />
-                  Parking: {formatParkingZone(pin.parking_zone)}
-                  <br />
-                  Lat: {pin.position[0].toFixed(6)}
-                  <br />
-                  Lng: {pin.position[1].toFixed(6)}
-                  <br />
-                  <small>
-                    Reserved: {new Date(pin.timestamp).toLocaleString()}
-                  </small>
-                </div>
-              </Popup>
-            </Marker>
+              eventHandlers={{
+                click: (e) => {
+                  e.originalEvent.stopPropagation();
+                  if (onPinClick) {
+                    onPinClick(pin, 'reserved');
+                  }
+                },
+              }}
+            />
           ))}
 
         {/* Search result rendering */}
