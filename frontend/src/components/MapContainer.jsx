@@ -4,6 +4,7 @@ import {
   TileLayer,
   Marker,
   Popup,
+  Polyline,
   useMapEvents,
   useMap,
 } from "react-leaflet";
@@ -37,6 +38,20 @@ const redPinIcon = createCustomIcon("#ff6b6b", "red-pin"); // User's own pin
 const bluePinIcon = createCustomIcon("#4285F4", "blue-pin"); // Other users' pins
 const orangePinIcon = createCustomIcon("#FF8C00", "orange-pin"); // Reserved pins
 
+// Search result pin (red marker like Google Maps)
+const searchPinIcon = L.divIcon({
+  className: "search-pin",
+  html: `<div style="position: relative;">
+    <svg width="40" height="48" viewBox="0 0 40 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 0C8.954 0 0 8.954 0 20c0 14.5 20 28 20 28s20-13.5 20-28c0-11.046-8.954-20-20-20z" fill="#EA4335"/>
+      <circle cx="20" cy="20" r="8" fill="#B31412"/>
+    </svg>
+  </div>`,
+  iconSize: [40, 48],
+  iconAnchor: [20, 48],
+  popupAnchor: [0, -48],
+});
+
 // Component to handle map clicks
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
@@ -47,13 +62,37 @@ function MapClickHandler({ onMapClick }) {
   return null;
 }
 
-// Component to handle map reference
-function MapRefHandler({ onMapReady }) {
+// Component to handle map reference and search navigation
+function MapRefHandler({ onMapReady, searchResult }) {
   const map = useMap();
 
   useEffect(() => {
     onMapReady(map);
   }, [map, onMapReady]);
+
+  // Handle search result navigation
+  useEffect(() => {
+    if (searchResult && map) {
+      if (searchResult.isStreet && searchResult.viewport) {
+        // For streets, fit to viewport bounds
+        const bounds = L.latLngBounds(
+          [searchResult.viewport.southwest.lat, searchResult.viewport.southwest.lng],
+          [searchResult.viewport.northeast.lat, searchResult.viewport.northeast.lng]
+        );
+        map.flyToBounds(bounds, {
+          animate: true,
+          duration: 1.2,
+          padding: [50, 50],
+        });
+      } else {
+        // For specific addresses, zoom in close
+        map.flyTo([searchResult.lat, searchResult.lng], 18, {
+          animate: true,
+          duration: 1.2,
+        });
+      }
+    }
+  }, [searchResult, map]);
 
   return null;
 }
@@ -65,6 +104,7 @@ const MapContainer = ({
   userReservedPins,
   onMapClick,
   onPinClick,
+  searchResult,
 }) => {
   const mapRef = useRef();
   const [isGpsLoading, setIsGpsLoading] = React.useState(false);
@@ -258,8 +298,44 @@ const MapContainer = ({
             </Marker>
           ))}
 
+        {/* Search result rendering */}
+        {searchResult && (
+          <>
+            {/* Search pin marker */}
+            <Marker
+              position={[searchResult.lat, searchResult.lng]}
+              icon={searchPinIcon}
+            >
+              <Popup>
+                <div>
+                  <strong>{searchResult.name || "Search Result"}</strong>
+                  <br />
+                  {searchResult.formattedAddress}
+                </div>
+              </Popup>
+            </Marker>
+
+            {/* Street highlight polylines (multiple segments) */}
+            {searchResult.isStreet && searchResult.streetGeometry?.segments && 
+              searchResult.streetGeometry.segments.map((segment, index) => (
+                <Polyline
+                  key={`street-segment-${index}`}
+                  positions={segment}
+                  pathOptions={{
+                    color: "#4285F4",
+                    weight: 6,
+                    opacity: 0.8,
+                    lineCap: "round",
+                    lineJoin: "round",
+                  }}
+                />
+              ))
+            }
+          </>
+        )}
+
         {/* Handle map reference and clicks */}
-        <MapRefHandler onMapReady={handleMapReady} />
+        <MapRefHandler onMapReady={handleMapReady} searchResult={searchResult} />
         <MapClickHandler onMapClick={onMapClick} />
       </LeafletMap>
 

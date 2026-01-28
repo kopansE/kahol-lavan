@@ -15,6 +15,7 @@ import NotLeavingParkingButton from '../components/NotLeavingParkingButton';
 import ReservedParkingButton from '../components/ReservedParkingButton';
 import CancelReservationButton from '../components/CancelReservationButton';
 import CarDataBanner from '../components/CarDataBanner';
+import SearchBar from '../components/SearchBar';
 import { colors } from '../styles/colors';
 import { reverseGeocode } from '../utils/geocoding';
 import { getParkingZone } from '../utils/parkingZoneUtils';
@@ -49,6 +50,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
   const [pendingNotifications, setPendingNotifications] = useState([]);
   const [userDataComplete, setUserDataComplete] = useState(true);
   const [showCarDataModal, setShowCarDataModal] = useState(false);
+  const [searchResult, setSearchResult] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -403,6 +405,14 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
     await loadUserProfile();
   };
 
+  const handleSearchResult = (result) => {
+    setSearchResult(result);
+  };
+
+  const handleClearSearch = () => {
+    setSearchResult(null);
+  };
+
   if (!userLocation) {
     return <LoadingSpinner />;
   }
@@ -431,6 +441,12 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         userReservedPins={userReservedPins}
         onMapPress={handleMapPress}
         onPinClick={handlePinClick}
+        searchResult={searchResult}
+      />
+
+      <SearchBar
+        onSearchResult={handleSearchResult}
+        onClearSearch={handleClearSearch}
       />
 
       {userOwnPin && userOwnPin.status === 'waiting' && (
