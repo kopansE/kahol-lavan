@@ -18,6 +18,7 @@ const MapContainer = ({
   userReservedPins,
   onMapPress,
   onPinClick,
+  onOwnPinClick,
   searchResult,
 }) => {
   const mapRef = useRef(null);
@@ -139,8 +140,11 @@ const MapContainer = ({
               longitude: userOwnPin.position[1],
             }}
             pinColor={colors.red}
-            title="Your Parking Spot"
-            description={`Status: ${userOwnPin.status}`}
+            onPress={() => {
+              if (onOwnPinClick) {
+                onOwnPinClick(userOwnPin);
+              }
+            }}
           />
         )}
 
@@ -173,7 +177,12 @@ const MapContainer = ({
               }}
               pinColor={colors.orange}
               title="Your Reserved Parking"
-              description={`Reserved at ${new Date(pin.timestamp).toLocaleString()}`}
+              description="Tap to view details"
+              onPress={() => {
+                if (onPinClick) {
+                  onPinClick(pin, 'reserved');
+                }
+              }}
             />
           ))}
 

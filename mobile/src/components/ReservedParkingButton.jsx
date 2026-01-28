@@ -29,8 +29,8 @@ const ReservedParkingButton = ({ reservedPin, reservedByName, onCancelReservatio
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
+    top: 20,
+    right: 20,
     borderRadius: 16,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 8 },

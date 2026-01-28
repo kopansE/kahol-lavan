@@ -33,6 +33,7 @@ serve(async (req) => {
         position: position,
         parking_zone: parking_zone,
         status: "waiting",
+        address: address || null,
       })
       .select()
       .single();

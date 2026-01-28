@@ -7,6 +7,8 @@ import MapContainer from '../components/MapContainer';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PinConfirmationModal from '../components/PinConfirmationModal';
 import ParkingDetailModal from '../components/ParkingDetailModal';
+import ReservedParkingDetailModal from '../components/ReservedParkingDetailModal';
+import OwnParkingDetailModal from '../components/OwnParkingDetailModal';
 import CancelReservationModal from '../components/CancelReservationModal';
 import CarDataFormModal from '../components/CarDataFormModal';
 import SideMenu from '../components/SideMenu';
@@ -43,6 +45,8 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
   const [isLoadingAddress, setIsLoadingAddress] = useState(false);
   const [isPaymentMenuOpen, setIsPaymentMenuOpen] = useState(false);
   const [selectedParking, setSelectedParking] = useState(null);
+  const [selectedReservedParking, setSelectedReservedParking] = useState(null);
+  const [selectedOwnParking, setSelectedOwnParking] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelUserType, setCancelUserType] = useState(null);
   const [pinToCancel, setPinToCancel] = useState(null);
@@ -134,7 +138,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
     try {
       const { data, error } = await supabase
         .from('pins')
-        .select('id, position, parking_zone, status, created_at, reserved_by')
+        .select('id, position, parking_zone, status, created_at, reserved_by, address')
         .eq('user_id', userId)
         .in('status', ['waiting', 'active', 'reserved'])
         .order('created_at', { ascending: false })
@@ -154,6 +158,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
           status: data.status,
           timestamp: data.created_at,
           reserved_by: data.reserved_by,
+          address: data.address,
         };
         setUserOwnPin(pin);
 
@@ -175,7 +180,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('full_name')
+        .select('full_name, car_make, car_model, car_color, car_license_plate')
         .eq('id', userId)
         .single();
 
@@ -187,6 +192,11 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
 
       if (data) {
         setReservedByName(data.full_name || 'Unknown User');
+        // Store the full user data for display
+        setUserOwnPin(prev => prev ? ({
+          ...prev,
+          reserved_by_user: data
+        }) : null);
       }
     } catch (error) {
       console.error('Error fetching reserved user name:', error);
@@ -212,6 +222,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
               status: pin.status,
               reserved_by: pin.reserved_by,
               user: pin.user,
+              address: pin.address,
             });
           } else if (pin.status === 'active') {
             activePins.push({
@@ -220,6 +231,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
               parking_zone: pin.parking_zone,
               timestamp: pin.created_at,
               user: pin.user,
+              address: pin.address,
             });
           }
         });
@@ -304,12 +316,21 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
     }
   };
 
-  const handlePinClick = async (pin) => {
+  const handlePinClick = async (pin, pinType) => {
     if (!pin.address && pin.position) {
       const address = await reverseGeocode(pin.position[0], pin.position[1]);
       pin.address = address;
     }
-    setSelectedParking(pin);
+    
+    if (pinType === 'reserved') {
+      setSelectedReservedParking(pin);
+    } else {
+      setSelectedParking(pin);
+    }
+  };
+
+  const handleOwnPinClick = (pin) => {
+    setSelectedOwnParking(pin);
   };
 
   const handleCancelReservationClick = (pin, userType) => {
@@ -441,6 +462,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         userReservedPins={userReservedPins}
         onMapPress={handleMapPress}
         onPinClick={handlePinClick}
+        onOwnPinClick={handleOwnPinClick}
         searchResult={searchResult}
       />
 
@@ -506,6 +528,18 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         parking={selectedParking}
         onClose={() => setSelectedParking(null)}
         userReservedPins={userReservedPins}
+      />
+
+      <ReservedParkingDetailModal
+        visible={!!selectedReservedParking}
+        parking={selectedReservedParking}
+        onClose={() => setSelectedReservedParking(null)}
+      />
+
+      <OwnParkingDetailModal
+        visible={!!selectedOwnParking}
+        parking={selectedOwnParking}
+        onClose={() => setSelectedOwnParking(null)}
       />
 
       <CancelReservationModal

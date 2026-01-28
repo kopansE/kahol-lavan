@@ -186,8 +186,8 @@
 /* Leaving Parking Button */
 .leaving-parking-button {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
+  top: 20px;
+  right: 20px;
   z-index: 1000;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
@@ -244,8 +244,8 @@
 /* Not Leaving Parking Button */
 .not-leaving-parking-button {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
+  top: 20px;
+  right: 20px;
   z-index: 1000;
   background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
   color: white;
@@ -302,8 +302,8 @@
 /* Reserved Parking Button (for parking owner) */
 .reserved-parking-button {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
+  top: 20px;
+  right: 20px;
   z-index: 1000;
   background: linear-gradient(135deg, #ff8c00 0%, #ff6b00 100%);
   color: white;
