@@ -187,6 +187,16 @@ const ChatThreadScreen = ({ route, navigation }) => {
                   <Text style={styles.inactiveMessageText}>
                     Chat session is {chatStatus}. No new messages can be sent.
                   </Text>
+                  <TouchableOpacity
+                    style={styles.reportUserButton}
+                    onPress={() => navigation.navigate('Report', {
+                      reportedUserId: otherUser?.id,
+                      reportedUserName: otherUser?.full_name,
+                      transferRequestId: channelData?.transfer_request_id,
+                    })}
+                  >
+                    <Text style={styles.reportUserButtonText}>Report User</Text>
+                  </TouchableOpacity>
                 </View>
               )}
             </View>
@@ -247,11 +257,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
     alignItems: 'center',
+    gap: 12,
   },
   inactiveMessageText: {
     color: '#666',
     fontSize: 14,
     textAlign: 'center',
+  },
+  reportUserButton: {
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  reportUserButtonText: {
+    color: '#dc2626',
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 

@@ -150,3 +150,35 @@ table pending_timers {
   status text  -- pending, completed, cancelled
   created_at timestamptz
 }
+
+table reports {
+  id uuid pk
+  
+  -- Who is reporting
+  reporter_id uuid fk -> users.id
+  
+  -- Who/what is being reported
+  reported_user_id uuid fk -> users.id
+  transfer_request_id uuid fk -> transfer_requests.id  -- The specific parking exchange
+  
+  -- Report details
+  report_type text  -- 'no_show', 'wrong_location', 'harassment', 'fraud', 'other'
+  description text  -- User's explanation
+  severity text  -- 'low', 'medium', 'high' (can be auto-set based on type)
+  
+  -- Evidence/metadata
+  evidence_urls text[] null  -- Array of screenshot URLs if you add that feature later
+  metadata jsonb null  -- Any additional context (e.g., GPS coordinates, timestamps)
+  
+  -- Status & resolution
+  status text  -- 'pending', 'under_review', 'resolved', 'dismissed'
+  reviewed_by uuid fk -> users.id null  -- Admin user who reviewed (for future admin panel)
+  reviewed_at timestamptz null
+  resolution_notes text null
+  action_taken text null  -- 'warning_issued', 'user_suspended', 'refund_processed', 'no_action', etc.
+  
+  -- Timestamps
+  created_at timestamptz
+  updated_at timestamptz
+  resolved_at timestamptz null
+}

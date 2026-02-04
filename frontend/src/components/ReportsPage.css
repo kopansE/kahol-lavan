@@ -1,0 +1,129 @@
+.reports-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.reports-page .loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: #666;
+}
+
+.reports-page .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.reports-page .empty-state-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.reports-page .empty-state h3 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 18px;
+}
+
+.reports-page .empty-state p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e8e8e8;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.report-type {
+  font-weight: 600;
+  color: #333;
+  font-size: 15px;
+}
+
+.report-status {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.status-pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-review {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.status-resolved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-dismissed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.report-user {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.report-description {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.5;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.report-date {
+  font-size: 12px;
+  color: #999;
+}
+
+.report-resolution {
+  margin-top: 12px;
+  padding: 10px;
+  background: #e8f5e9;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #2e7d32;
+}
+
+.report-resolution .action-taken {
+  color: #1b5e20;
+  font-style: italic;
+}
