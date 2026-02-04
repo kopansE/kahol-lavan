@@ -472,6 +472,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         onNavigateToWallet={() => navigation.navigate('Wallet', { user })}
         onNavigateToChats={() => navigation.navigate('ChatChannelList')}
         onNavigateToSettings={() => navigation.navigate('Settings', { user })}
+        onNavigateToReports={() => navigation.navigate('Reports')}
       />
 
       <ParkingDetailModal

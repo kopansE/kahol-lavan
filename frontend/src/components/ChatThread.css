@@ -331,3 +331,44 @@
   opacity: 0.7;
   margin-top: 4px;
 }
+
+/* ============================================
+   Inactive Chat Area Styles
+   ============================================ */
+
+.chat-inactive-area {
+  padding: 16px;
+  text-align: center;
+  background-color: #f5f5f5;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.chat-inactive-message {
+  color: #666;
+  font-size: 14px;
+}
+
+.report-user-button {
+  background: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.report-user-button:hover {
+  background: #fecaca;
+  border-color: #f87171;
+}
+
+.report-user-button:active {
+  transform: translateY(1px);
+}

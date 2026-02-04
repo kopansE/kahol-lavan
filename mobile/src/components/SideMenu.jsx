@@ -22,6 +22,7 @@ const SideMenu = ({
   onNavigateToWallet,
   onNavigateToChats,
   onNavigateToSettings,
+  onNavigateToReports,
 }) => {
   const { chatClient, isReady } = useStreamChat();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -146,6 +147,18 @@ const SideMenu = ({
                 <Text style={styles.menuArrow}>›</Text>
               </TouchableOpacity>
 
+              {/* Reports */}
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => handleMenuItemPress(onNavigateToReports)}
+              >
+                <View style={styles.menuIcon}>
+                  <ReportsIcon />
+                </View>
+                <Text style={styles.menuLabel}>My Reports</Text>
+                <Text style={styles.menuArrow}>›</Text>
+              </TouchableOpacity>
+
               {/* Settings */}
               <TouchableOpacity
                 style={styles.menuItem}
@@ -205,6 +218,13 @@ const SignOutIcon = () => (
   </View>
 );
 
+const ReportsIcon = () => (
+  <View style={iconStyles.container}>
+    <View style={iconStyles.reports} />
+    <View style={iconStyles.reportsPlus} />
+  </View>
+);
+
 const iconStyles = StyleSheet.create({
   container: {
     width: 24,
@@ -245,6 +265,20 @@ const iconStyles = StyleSheet.create({
     borderColor: colors.red,
     borderRadius: 3,
     borderRightWidth: 0,
+  },
+  reports: {
+    width: 16,
+    height: 20,
+    borderWidth: 2,
+    borderColor: colors.primaryGradientStart,
+    borderRadius: 3,
+  },
+  reportsPlus: {
+    position: 'absolute',
+    width: 8,
+    height: 2,
+    backgroundColor: colors.primaryGradientStart,
+    top: 12,
   },
 });
 

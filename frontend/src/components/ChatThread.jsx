@@ -4,6 +4,7 @@ import { useStreamChat } from '../contexts/StreamChatContext';
 import { supabase } from '../supabaseClient';
 import ChatTimer from './ChatTimer';
 import ChatActionButtons from './ChatActionButtons';
+import ReportPage from './ReportPage';
 import 'stream-chat-react/dist/css/v2/index.css';
 import './ChatThread.css';
 
@@ -11,6 +12,7 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
   const { chatClient } = useStreamChat();
   const [isProcessing, setIsProcessing] = useState(false);
   const [expiresAt, setExpiresAt] = useState(channelData?.expires_at || null);
+  const [showReportPage, setShowReportPage] = useState(false);
   const [approvalState, setApprovalState] = useState({
     userApproved: false,
     otherUserApproved: false,
@@ -30,6 +32,18 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
   const chatStatus = channelData?.status || 'unknown';
 
   const handleTimerExpire = () => {
+  };
+
+  const handleReportUser = () => {
+    setShowReportPage(true);
+  };
+
+  const handleReportBack = () => {
+    setShowReportPage(false);
+  };
+
+  const handleReportClose = () => {
+    setShowReportPage(false);
   };
 
   const handleExtension = async () => {
@@ -189,6 +203,21 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
 
   // Render inside side menu (no overlay, fill container)
   if (inSideMenu) {
+    // Show report page if requested
+    if (showReportPage) {
+      return (
+        <div className="chat-thread-side-menu">
+          <ReportPage
+            onBack={handleReportBack}
+            onClose={handleReportClose}
+            reportedUserId={otherUser?.id}
+            reportedUserName={otherUser?.full_name}
+            transferRequestId={channelData?.transfer_request_id}
+          />
+        </div>
+      );
+    }
+
     return (
       <div className="chat-thread-side-menu">
         <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
@@ -222,14 +251,16 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
               {isActive ? (
                 <MessageInput />
               ) : (
-                <div style={{ 
-                  padding: '16px', 
-                  textAlign: 'center', 
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  borderTop: '1px solid #e0e0e0'
-                }}>
-                  Chat session is {chatStatus}. No new messages can be sent.
+                <div className="chat-inactive-area">
+                  <div className="chat-inactive-message">
+                    Chat session is {chatStatus}. No new messages can be sent.
+                  </div>
+                  <button 
+                    className="report-user-button"
+                    onClick={handleReportUser}
+                  >
+                    Report User
+                  </button>
                 </div>
               )}
             </Window>
@@ -245,6 +276,23 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
             approvalState={approvalState}
           />
         )}
+      </div>
+    );
+  }
+
+  // Show report page if requested (overlay version)
+  if (showReportPage) {
+    return (
+      <div className="chat-thread-overlay" onClick={onClose}>
+        <div className="chat-thread-container" onClick={(e) => e.stopPropagation()}>
+          <ReportPage
+            onBack={handleReportBack}
+            onClose={handleReportClose}
+            reportedUserId={otherUser?.id}
+            reportedUserName={otherUser?.full_name}
+            transferRequestId={channelData?.transfer_request_id}
+          />
+        </div>
       </div>
     );
   }
@@ -284,14 +332,16 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
               {isActive ? (
                 <MessageInput />
               ) : (
-                <div style={{ 
-                  padding: '16px', 
-                  textAlign: 'center', 
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  borderTop: '1px solid #e0e0e0'
-                }}>
-                  Chat session is {chatStatus}. No new messages can be sent.
+                <div className="chat-inactive-area">
+                  <div className="chat-inactive-message">
+                    Chat session is {chatStatus}. No new messages can be sent.
+                  </div>
+                  <button 
+                    className="report-user-button"
+                    onClick={handleReportUser}
+                  >
+                    Report User
+                  </button>
                 </div>
               )}
             </Window>
