@@ -60,6 +60,7 @@ serve(async (req) => {
       console.log(`✅ Session already exists for transfer_request ${transfer_request_id}`);
       return successResponse({
         channel_id: existingSession.stream_channel_id,
+        session_id: existingSession.id,
         already_exists: true,
         session_status: existingSession.status,
       });
@@ -117,7 +118,7 @@ serve(async (req) => {
     const now = new Date().toISOString();
     const twentyMinutesInMs = 20 * 60 * 1000;
     
-    const { error: insertError } = await supabaseAdmin
+    const { data: insertedSession, error: insertError } = await supabaseAdmin
       .from("chat_sessions")
       .insert({
         holder_id,
@@ -134,7 +135,9 @@ serve(async (req) => {
         tracker_approved: false,
         holder_cancelled: false,
         tracker_cancelled: false,
-      });
+      })
+      .select("id")
+      .single();
 
     if (insertError) {
       console.error("DB Insert Error:", insertError);
@@ -143,13 +146,14 @@ serve(async (req) => {
         // Duplicate key - session was created by another request, fetch and return it
         const { data: justCreatedSession } = await supabaseAdmin
           .from("chat_sessions")
-          .select("stream_channel_id, status")
+          .select("id, stream_channel_id, status")
           .eq("transfer_request_id", transfer_request_id)
           .single();
         
         if (justCreatedSession) {
           return successResponse({
             channel_id: justCreatedSession.stream_channel_id,
+            session_id: justCreatedSession.id,
             already_exists: true,
             session_status: justCreatedSession.status,
           });
@@ -160,7 +164,10 @@ serve(async (req) => {
     
     console.log(`✅ Created new session for transfer_request ${transfer_request_id}: ${channelId}`);
 
-    return successResponse({ channel_id: channelId });
+    return successResponse({ 
+      channel_id: channelId,
+      session_id: insertedSession.id,
+    });
 
   } catch (err) {
     console.error("CRITICAL ERROR:", err);

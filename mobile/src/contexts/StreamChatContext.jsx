@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { StreamChat } from 'stream-chat';
-import { supabase } from '../config/supabase';
+import { supabase } from '../config/supabase.js';
 
 const StreamChatContext = createContext(null);
 

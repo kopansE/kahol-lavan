@@ -11,6 +11,73 @@ import { acceptTransfer, checkWalletBalance, logTransaction } from "../_shared/r
 const CURRENCY = "ILS";
 const PLATFORM_FEE = 0;
 
+/**
+ * Cancel QStash scheduled message and update pending_timers status
+ */
+async function cancelPendingTimer(
+  supabaseAdmin: ReturnType<typeof createSupabaseAdmin>,
+  sessionId: string
+): Promise<void> {
+  try {
+    // Find pending timer for this session
+    const { data: timer, error: timerError } = await supabaseAdmin
+      .from("pending_timers")
+      .select("id, qstash_message_id, status")
+      .eq("session_id", sessionId)
+      .eq("status", "pending")
+      .single();
+
+    if (timerError || !timer) {
+      console.log(`ℹ️ No pending timer found for session ${sessionId}`);
+      return;
+    }
+
+    console.log(`🔄 Cancelling timer for session ${sessionId}`);
+
+    // Cancel QStash message if we have the message ID
+    if (timer.qstash_message_id) {
+      const QSTASH_TOKEN = Deno.env.get("QSTASH_TOKEN");
+      if (QSTASH_TOKEN) {
+        try {
+          const cancelResponse = await fetch(
+            `https://qstash.upstash.io/v2/messages/${timer.qstash_message_id}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${QSTASH_TOKEN}`,
+              },
+            }
+          );
+
+          if (cancelResponse.ok) {
+            console.log(`✅ QStash message cancelled: ${timer.qstash_message_id}`);
+          } else {
+            const errorText = await cancelResponse.text();
+            console.warn(`⚠️ Failed to cancel QStash message: ${errorText}`);
+          }
+        } catch (cancelError) {
+          console.warn(`⚠️ Error cancelling QStash message:`, cancelError);
+        }
+      }
+    }
+
+    // Update timer status to cancelled
+    const { error: updateError } = await supabaseAdmin
+      .from("pending_timers")
+      .update({ status: "cancelled" })
+      .eq("id", timer.id);
+
+    if (updateError) {
+      console.warn(`⚠️ Failed to update timer status:`, updateError);
+    } else {
+      console.log(`✅ Timer status updated to cancelled`);
+    }
+  } catch (err) {
+    console.error(`⚠️ Error in cancelPendingTimer:`, err);
+    // Don't throw - this is a cleanup operation that shouldn't fail the main flow
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return handleCorsPreFlight();
@@ -268,6 +335,10 @@ serve(async (req) => {
         console.error("⚠️ Failed to update chat session:", chatUpdateError);
       }
 
+      // ========== CANCEL QSTASH TIMER ==========
+      // Prevent double-execution by cancelling the scheduled auto-approval
+      await cancelPendingTimer(supabaseAdmin, chatSession.id);
+
       console.log("✅ Deal completed successfully via chat");
 
       return successResponse({
@@ -294,6 +365,6 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error("Error in approve-in-chat:", err);
-    return errorResponse(err.message || "Internal server error");
+    return errorResponse((err as Error).message || "Internal server error");
   }
 });
