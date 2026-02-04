@@ -5,13 +5,14 @@ import { useStreamChat } from '../contexts/StreamChatContext';
 import ChatTimer from '../components/ChatTimer';
 import ChatActionButtons from '../components/ChatActionButtons';
 import { customChatTheme } from '../styles/chatTheme';
-import { approveInChat, cancelInChat } from '../utils/edgeFunctions';
+import { approveInChat, cancelInChat, extendInChat } from '../utils/edgeFunctions';
 
 const ChatThreadScreen = ({ route, navigation }) => {
   const { channel, channelData } = route.params;
   const { chatClient } = useStreamChat();
   const otherUser = channelData.other_user;
   const [isProcessing, setIsProcessing] = useState(false);
+  const [expiresAt, setExpiresAt] = useState(channelData?.expires_at || null);
   const [approvalState, setApprovalState] = useState({
     userApproved: false,
     otherUserApproved: false,
@@ -33,6 +34,29 @@ const ChatThreadScreen = ({ route, navigation }) => {
 
   const handleTimerExpire = () => {
     Alert.alert('Time Expired', 'The reservation time has expired.');
+  };
+
+  const handleExtension = async () => {
+    if (isProcessing) return;
+
+    if (!channelData?.id) {
+      Alert.alert('Error', 'Chat session data is missing. Please try again.');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const result = await extendInChat(channelData.id);
+
+      // Update the expiresAt state to trigger timer recalculation
+      setExpiresAt(result.new_expires_at);
+      Alert.alert('Extended', result.message || 'Timer extended by 10 minutes!');
+    } catch (error) {
+      console.error('Error extending timer:', error);
+      Alert.alert('Error', `Failed to extend timer: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleApprove = async () => {
@@ -128,7 +152,7 @@ const ChatThreadScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <ChatTimer startedAt={channelData?.started_at} initialMinutes={20} onExpire={handleTimerExpire} />
+      <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -174,6 +198,7 @@ const ChatThreadScreen = ({ route, navigation }) => {
         <ChatActionButtons
           onApprove={handleApprove}
           onCancel={handleCancel}
+          onExtension={handleExtension}
           isProcessing={isProcessing}
           approvalState={approvalState}
         />

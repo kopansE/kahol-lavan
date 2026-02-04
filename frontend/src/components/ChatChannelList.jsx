@@ -40,6 +40,10 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
       const result = await response.json();
 
       if (!response.ok || !result.channels) {
+        console.error('Failed to load channels, refreshing page in 2 seconds...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
         throw new Error('Failed to load channels');
       }
 
@@ -58,6 +62,10 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
             };
           } catch (err) {
             console.error(`Failed to load channel ${channelData.stream_channel_id}:`, err);
+            console.error('Refreshing page in 2 seconds...');
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
             return null;
           }
         })

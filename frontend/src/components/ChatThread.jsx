@@ -10,6 +10,7 @@ import './ChatThread.css';
 const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMenu = false }) => {
   const { chatClient } = useStreamChat();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [expiresAt, setExpiresAt] = useState(channelData?.expires_at || null);
   const [approvalState, setApprovalState] = useState({
     userApproved: false,
     otherUserApproved: false,
@@ -29,6 +30,53 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
   const chatStatus = channelData?.status || 'unknown';
 
   const handleTimerExpire = () => {
+  };
+
+  const handleExtension = async () => {
+    if (isProcessing) return;
+
+    if (!channelData?.id) {
+      alert('Chat session data is missing. Please try again.');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        alert('Authentication error. Please log in again.');
+        return;
+      }
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/extend-in-chat`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ session_id: channelData.id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to extend timer');
+      }
+
+      // Update the expiresAt state to trigger timer recalculation
+      setExpiresAt(result.new_expires_at);
+      alert(result.message || 'Timer extended by 10 minutes!');
+    } catch (error) {
+      console.error('Error extending timer:', error);
+      alert(`Failed to extend timer: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleApprove = async () => {
@@ -143,7 +191,7 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
   if (inSideMenu) {
     return (
       <div className="chat-thread-side-menu">
-        <ChatTimer startedAt={channelData?.started_at} initialMinutes={20} onExpire={handleTimerExpire} />
+        <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
 
         <div className="chat-thread-header-side-menu">
           <button type="button" className="chat-thread-back-button-side-menu" onClick={onBack}>
@@ -192,6 +240,7 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
           <ChatActionButtons
             onApprove={handleApprove}
             onCancel={handleCancel}
+            onExtension={handleExtension}
             isProcessing={isProcessing}
             approvalState={approvalState}
           />
@@ -204,7 +253,7 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
   return (
     <div className="chat-thread-overlay" onClick={onClose}>
       <div className="chat-thread-container" onClick={(e) => e.stopPropagation()}>
-        <ChatTimer startedAt={channelData?.started_at} initialMinutes={20} onExpire={handleTimerExpire} />
+        <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
 
         <div className="chat-thread-header">
           <button type="button" className="chat-thread-back-button" onClick={onBack}>
@@ -253,6 +302,7 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
           <ChatActionButtons
             onApprove={handleApprove}
             onCancel={handleCancel}
+            onExtension={handleExtension}
             isProcessing={isProcessing}
             approvalState={approvalState}
           />

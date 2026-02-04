@@ -176,6 +176,12 @@ export const cancelInChat = async (sessionId) => {
   });
 };
 
+export const extendInChat = async (sessionId) => {
+  return callEdgeFunction('extend-in-chat', {
+    body: { session_id: sessionId },
+  });
+};
+
 // Data fetching operations
 export const getActivePins = async () => {
   return callEdgeFunction('get-active-pins', {

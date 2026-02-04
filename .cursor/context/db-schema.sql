@@ -140,3 +140,13 @@ updated_at timestamptz
 holder_out_of_time bool null
 tracker_out_of_time bool null
 }
+
+table pending_timers {
+  id uuid pk
+  session_id uuid fk -> chat_sessions.id
+  secret_token uuid
+  qstash_message_id text
+  expires_at timestamptz
+  status text  -- pending, completed, cancelled
+  created_at timestamptz
+}
