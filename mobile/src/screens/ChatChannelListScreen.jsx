@@ -42,6 +42,10 @@ const ChatChannelListScreen = ({ navigation }) => {
       const { data, error } = await supabase.functions.invoke('get-user-channels');
 
       if (error || !data || !data.channels) {
+        console.error('Failed to load channels, retrying in 2 seconds...');
+        setTimeout(() => {
+          loadChannels();
+        }, 2000);
         throw new Error(error?.message || 'Failed to load channels');
       }
 
@@ -60,6 +64,10 @@ const ChatChannelListScreen = ({ navigation }) => {
             };
           } catch (err) {
             console.error(`Failed to load channel ${channelData.stream_channel_id}:`, err);
+            console.error('Retrying to load channels in 2 seconds...');
+            setTimeout(() => {
+              loadChannels();
+            }, 2000);
             return null;
           }
         })

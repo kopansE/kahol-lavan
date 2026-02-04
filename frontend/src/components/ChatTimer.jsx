@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import './ChatTimer.css';
 
-const ChatTimer = ({ startedAt, initialMinutes = 20, onExpire }) => {
+const ChatTimer = ({ startedAt, expiresAt, initialMinutes = 20, onExpire }) => {
   const calculateTimeRemaining = () => {
+    // If expiresAt is provided, use it directly (for extensions)
+    if (expiresAt) {
+      const now = new Date();
+      const expires = new Date(expiresAt);
+      const remaining = Math.floor((expires - now) / 1000);
+      return Math.max(0, remaining);
+    }
+    
+    // Fallback to startedAt + initialMinutes calculation
     if (!startedAt) {
       return initialMinutes * 60;
     }
@@ -19,9 +28,9 @@ const ChatTimer = ({ startedAt, initialMinutes = 20, onExpire }) => {
   const [timeRemaining, setTimeRemaining] = useState(calculateTimeRemaining());
 
   useEffect(() => {
-    // Recalculate on mount in case component remounts
+    // Recalculate when startedAt or expiresAt changes
     setTimeRemaining(calculateTimeRemaining());
-  }, [startedAt]);
+  }, [startedAt, expiresAt]);
 
   useEffect(() => {
     if (timeRemaining <= 0) {
