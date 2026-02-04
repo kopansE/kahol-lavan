@@ -51,3 +51,15 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/get-user-channels/deno.json"
 entrypoint = "./functions/get-user-channels/index.ts"
+
+[functions.schedule-approval-timer]
+enabled = true
+verify_jwt = true
+import_map = "./functions/schedule-approval-timer/deno.json"
+entrypoint = "./functions/schedule-approval-timer/index.ts"
+
+[functions.handle-timer-expiration]
+enabled = true
+verify_jwt = false
+import_map = "./functions/handle-timer-expiration/deno.json"
+entrypoint = "./functions/handle-timer-expiration/index.ts"

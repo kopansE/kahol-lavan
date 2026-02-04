@@ -199,6 +199,7 @@ serve(async (req) => {
     console.log("✅ Reservation request created - waiting for owner approval");
 
     // Create chat channel for the reservation
+    let sessionId: string | null = null;
     try {
       console.log("💬 Creating chat channel for reservation");
       const createChannelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/create-chat-channel`;
@@ -221,6 +222,7 @@ serve(async (req) => {
       if (channelResponse.ok) {
         const channelData = await channelResponse.json();
         console.log(`✅ Chat channel created: ${channelData.channel_id}`);
+        sessionId = channelData.session_id;
       } else {
         const errorText = await channelResponse.text();
         console.error("⚠️ Failed to create chat channel:", errorText);
@@ -229,6 +231,40 @@ serve(async (req) => {
     } catch (chatError) {
       console.error("⚠️ Error creating chat channel:", chatError);
       // Don't fail the reservation if chat creation fails
+    }
+
+    // Schedule the auto-approval timer (QStash)
+    if (sessionId) {
+      try {
+        console.log("⏰ Scheduling auto-approval timer");
+        const scheduleTimerUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/schedule-approval-timer`;
+        const authHeader = req.headers.get("Authorization");
+
+        const timerResponse = await fetch(scheduleTimerUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: authHeader || "",
+          },
+          body: JSON.stringify({
+            session_id: sessionId,
+          }),
+        });
+
+        if (timerResponse.ok) {
+          const timerData = await timerResponse.json();
+          console.log(`✅ Auto-approval timer scheduled: ${timerData.timer_id}, expires at: ${timerData.expires_at}`);
+        } else {
+          const errorText = await timerResponse.text();
+          console.error("⚠️ Failed to schedule timer:", errorText);
+          // Don't fail the reservation if timer scheduling fails
+        }
+      } catch (timerError) {
+        console.error("⚠️ Error scheduling timer:", timerError);
+        // Don't fail the reservation if timer scheduling fails
+      }
+    } else {
+      console.warn("⚠️ No session_id available, skipping timer scheduling");
     }
 
     return successResponse({
