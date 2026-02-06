@@ -41,6 +41,7 @@ function App() {
   const [userDataComplete, setUserDataComplete] = useState(true); // Assume true initially
   const [showCarDataModal, setShowCarDataModal] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -698,6 +699,14 @@ function App() {
     setSearchResult(null);
   };
 
+  const showToast = (message) => {
+    setToastMessage(message);
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -771,6 +780,8 @@ function App() {
           onClose={() => setIsPaymentMenuOpen(false)}
           user={user}
           onSignOut={handleSignOut}
+          userOwnPin={userOwnPin}
+          onShowToast={showToast}
         />
         {selectedParking && (
           <ParkingDetailModal
@@ -803,6 +814,11 @@ function App() {
             onClose={handleCarDataModalClose}
             onSuccess={handleCarDataSuccess}
           />
+        )}
+        {toastMessage && (
+          <div className="toast-notification">
+            {toastMessage}
+          </div>
         )}
       </div>
     </StreamChatProvider>

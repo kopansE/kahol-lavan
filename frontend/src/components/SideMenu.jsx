@@ -4,11 +4,12 @@ import ChatChannelList from "./ChatChannelList";
 import WalletPage from "./WalletPage";
 import SettingsPage from "./SettingsPage";
 import ReportsPage from "./ReportsPage";
+import ScheduleLeavePage from "./ScheduleLeavePage";
 import "./SideMenu.css";
 
-const SideMenu = ({ isOpen, onClose, user, onSignOut }) => {
+const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast }) => {
   const { chatClient, isReady } = useStreamChat();
-  const [currentPage, setCurrentPage] = useState("menu"); // 'menu', 'wallet', 'chats', 'settings', 'reports'
+  const [currentPage, setCurrentPage] = useState("menu"); // 'menu', 'wallet', 'chats', 'settings', 'reports', 'scheduleleave'
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -92,6 +93,23 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut }) => {
     );
   }
 
+  if (currentPage === "scheduleleave") {
+    return (
+      <>
+        <div className="side-menu-overlay" onClick={onClose} />
+        <div className={`side-menu ${isOpen ? "open" : ""}`}>
+          <ScheduleLeavePage 
+            user={user} 
+            userOwnPin={userOwnPin} 
+            onBack={handleBack} 
+            onClose={onClose}
+            onScheduleSuccess={onShowToast}
+          />
+        </div>
+      </>
+    );
+  }
+
   // Main menu
   return (
     <>
@@ -150,6 +168,20 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut }) => {
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
+              <span className="menu-arrow">›</span>
+            </button>
+
+            <button
+              className="menu-item"
+              onClick={() => handleMenuItemClick("scheduleleave")}
+            >
+              <span className="menu-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12,6 12,12 16,14" />
+                </svg>
+              </span>
+              <span className="menu-label">Schedule Leave</span>
               <span className="menu-arrow">›</span>
             </button>
 

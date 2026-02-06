@@ -1,0 +1,359 @@
+.schedule-leave-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+}
+
+.schedule-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  margin: 0 0 24px 0;
+}
+
+/* Date Selection */
+.date-selection {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.date-btn {
+  padding: 12px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  background: white;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.date-btn:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.date-btn.active {
+  border-color: #667eea;
+  background: #667eea;
+  color: white;
+}
+
+.date-picker {
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 15px;
+  color: #333;
+  cursor: pointer;
+  background: white;
+}
+
+.date-picker:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.selected-date-label {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: #667eea;
+  margin-bottom: 24px;
+}
+
+/* Time Wheel Picker */
+.time-picker-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  position: relative;
+  margin: 20px 0;
+  background: #f8f9fa;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.time-picker-highlight {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 32px);
+  height: 48px;
+  background: rgba(102, 126, 234, 0.1);
+  border-top: 2px solid #667eea;
+  border-bottom: 2px solid #667eea;
+  border-radius: 8px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wheel-column {
+  height: 200px;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  flex: 0 0 70px;
+  position: relative;
+}
+
+.wheel-column::-webkit-scrollbar {
+  display: none;
+}
+
+.period-column {
+  flex: 0 0 60px;
+}
+
+.wheel-padding {
+  height: 76px; /* (200px - 48px) / 2 to center the middle item */
+}
+
+.wheel-item {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 500;
+  color: #999;
+  scroll-snap-align: center;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.wheel-item.selected {
+  color: #333;
+  font-weight: 600;
+  font-size: 24px;
+}
+
+.wheel-separator {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  padding: 0 4px;
+}
+
+/* Schedule Preview */
+.schedule-preview {
+  text-align: center;
+  font-size: 15px;
+  color: #666;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.schedule-preview strong {
+  color: #667eea;
+}
+
+/* Messages */
+.error-message {
+  background: #fff5f5;
+  color: #dc3545;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.success-message {
+  background: #f0fff4;
+  color: #28a745;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Schedule Button */
+.schedule-btn {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.schedule-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.schedule-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.schedule-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.validation-hint {
+  text-align: center;
+  font-size: 13px;
+  color: #999;
+  margin-top: 12px;
+}
+
+/* No Pin State */
+.no-pin-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  height: 100%;
+}
+
+.no-pin-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.no-pin-message h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 12px 0;
+}
+
+.no-pin-message p {
+  font-size: 15px;
+  color: #666;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.close-btn {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Existing Schedule State */
+.existing-schedule {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.existing-schedule-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.existing-schedule h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 16px 0;
+}
+
+.scheduled-time {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 24px 0;
+  line-height: 1.6;
+}
+
+.scheduled-time strong {
+  color: #667eea;
+  font-size: 18px;
+}
+
+.cancel-schedule-btn {
+  width: 100%;
+  max-width: 280px;
+  padding: 16px;
+  border: 2px solid #dc3545;
+  border-radius: 12px;
+  background: white;
+  color: #dc3545;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancel-schedule-btn:hover:not(:disabled) {
+  background: #dc3545;
+  color: white;
+}
+
+.cancel-schedule-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cancel-hint {
+  font-size: 13px;
+  color: #999;
+  margin-top: 16px;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #666;
+  font-size: 16px;
+}
+
+/* Mobile optimizations */
+@media (max-width: 400px) {
+  .date-selection {
+    flex-direction: column;
+  }
+
+  .date-btn,
+  .date-picker {
+    width: 100%;
+  }
+
+  .wheel-item {
+    font-size: 20px;
+  }
+
+  .wheel-item.selected {
+    font-size: 22px;
+  }
+}
