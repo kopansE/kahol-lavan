@@ -87,9 +87,18 @@ serve(async (req) => {
         .or(`user_id.eq.${userId},reserved_by.eq.${userId}`);
     }
 
+    // Get published pins (visible to ALL users including owner)
+    let publishedQuery = supabaseAdmin
+      .from("pins")
+      .select(
+        "id, position, parking_zone, created_at, price, user_id, status, reserved_by, address"
+      )
+      .eq("status", "published");
+
     // Filter by parking zone if provided
     if (parking_zone) {
       activeQuery = activeQuery.eq("parking_zone", parseInt(parking_zone));
+      publishedQuery = publishedQuery.eq("parking_zone", parseInt(parking_zone));
       if (reservedQuery) {
         reservedQuery = reservedQuery.eq(
           "parking_zone",
@@ -110,7 +119,7 @@ serve(async (req) => {
       return errorResponse("Failed to fetch pins", 500);
     }
 
-    let reservedPins = [];
+    let reservedPins: any[] = [];
     if (reservedQuery) {
       const { data: reserved, error: reservedError } =
         await reservedQuery.order("created_at", {
@@ -125,8 +134,107 @@ serve(async (req) => {
       }
     }
 
-    // Combine active and reserved pins
-    const allPins = [...(activePins || []), ...reservedPins];
+    const { data: publishedPinsData, error: publishedError } = await publishedQuery.order(
+      "created_at",
+      { ascending: false }
+    );
+
+    if (publishedError) {
+      console.error("❌ Error fetching published pins:", publishedError);
+      // Don't fail the whole request
+    }
+
+    // ========== SELF-HEALING: Auto-activate past-due published pins ==========
+    // If QStash failed to call handle-scheduled-leave, pins stay "published" past their time.
+    // Detect and fix these here.
+    const publishedPinsList = publishedPinsData || [];
+    let healedPinIds: string[] = [];
+
+    if (publishedPinsList.length > 0) {
+      // Fetch scheduled leaves for published pins to check which are past due
+      const { data: allScheduledLeaves } = await supabaseAdmin
+        .from("scheduled_leaves")
+        .select("id, pin_id, user_id, secret_token, scheduled_for, status")
+        .in("pin_id", publishedPinsList.map((p: any) => p.id))
+        .eq("status", "pending");
+
+      if (allScheduledLeaves && allScheduledLeaves.length > 0) {
+        const now = new Date();
+
+        for (const sl of allScheduledLeaves) {
+          const scheduledTime = new Date(sl.scheduled_for);
+          if (scheduledTime > now) continue; // Not past due yet
+
+          console.log(`⚠️ Self-healing: Pin ${sl.pin_id} is past due (scheduled: ${sl.scheduled_for})`);
+
+          // Check if there's a pending future reservation for this pin
+          const { data: pendingFR } = await supabaseAdmin
+            .from("future_reservations")
+            .select("id")
+            .eq("pin_id", sl.pin_id)
+            .eq("scheduled_leave_id", sl.id)
+            .eq("status", "pending")
+            .maybeSingle();
+
+          if (!pendingFR) {
+            // Simple case: no pending reservation - just activate the pin
+            console.log(`🔧 Self-healing: Activating pin ${sl.pin_id} (no pending reservation)`);
+            await supabaseAdmin
+              .from("pins")
+              .update({ status: "active" })
+              .eq("id", sl.pin_id);
+
+            await supabaseAdmin
+              .from("scheduled_leaves")
+              .update({ status: "completed" })
+              .eq("id", sl.id);
+
+            healedPinIds.push(sl.pin_id);
+            console.log(`✅ Self-healing: Pin ${sl.pin_id} activated successfully`);
+          } else {
+            // Complex case: has pending reservation - trigger handle-scheduled-leave internally (fire-and-forget)
+            console.log(`🔧 Self-healing: Triggering handle-scheduled-leave for pin ${sl.pin_id} (has pending reservation)`);
+            const handleUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/handle-scheduled-leave`;
+            const svcKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+            // Fire-and-forget: don't await (we don't want to slow down the response)
+            fetch(handleUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${svcKey}`,
+              },
+              body: JSON.stringify({
+                user_id: sl.user_id,
+                pin_id: sl.pin_id,
+                secret_token: sl.secret_token,
+              }),
+            }).then(res => {
+              console.log(`✅ Self-healing: handle-scheduled-leave triggered for pin ${sl.pin_id}, status: ${res.status}`);
+            }).catch(err => {
+              console.error(`❌ Self-healing: Failed to trigger handle-scheduled-leave for pin ${sl.pin_id}:`, err);
+            });
+
+            // Mark this pin as being healed so we don't show it as "published" in the response
+            // (handle-scheduled-leave will take care of it momentarily)
+            healedPinIds.push(sl.pin_id);
+          }
+        }
+      }
+    }
+
+    // Filter out healed pins from the published list (they are being transitioned)
+    // They'll appear correctly as "active" or "reserved" on the next refresh
+    const cleanPublishedPins = publishedPinsList.filter(
+      (p: any) => !healedPinIds.includes(p.id)
+    );
+
+    // Combine all pins
+    const allPins = [
+      ...(activePins || []),
+      ...reservedPins,
+      ...cleanPublishedPins,
+    ];
 
     // Get unique user IDs from pins
     const userIds = [
@@ -159,17 +267,69 @@ serve(async (req) => {
     // Create a map of user data by user ID for quick lookup
     const usersMap = new Map(usersData.map((u) => [u.id, u]));
 
-    // Join pins with user data
-    const pins = allPins.map((pin) => {
+    // Fetch scheduled_for data for published pins
+    const publishedPinIds = allPins
+      .filter((p: any) => p.status === "published")
+      .map((p: any) => p.id);
+
+    let scheduledLeavesMap = new Map();
+
+    if (publishedPinIds.length > 0) {
+      const { data: scheduledLeaves } = await supabaseAdmin
+        .from("scheduled_leaves")
+        .select("pin_id, scheduled_for")
+        .in("pin_id", publishedPinIds)
+        .eq("status", "pending");
+
+      if (scheduledLeaves) {
+        scheduledLeaves.forEach((sl: any) => {
+          scheduledLeavesMap.set(sl.pin_id, sl.scheduled_for);
+        });
+      }
+    }
+
+    // Fetch future reservation data for published pins (bypass RLS with admin client)
+    let futureReservationsMap = new Map();
+
+    if (publishedPinIds.length > 0) {
+      const { data: futureReservations } = await supabaseAdmin
+        .from("future_reservations")
+        .select("pin_id, reserver_id, id")
+        .in("pin_id", publishedPinIds)
+        .eq("status", "pending");
+
+      if (futureReservations) {
+        futureReservations.forEach((fr: any) => {
+          futureReservationsMap.set(fr.pin_id, {
+            future_reservation_id: fr.id,
+            reserver_id: fr.reserver_id,
+          });
+        });
+      }
+    }
+
+    // Join pins with user data, schedule info, and future reservation info
+    const pins = allPins.map((pin: any) => {
       const userData = usersMap.get(pin.user_id);
-      console.log(
-        `🔍 Pin ${pin.id} - user_id: ${pin.user_id}, userData:`,
-        userData
-      );
-      return {
+      const result: any = {
         ...pin,
         user: userData || null,
       };
+
+      // Add scheduled_for and future reservation info for published pins
+      if (pin.status === "published") {
+        result.scheduled_for = scheduledLeavesMap.get(pin.id) || null;
+        const futureRes = futureReservationsMap.get(pin.id);
+        if (futureRes) {
+          result.future_reservation_id = futureRes.future_reservation_id;
+          result.future_reserved_by = futureRes.reserver_id;
+        } else {
+          result.future_reservation_id = null;
+          result.future_reserved_by = null;
+        }
+      }
+
+      return result;
     });
 
     // If lat/lng provided, filter by distance

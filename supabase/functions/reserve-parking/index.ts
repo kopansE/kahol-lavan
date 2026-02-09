@@ -41,8 +41,8 @@ serve(async (req) => {
       return errorResponse("Pin not found", 404);
     }
 
-    if (pinData.status !== "active") {
-      return errorResponse("Pin is not active", 400);
+    if (pinData.status !== "active" && pinData.status !== "published") {
+      return errorResponse("Pin is not available for reservation", 400);
     }
 
     if (pinData.user_id === user.id) {
@@ -72,6 +72,140 @@ serve(async (req) => {
         400
       );
     }
+
+    // Also check if user already has a pending future reservation
+    const { data: existingFutureRes, error: futureResCheckError } =
+      await supabaseAdmin
+        .from("future_reservations")
+        .select("id")
+        .eq("reserver_id", user.id)
+        .eq("status", "pending")
+        .maybeSingle();
+
+    if (futureResCheckError) {
+      console.error("Error checking existing future reservations:", futureResCheckError);
+    }
+
+    if (existingFutureRes) {
+      return errorResponse(
+        "You already have a pending future reservation. Please cancel it before reserving another spot.",
+        400
+      );
+    }
+
+    // ========== FUTURE RESERVATION FLOW (published pin) ==========
+    if (pinData.status === "published") {
+      // Check if this pin already has a pending future reservation from any user
+      const { data: existingPinRes, error: pinResCheckError } =
+        await supabaseAdmin
+          .from("future_reservations")
+          .select("id")
+          .eq("pin_id", pin_id)
+          .eq("status", "pending")
+          .maybeSingle();
+
+      if (pinResCheckError) {
+        console.error("Error checking existing pin reservation:", pinResCheckError);
+      }
+
+      if (existingPinRes) {
+        return errorResponse(
+          "This parking spot is already scheduled by another user.",
+          400
+        );
+      }
+
+      console.log(`📋 Pin ${pin_id} is published - creating future reservation (no payment yet)`);
+
+      // Look up the scheduled_leaves record for this pin
+      const { data: scheduledLeave, error: slError } = await supabaseAdmin
+        .from("scheduled_leaves")
+        .select("id, scheduled_for")
+        .eq("pin_id", pin_id)
+        .eq("user_id", pinData.user_id)
+        .eq("status", "pending")
+        .single();
+
+      if (slError || !scheduledLeave) {
+        console.error("❌ Scheduled leave not found for published pin:", slError);
+        return errorResponse("Scheduled leave data not found for this pin", 500);
+      }
+
+      // Create the future_reservations record
+      const { data: futureResData, error: futureResError } = await supabaseAdmin
+        .from("future_reservations")
+        .insert({
+          pin_id: pin_id,
+          scheduled_leave_id: scheduledLeave.id,
+          publisher_id: pinData.user_id,
+          reserver_id: user.id,
+          status: "pending",
+          scheduled_for: scheduledLeave.scheduled_for,
+        })
+        .select("id")
+        .single();
+
+      if (futureResError || !futureResData) {
+        console.error("❌ Failed to create future reservation:", futureResError);
+        return errorResponse(`Failed to create future reservation: ${futureResError?.message || "No data"}`, 500);
+      }
+
+      console.log(`✅ Future reservation created: ${futureResData.id}`);
+
+      // Create a chat channel for the future reservation
+      let sessionId: string | null = null;
+      try {
+        console.log("💬 Creating chat channel for future reservation");
+        const createChannelUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/create-chat-channel`;
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+        const channelResponse = await fetch(createChannelUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceRoleKey}`,
+          },
+          body: JSON.stringify({
+            pin_id: pin_id,
+            holder_id: user.id,
+            tracker_id: pinData.user_id,
+            future_reservation_id: futureResData.id,
+          }),
+        });
+
+        if (channelResponse.ok) {
+          const channelData = await channelResponse.json();
+          console.log(`✅ Chat channel created: ${channelData.channel_id}`);
+          sessionId = channelData.session_id;
+
+          // Update future reservation with chat_session_id
+          await supabaseAdmin
+            .from("future_reservations")
+            .update({ chat_session_id: sessionId })
+            .eq("id", futureResData.id);
+        } else {
+          const errorText = await channelResponse.text();
+          console.error("⚠️ Failed to create chat channel:", errorText);
+        }
+      } catch (chatError) {
+        console.error("⚠️ Error creating chat channel:", chatError);
+      }
+
+      // Pin stays "published" - visible to all users
+      // The reservation info lives in future_reservations table only
+      console.log(`✅ Pin ${pin_id} stays published, future reservation recorded`);
+
+      return successResponse({
+        success: true,
+        future_reservation: true,
+        future_reservation_id: futureResData.id,
+        scheduled_for: scheduledLeave.scheduled_for,
+        status: "future_reservation",
+        message: `Spot scheduled! The reservation will activate at ${new Date(scheduledLeave.scheduled_for).toLocaleString()}.`,
+      });
+    }
+
+    // ========== IMMEDIATE RESERVATION FLOW (active pin) ==========
 
     // Get sender's wallet
     const { data: senderData, error: senderError } = await supabaseAdmin

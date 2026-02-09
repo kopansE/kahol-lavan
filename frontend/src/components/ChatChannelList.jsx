@@ -153,9 +153,10 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
     );
   }
 
-  // Separate channels into active and history
+  // Separate channels into active, future reservations, and history
   const activeChannels = channels.filter(c => c.status === 'active');
-  const historyChannels = channels.filter(c => c.status !== 'active');
+  const futureReservationChannels = channels.filter(c => c.type === 'future_reservation' && c.status === 'future_reservation');
+  const historyChannels = channels.filter(c => c.status !== 'active' && !(c.type === 'future_reservation' && c.status === 'future_reservation'));
 
   // Render inside side menu
   if (inSideMenu) {
@@ -192,6 +193,13 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
                   <div className="chat-section-empty">No active chats</div>
                 )}
               </div>
+
+              {futureReservationChannels.length > 0 && (
+                <div className="chat-section">
+                  <div className="chat-section-header" style={{ color: '#34A853' }}>Future Reservations</div>
+                  {futureReservationChannels.map(renderChannelItem)}
+                </div>
+              )}
 
               <div className="chat-section">
                 <div className="chat-section-header">History</div>
@@ -241,6 +249,13 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
                   <div className="chat-section-empty">No active chats</div>
                 )}
               </div>
+
+              {futureReservationChannels.length > 0 && (
+                <div className="chat-section">
+                  <div className="chat-section-header" style={{ color: '#34A853' }}>Future Reservations</div>
+                  {futureReservationChannels.map(renderChannelItem)}
+                </div>
+              )}
 
               <div className="chat-section">
                 <div className="chat-section-header">History</div>

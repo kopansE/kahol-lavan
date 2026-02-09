@@ -63,3 +63,33 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/handle-timer-expiration/deno.json"
 entrypoint = "./functions/handle-timer-expiration/index.ts"
+
+[functions.handle-scheduled-leave]
+enabled = true
+verify_jwt = false
+import_map = "./functions/handle-scheduled-leave/deno.json"
+entrypoint = "./functions/handle-scheduled-leave/index.ts"
+
+[functions.schedule-leave]
+enabled = true
+verify_jwt = true
+import_map = "./functions/schedule-leave/deno.json"
+entrypoint = "./functions/schedule-leave/index.ts"
+
+[functions.reserve-parking]
+enabled = true
+verify_jwt = true
+import_map = "./functions/reserve-parking/deno.json"
+entrypoint = "./functions/reserve-parking/index.ts"
+
+[functions.cancel-scheduled-leave]
+enabled = true
+verify_jwt = true
+import_map = "./functions/cancel-scheduled-leave/deno.json"
+entrypoint = "./functions/cancel-scheduled-leave/index.ts"
+
+[functions.cancel-future-reservation]
+enabled = true
+verify_jwt = true
+import_map = "./functions/cancel-future-reservation/deno.json"
+entrypoint = "./functions/cancel-future-reservation/index.ts"

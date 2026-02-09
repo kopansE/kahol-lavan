@@ -5,7 +5,7 @@ import { useStreamChat } from '../contexts/StreamChatContext';
 import ChatTimer from '../components/ChatTimer';
 import ChatActionButtons from '../components/ChatActionButtons';
 import { customChatTheme } from '../styles/chatTheme';
-import { approveInChat, cancelInChat, extendInChat } from '../utils/edgeFunctions';
+import { approveInChat, cancelInChat, extendInChat, cancelFutureReservation } from '../utils/edgeFunctions';
 
 const ChatThreadScreen = ({ route, navigation }) => {
   const { channel, channelData } = route.params;
@@ -30,6 +30,7 @@ const ChatThreadScreen = ({ route, navigation }) => {
 
   // Check if chat session is active
   const isActive = channelData?.status === 'active';
+  const isFutureReservation = channelData?.type === 'future_reservation' && channelData?.status === 'future_reservation';
   const chatStatus = channelData?.status || 'unknown';
 
   const handleTimerExpire = () => {
@@ -150,9 +151,57 @@ const ChatThreadScreen = ({ route, navigation }) => {
     );
   };
 
+  const handleCancelFutureReservation = () => {
+    if (isProcessing) return;
+
+    if (!channelData?.future_reservation_id) {
+      Alert.alert('Error', 'Future reservation data is missing. Please try again.');
+      return;
+    }
+
+    Alert.alert(
+      'Cancel Future Reservation',
+      'Are you sure you want to cancel this future reservation?',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsProcessing(true);
+              const result = await cancelFutureReservation(channelData.future_reservation_id);
+
+              Alert.alert(
+                'Cancelled',
+                result.message || 'Future reservation cancelled successfully.',
+                [{ text: 'OK', onPress: () => navigation.goBack() }]
+              );
+            } catch (error) {
+              console.error('Error cancelling future reservation:', error);
+              Alert.alert('Error', `Failed to cancel: ${error.message}`);
+            } finally {
+              setIsProcessing(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
+      {!isFutureReservation && (
+        <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
+      )}
+
+      {isFutureReservation && channelData?.scheduled_for && (
+        <View style={styles.futureReservationBanner}>
+          <Text style={styles.futureReservationBannerText}>
+            Future Reservation - Activates {new Date(channelData.scheduled_for).toLocaleString()}
+          </Text>
+        </View>
+      )}
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -180,7 +229,7 @@ const ChatThreadScreen = ({ route, navigation }) => {
           <Channel channel={channel}>
             <View style={styles.chatContainer}>
               <MessageList />
-              {isActive ? (
+              {(isActive || isFutureReservation) ? (
                 <MessageInput />
               ) : (
                 <View style={styles.inactiveMessageBar}>
@@ -212,6 +261,20 @@ const ChatThreadScreen = ({ route, navigation }) => {
           isProcessing={isProcessing}
           approvalState={approvalState}
         />
+      )}
+
+      {isFutureReservation && (
+        <View style={styles.futureReservationActions}>
+          <TouchableOpacity
+            style={styles.cancelFutureButton}
+            onPress={handleCancelFutureReservation}
+            disabled={isProcessing}
+          >
+            <Text style={styles.cancelFutureButtonText}>
+              {isProcessing ? 'Cancelling...' : 'Cancel Future Reservation'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       )}
     </View>
   );
@@ -276,6 +339,33 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontSize: 14,
     fontWeight: '500',
+  },
+  futureReservationBanner: {
+    backgroundColor: '#34A853',
+    padding: 10,
+    alignItems: 'center',
+  },
+  futureReservationBannerText: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  futureReservationActions: {
+    padding: 12,
+    paddingHorizontal: 16,
+  },
+  cancelFutureButton: {
+    borderWidth: 2,
+    borderColor: '#dc3545',
+    backgroundColor: 'white',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  cancelFutureButtonText: {
+    color: '#dc3545',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

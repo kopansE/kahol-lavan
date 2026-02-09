@@ -29,6 +29,7 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
 
   // Check if chat session is active
   const isActive = channelData?.status === 'active';
+  const isFutureReservation = channelData?.type === 'future_reservation' && channelData?.status === 'future_reservation';
   const chatStatus = channelData?.status || 'unknown';
 
   const handleTimerExpire = () => {
@@ -201,6 +202,56 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
     }
   };
 
+  const handleCancelFutureReservation = async () => {
+    if (isProcessing) return;
+
+    if (!channelData?.future_reservation_id) {
+      alert('Future reservation data is missing. Please try again.');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to cancel this future reservation?')) {
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+
+      if (!token) {
+        alert('Authentication error. Please log in again.');
+        return;
+      }
+
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cancel-future-reservation`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ future_reservation_id: channelData.future_reservation_id }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to cancel future reservation');
+      }
+
+      alert(result.message || 'Future reservation cancelled successfully.');
+      if (onClose) onClose();
+    } catch (error) {
+      console.error('Error cancelling future reservation:', error);
+      alert(`Failed to cancel: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Render inside side menu (no overlay, fill container)
   if (inSideMenu) {
     // Show report page if requested
@@ -220,7 +271,15 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
 
     return (
       <div className="chat-thread-side-menu">
-        <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
+        {!isFutureReservation && (
+          <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
+        )}
+
+        {isFutureReservation && channelData?.scheduled_for && (
+          <div className="chat-future-reservation-banner" style={{ background: '#34A853', color: 'white', padding: '8px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>
+            Future Reservation - Activates {new Date(channelData.scheduled_for).toLocaleString()}
+          </div>
+        )}
 
         <div className="chat-thread-header-side-menu">
           <button type="button" className="chat-thread-back-button-side-menu" onClick={onBack}>
@@ -248,7 +307,7 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
           <Channel channel={channel}>
             <Window>
               <MessageList />
-              {isActive ? (
+              {(isActive || isFutureReservation) ? (
                 <MessageInput />
               ) : (
                 <div className="chat-inactive-area">
@@ -276,6 +335,18 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
             approvalState={approvalState}
           />
         )}
+
+        {isFutureReservation && (
+          <div style={{ padding: '12px 16px' }}>
+            <button
+              onClick={handleCancelFutureReservation}
+              disabled={isProcessing}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #dc3545', background: 'white', color: '#dc3545', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              {isProcessing ? 'Cancelling...' : 'Cancel Future Reservation'}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -301,7 +372,15 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
   return (
     <div className="chat-thread-overlay" onClick={onClose}>
       <div className="chat-thread-container" onClick={(e) => e.stopPropagation()}>
-        <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
+        {!isFutureReservation && (
+          <ChatTimer startedAt={channelData?.started_at} expiresAt={expiresAt} initialMinutes={20} onExpire={handleTimerExpire} />
+        )}
+
+        {isFutureReservation && channelData?.scheduled_for && (
+          <div style={{ background: '#34A853', color: 'white', padding: '8px 16px', textAlign: 'center', fontSize: '13px', fontWeight: 600 }}>
+            Future Reservation - Activates {new Date(channelData.scheduled_for).toLocaleString()}
+          </div>
+        )}
 
         <div className="chat-thread-header">
           <button type="button" className="chat-thread-back-button" onClick={onBack}>
@@ -329,7 +408,7 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
           <Channel channel={channel}>
             <Window>
               <MessageList />
-              {isActive ? (
+              {(isActive || isFutureReservation) ? (
                 <MessageInput />
               ) : (
                 <div className="chat-inactive-area">
@@ -356,6 +435,18 @@ const ChatThread = ({ channel, otherUser, channelData, onClose, onBack, inSideMe
             isProcessing={isProcessing}
             approvalState={approvalState}
           />
+        )}
+
+        {isFutureReservation && (
+          <div style={{ padding: '12px 16px' }}>
+            <button
+              onClick={handleCancelFutureReservation}
+              disabled={isProcessing}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid #dc3545', background: 'white', color: '#dc3545', fontSize: '16px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              {isProcessing ? 'Cancelling...' : 'Cancel Future Reservation'}
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -182,6 +182,12 @@ export const extendInChat = async (sessionId) => {
   });
 };
 
+export const cancelFutureReservation = async (futureReservationId) => {
+  return callEdgeFunction('cancel-future-reservation', {
+    body: { future_reservation_id: futureReservationId },
+  });
+};
+
 // Data fetching operations
 export const getActivePins = async () => {
   return callEdgeFunction('get-active-pins', {

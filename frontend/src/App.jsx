@@ -10,6 +10,7 @@ import ReservedParkingButton from "./components/ReservedParkingButton";
 import CancelReservationModal from "./components/CancelReservationModal";
 import SideMenu from "./components/SideMenu";
 import ParkingDetailModal from "./components/ParkingDetailModal";
+import PublishedParkingDetailModal from "./components/PublishedParkingDetailModal";
 import ReservedParkingDetailModal from "./components/ReservedParkingDetailModal";
 import OwnParkingDetailModal from "./components/OwnParkingDetailModal";
 import CarDataBanner from "./components/CarDataBanner";
@@ -40,7 +41,10 @@ function App() {
   const [reservedByName, setReservedByName] = useState(null);
   const [userDataComplete, setUserDataComplete] = useState(true); // Assume true initially
   const [showCarDataModal, setShowCarDataModal] = useState(false);
+  const [publishedPins, setPublishedPins] = useState([]);
+  const [selectedPublishedParking, setSelectedPublishedParking] = useState(null);
   const [searchResult, setSearchResult] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -67,6 +71,7 @@ function App() {
         setOtherUsersPins([]);
         setUserOwnPin(null);
         setUserReservedPins([]);
+        setPublishedPins([]);
         setUserDataComplete(true);
       }
     });
@@ -153,7 +158,7 @@ function App() {
         .from("pins")
         .select("id, position, parking_zone, status, created_at, reserved_by, address")
         .eq("user_id", userId)
-        .in("status", ["waiting", "active", "reserved"])
+        .in("status", ["waiting", "active", "reserved", "published"])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -249,9 +254,10 @@ function App() {
       }
 
       if (result.pins && result.pins.length > 0) {
-        // Separate active pins and reserved pins that the user reserved
+        // Separate active pins, reserved pins, and published pins
         const activePins = [];
         const reservedByUser = [];
+        const published = [];
 
         result.pins.forEach((pin) => {
           if (pin.status === "reserved" && pin.reserved_by === userId) {
@@ -276,14 +282,30 @@ function App() {
               user: pin.user,
               address: pin.address,
             });
+          } else if (pin.status === "published" && pin.user_id !== userId) {
+            // Published pin from OTHER users (scheduled leave visible to others)
+            published.push({
+              id: pin.id,
+              position: pin.position,
+              parking_zone: pin.parking_zone,
+              timestamp: pin.created_at,
+              user: pin.user,
+              address: pin.address,
+              scheduled_for: pin.scheduled_for,
+              status: pin.status,
+              future_reservation_id: pin.future_reservation_id || null,
+              future_reserved_by: pin.future_reserved_by || null,
+            });
           }
         });
 
         setOtherUsersPins(activePins);
         setUserReservedPins(reservedByUser);
+        setPublishedPins(published);
       } else {
         setOtherUsersPins([]);
         setUserReservedPins([]);
+        setPublishedPins([]);
       }
     } catch (error) {
       console.error("Error loading other users' pins:", error);
@@ -513,6 +535,7 @@ function App() {
       setOtherUsersPins([]);
       setUserOwnPin(null);
       setUserReservedPins([]);
+      setPublishedPins([]);
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -571,6 +594,18 @@ function App() {
     } else {
       setSelectedParking(pin);
     }
+  };
+
+  const handlePublishedPinClick = async (pin) => {
+    if (!pin.address && pin.position) {
+      const address = await reverseGeocode(pin.position[0], pin.position[1]);
+      pin.address = address;
+    }
+    setSelectedPublishedParking(pin);
+  };
+
+  const handleClosePublishedParkingDetail = () => {
+    setSelectedPublishedParking(null);
   };
 
   const handleCloseParkingDetail = () => {
@@ -698,6 +733,14 @@ function App() {
     setSearchResult(null);
   };
 
+  const showToast = (message) => {
+    setToastMessage(message);
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3000);
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -727,9 +770,11 @@ function App() {
           otherUsersPins={otherUsersPins}
           userOwnPin={userOwnPin}
           userReservedPins={userReservedPins}
+          publishedPins={publishedPins}
           onMapClick={handleMapClick}
           onPinClick={handlePinClick}
           onOwnPinClick={handleOwnPinClick}
+          onPublishedPinClick={handlePublishedPinClick}
           searchResult={searchResult}
         />
         <SearchBar
@@ -771,12 +816,23 @@ function App() {
           onClose={() => setIsPaymentMenuOpen(false)}
           user={user}
           onSignOut={handleSignOut}
+          userOwnPin={userOwnPin}
+          onShowToast={showToast}
         />
         {selectedParking && (
           <ParkingDetailModal
             parking={selectedParking}
             onClose={handleCloseParkingDetail}
             userReservedPins={userReservedPins}
+          />
+        )}
+        {selectedPublishedParking && (
+          <PublishedParkingDetailModal
+            parking={selectedPublishedParking}
+            onClose={handleClosePublishedParkingDetail}
+            userReservedPins={userReservedPins}
+            publishedPins={publishedPins}
+            currentUserId={user?.id}
           />
         )}
         {selectedReservedParking && (
@@ -803,6 +859,11 @@ function App() {
             onClose={handleCarDataModalClose}
             onSuccess={handleCarDataSuccess}
           />
+        )}
+        {toastMessage && (
+          <div className="toast-notification">
+            {toastMessage}
+          </div>
         )}
       </div>
     </StreamChatProvider>

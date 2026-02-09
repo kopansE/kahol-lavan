@@ -36,6 +36,7 @@ const userLocationIcon = createCustomIcon("#4ecdc4", "user-location-pin");
 const redPinIcon = createCustomIcon("#ff6b6b", "red-pin"); // User's own pin
 const bluePinIcon = createCustomIcon("#4285F4", "blue-pin"); // Other users' pins
 const orangePinIcon = createCustomIcon("#FF8C00", "orange-pin"); // Reserved pins
+const greenPinIcon = createCustomIcon("#34A853", "green-pin"); // Published pins (scheduled leave)
 
 // Search result pin (red marker like Google Maps)
 const searchPinIcon = L.divIcon({
@@ -101,9 +102,11 @@ const MapContainer = ({
   otherUsersPins,
   userOwnPin,
   userReservedPins,
+  publishedPins,
   onMapClick,
   onPinClick,
   onOwnPinClick,
+  onPublishedPinClick,
   searchResult,
 }) => {
   const mapRef = useRef();
@@ -264,6 +267,25 @@ const MapContainer = ({
                   e.originalEvent.stopPropagation();
                   if (onPinClick) {
                     onPinClick(pin, 'reserved');
+                  }
+                },
+              }}
+            />
+          ))}
+
+        {/* Published pins (GREEN) - scheduled leaves visible to other users */}
+        {publishedPins &&
+          publishedPins.length > 0 &&
+          publishedPins.map((pin) => (
+            <Marker
+              key={`published-${pin.id}`}
+              position={pin.position}
+              icon={greenPinIcon}
+              eventHandlers={{
+                click: (e) => {
+                  e.originalEvent.stopPropagation();
+                  if (onPublishedPinClick) {
+                    onPublishedPinClick(pin);
                   }
                 },
               }}

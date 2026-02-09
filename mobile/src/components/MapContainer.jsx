@@ -16,9 +16,11 @@ const MapContainer = ({
   otherUsersPins,
   userOwnPin,
   userReservedPins,
+  publishedPins,
   onMapPress,
   onPinClick,
   onOwnPinClick,
+  onPublishedPinClick,
   searchResult,
 }) => {
   const mapRef = useRef(null);
@@ -181,6 +183,26 @@ const MapContainer = ({
               onPress={() => {
                 if (onPinClick) {
                   onPinClick(pin, 'reserved');
+                }
+              }}
+            />
+          ))}
+
+        {/* Published pins (green) - scheduled leaves visible to other users */}
+        {publishedPins &&
+          publishedPins.map((pin) => (
+            <Marker
+              key={`published-${pin.id}`}
+              coordinate={{
+                latitude: pin.position[0],
+                longitude: pin.position[1],
+              }}
+              pinColor="#34A853"
+              title="Upcoming Parking"
+              description="Tap to schedule"
+              onPress={() => {
+                if (onPublishedPinClick) {
+                  onPublishedPinClick(pin);
                 }
               }}
             />
