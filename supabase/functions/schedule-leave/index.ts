@@ -156,13 +156,27 @@ serve(async (req) => {
 
     console.log(`✅ Scheduled leave stored in database: ${scheduleData.id}`);
 
+    // Update pin status to "published" so it becomes visible to other users
+    const { error: pinUpdateError } = await supabaseAdmin
+      .from("pins")
+      .update({ status: "published" })
+      .eq("id", userPin.id);
+
+    if (pinUpdateError) {
+      console.error("⚠️ Failed to update pin status to published:", pinUpdateError);
+      // Don't fail the whole operation - schedule was created successfully
+    } else {
+      console.log(`✅ Pin ${userPin.id} status updated to published`);
+    }
+
     return successResponse({
       success: true,
       schedule_id: scheduleData.id,
       scheduled_for: scheduledTime.toISOString(),
       qstash_message_id: qstashMessageId,
       pin_address: userPin.address,
-      message: `Your parking spot will become visible to others at ${scheduledTime.toLocaleString()}.`,
+      pin_id: userPin.id,
+      message: `Your parking spot is now published and visible to others. It will activate at ${scheduledTime.toLocaleString()}.`,
     });
   } catch (err) {
     console.error("Error in schedule-leave:", err);

@@ -7,6 +7,7 @@ import MapContainer from '../components/MapContainer';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PinConfirmationModal from '../components/PinConfirmationModal';
 import ParkingDetailModal from '../components/ParkingDetailModal';
+import PublishedParkingDetailModal from '../components/PublishedParkingDetailModal';
 import ReservedParkingDetailModal from '../components/ReservedParkingDetailModal';
 import OwnParkingDetailModal from '../components/OwnParkingDetailModal';
 import CarDataFormModal from '../components/CarDataFormModal';
@@ -48,6 +49,8 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
   const [pendingNotifications, setPendingNotifications] = useState([]);
   const [userDataComplete, setUserDataComplete] = useState(true);
   const [showCarDataModal, setShowCarDataModal] = useState(false);
+  const [publishedPins, setPublishedPins] = useState([]);
+  const [selectedPublishedParking, setSelectedPublishedParking] = useState(null);
   const [searchResult, setSearchResult] = useState(null);
 
   useEffect(() => {
@@ -134,7 +137,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         .from('pins')
         .select('id, position, parking_zone, status, created_at, reserved_by, address')
         .eq('user_id', userId)
-        .in('status', ['waiting', 'active', 'reserved'])
+        .in('status', ['waiting', 'active', 'reserved', 'published'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -205,6 +208,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
       if (result.pins && result.pins.length > 0) {
         const activePins = [];
         const reservedByUser = [];
+        const published = [];
 
         result.pins.forEach((pin) => {
           if (pin.status === 'reserved' && pin.reserved_by === userId) {
@@ -227,14 +231,29 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
               user: pin.user,
               address: pin.address,
             });
+          } else if (pin.status === 'published' && pin.user_id !== userId) {
+            published.push({
+              id: pin.id,
+              position: pin.position,
+              parking_zone: pin.parking_zone,
+              timestamp: pin.created_at,
+              user: pin.user,
+              address: pin.address,
+              scheduled_for: pin.scheduled_for,
+              status: pin.status,
+              future_reservation_id: pin.future_reservation_id || null,
+              future_reserved_by: pin.future_reserved_by || null,
+            });
           }
         });
 
         setOtherUsersPins(activePins);
         setUserReservedPins(reservedByUser);
+        setPublishedPins(published);
       } else {
         setOtherUsersPins([]);
         setUserReservedPins([]);
+        setPublishedPins([]);
       }
     } catch (error) {
       console.error('Error loading other users pins:', error);
@@ -321,6 +340,14 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
     } else {
       setSelectedParking(pin);
     }
+  };
+
+  const handlePublishedPinClick = async (pin) => {
+    if (!pin.address && pin.position) {
+      const address = await reverseGeocode(pin.position[0], pin.position[1]);
+      pin.address = address;
+    }
+    setSelectedPublishedParking(pin);
   };
 
   const handleOwnPinClick = (pin) => {
@@ -423,9 +450,11 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         otherUsersPins={otherUsersPins}
         userOwnPin={userOwnPin}
         userReservedPins={userReservedPins}
+        publishedPins={publishedPins}
         onMapPress={handleMapPress}
         onPinClick={handlePinClick}
         onOwnPinClick={handleOwnPinClick}
+        onPublishedPinClick={handlePublishedPinClick}
         searchResult={searchResult}
       />
 
@@ -455,6 +484,7 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         />
       )}
 
+
       <PinConfirmationModal
         visible={showConfirmModal}
         address={pinAddress}
@@ -480,6 +510,14 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         parking={selectedParking}
         onClose={() => setSelectedParking(null)}
         userReservedPins={userReservedPins}
+      />
+
+      <PublishedParkingDetailModal
+        visible={!!selectedPublishedParking}
+        parking={selectedPublishedParking}
+        onClose={() => setSelectedPublishedParking(null)}
+        userReservedPins={userReservedPins}
+        currentUserId={user?.id}
       />
 
       <ReservedParkingDetailModal
@@ -537,6 +575,36 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: colors.white,
     borderRadius: 1,
+  },
+  statusButton: {
+    position: 'absolute',
+    bottom: 40,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 100,
+  },
+  statusButtonIcon: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  statusButtonTitle: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  statusButtonSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    marginTop: 2,
   },
 });
 

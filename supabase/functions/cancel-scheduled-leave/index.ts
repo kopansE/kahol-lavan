@@ -82,6 +82,48 @@ serve(async (req) => {
       return errorResponse(`Failed to cancel schedule: ${updateError.message}`, 500);
     }
 
+    // Revert pin status back to "waiting" if it's published
+    const { data: pin } = await supabaseAdmin
+      .from("pins")
+      .select("id, status")
+      .eq("id", schedule.pin_id)
+      .single();
+
+    if (pin && pin.status === "published") {
+      // Also cancel any linked future reservations
+      const { data: futureRes } = await supabaseAdmin
+        .from("future_reservations")
+        .select("id, chat_session_id")
+        .eq("scheduled_leave_id", schedule_id)
+        .eq("status", "pending")
+        .maybeSingle();
+
+      if (futureRes) {
+        console.log(`🗑️ Also cancelling linked future reservation ${futureRes.id}`);
+
+        await supabaseAdmin
+          .from("future_reservations")
+          .update({ status: "cancelled", updated_at: new Date().toISOString() })
+          .eq("id", futureRes.id);
+
+        // Cancel linked chat session
+        if (futureRes.chat_session_id) {
+          await supabaseAdmin
+            .from("chat_sessions")
+            .update({ status: "cancelled", cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+            .eq("id", futureRes.chat_session_id);
+        }
+      }
+
+      // Revert pin to waiting
+      await supabaseAdmin
+        .from("pins")
+        .update({ status: "waiting", reserved_by: null })
+        .eq("id", schedule.pin_id);
+
+      console.log(`✅ Pin ${schedule.pin_id} reverted to waiting`);
+    }
+
     console.log(`✅ Scheduled leave ${schedule_id} cancelled successfully`);
 
     return successResponse({

@@ -177,15 +177,34 @@ const ChatChannelListScreen = ({ navigation }) => {
     );
   }
 
-  // Separate channels into active and history
+  // Separate channels into active, future reservations, and history
   const activeChannels = channels.filter((c) => c.status === 'active');
-  const historyChannels = channels.filter((c) => c.status !== 'active');
+  const futureReservationChannels = channels.filter(
+    (c) => c.type === 'future_reservation' && c.status === 'future_reservation'
+  );
+  const historyChannels = channels.filter(
+    (c) => c.status !== 'active' && !(c.type === 'future_reservation' && c.status === 'future_reservation')
+  );
 
-  // Always show both sections
+  // Build sections
   const sections = [
     { title: 'Active', data: activeChannels, isEmpty: activeChannels.length === 0 },
-    { title: 'History', data: historyChannels, isEmpty: historyChannels.length === 0 },
   ];
+
+  if (futureReservationChannels.length > 0) {
+    sections.push({
+      title: 'Future Reservations',
+      data: futureReservationChannels,
+      isEmpty: false,
+      headerColor: '#34A853',
+    });
+  }
+
+  sections.push({
+    title: 'History',
+    data: historyChannels,
+    isEmpty: historyChannels.length === 0,
+  });
 
   return (
     <View style={styles.container}>
@@ -208,7 +227,7 @@ const ChatChannelListScreen = ({ navigation }) => {
       ) : (
         <FlatList
           data={sections.flatMap((section) => [
-            { isHeader: true, title: section.title },
+            { isHeader: true, title: section.title, headerColor: section.headerColor },
             ...(section.isEmpty
               ? [{ isEmpty: true, sectionTitle: section.title }]
               : section.data),
@@ -216,7 +235,7 @@ const ChatChannelListScreen = ({ navigation }) => {
           renderItem={({ item }) =>
             item.isHeader ? (
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionHeaderText}>{item.title}</Text>
+                <Text style={[styles.sectionHeaderText, item.headerColor && { color: item.headerColor }]}>{item.title}</Text>
               </View>
             ) : item.isEmpty ? (
               <View style={styles.sectionEmpty}>

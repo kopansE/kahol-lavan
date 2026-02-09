@@ -11,6 +11,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState(null);
   const [pendingSchedule, setPendingSchedule] = useState(null);
+  const [futureReservation, setFutureReservation] = useState(null);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
 
   const hourRef = useRef(null);
@@ -47,6 +48,32 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
         console.error("Error loading pending schedule:", error);
       } else if (data) {
         setPendingSchedule(data);
+
+        // Check if someone has made a future reservation for this schedule
+        try {
+          const { data: frData, error: frError } = await supabase
+            .from("future_reservations")
+            .select("id, reserver_id, status")
+            .eq("scheduled_leave_id", data.id)
+            .eq("status", "pending")
+            .maybeSingle();
+
+          if (!frError && frData) {
+            // Fetch the reserver's name
+            const { data: userData } = await supabase
+              .from("users")
+              .select("first_name, last_name")
+              .eq("id", frData.reserver_id)
+              .single();
+
+            setFutureReservation({
+              ...frData,
+              reserver_name: userData ? `${userData.first_name} ${userData.last_name}` : "A user",
+            });
+          }
+        } catch (frErr) {
+          console.error("Error loading future reservation:", frErr);
+        }
       }
     } catch (err) {
       console.error("Error loading pending schedule:", err);
@@ -145,7 +172,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
   };
 
   const handleSchedule = async () => {
-    if (!userOwnPin || userOwnPin.status !== "waiting") {
+    if (!userOwnPin || (userOwnPin.status !== "waiting" && userOwnPin.status !== "published")) {
       setError("You don't have a parking spot to schedule. Please mark your parking location first.");
       return;
     }
@@ -255,7 +282,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
     }
   };
 
-  const hasWaitingPin = userOwnPin && userOwnPin.status === "waiting";
+  const hasWaitingPin = userOwnPin && (userOwnPin.status === "waiting" || userOwnPin.status === "published");
 
   if (loadingSchedule) {
     return (
@@ -303,9 +330,19 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
             <div className="existing-schedule-icon">⏰</div>
             <h3>You have a scheduled leave</h3>
             <p className="scheduled-time">
-              Your parking will become visible at<br />
+              Your parking will become available at<br />
               <strong>{formatScheduledTime(pendingSchedule.scheduled_for)}</strong>
             </p>
+
+            {futureReservation && (
+              <div className="reservation-notification">
+                <div className="reservation-notification-icon">📋</div>
+                <div className="reservation-notification-text">
+                  <strong>{futureReservation.reserver_name}</strong> has reserved your future spot.
+                  They will be matched with you when the scheduled time arrives.
+                </div>
+              </div>
+            )}
             
             {error && <div className="error-message">{error}</div>}
             
@@ -319,6 +356,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
             
             <p className="cancel-hint">
               You can cancel this and schedule a new time.
+              {futureReservation && " This will also cancel the reservation."}
             </p>
           </div>
         ) : (
