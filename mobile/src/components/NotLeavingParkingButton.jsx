@@ -1,17 +1,17 @@
-import React from 'react';
-import { TouchableOpacity, View, Text, StyleSheet, Alert } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../styles/colors';
+import React from "react";
+import { TouchableOpacity, View, Text, StyleSheet, Alert } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { colors } from "../styles/colors";
 
 const NotLeavingParkingButton = ({ activePin, onDeactivate }) => {
   const handleClick = () => {
     Alert.alert(
-      'Still Parking?',
-      'Are you no longer leaving this parking spot? This will hide it from other users.',
+      "עדיין חונה?",
+      "האם אינך עוזב את מקום החניה? פעולה זו תסתיר אותו ממשתמשים אחרים.",
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Yes, Still Here', onPress: onDeactivate },
-      ]
+        { text: "ביטול", style: "cancel" },
+        { text: "כן, עדיין כאן", onPress: onDeactivate },
+      ],
     );
   };
 
@@ -27,8 +27,8 @@ const NotLeavingParkingButton = ({ activePin, onDeactivate }) => {
       >
         <Text style={styles.icon}>🅿️</Text>
         <View style={styles.textContainer}>
-          <Text style={styles.title}>Not Leaving Parking</Text>
-          <Text style={styles.subtitle}>Click to hide your spot</Text>
+          <Text style={styles.title}>נשאר בחניה</Text>
+          <Text style={styles.subtitle}>לחץ להסתרת המקום שלך</Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
@@ -37,7 +37,7 @@ const NotLeavingParkingButton = ({ activePin, onDeactivate }) => {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     top: 20,
     right: 20,
     borderRadius: 16,
@@ -48,8 +48,8 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   gradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 16,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.white,
     marginBottom: 2,
   },

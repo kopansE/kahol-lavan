@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "../supabaseClient";
+import { useToast } from "../contexts/ToastContext";
 import "./SearchBar.css";
 
 // Generate a unique session token for billing optimization
@@ -8,6 +9,7 @@ const generateSessionToken = () => {
 };
 
 const SearchBar = ({ onSearchResult, onClearSearch }) => {
+  const { showToast } = useToast();
   const [query, setQuery] = useState("");
   const [predictions, setPredictions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +39,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
         const url = `${
           import.meta.env.VITE_SUPABASE_URL
         }/functions/v1/places-autocomplete?input=${encodeURIComponent(
-          searchQuery
+          searchQuery,
         )}&sessionToken=${sessionToken}`;
 
         const response = await fetch(url, {
@@ -63,7 +65,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
         setIsLoading(false);
       }
     },
-    [sessionToken]
+    [sessionToken],
   );
 
   // Handle input change with debounce
@@ -103,7 +105,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
       const geocodeUrl = `${
         import.meta.env.VITE_SUPABASE_URL
       }/functions/v1/geocode-address?placeId=${encodeURIComponent(
-        prediction.placeId
+        prediction.placeId,
       )}&sessionToken=${sessionToken}`;
 
       const geocodeResponse = await fetch(geocodeUrl, {
@@ -118,7 +120,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
 
       if (!geocodeResponse.ok || !geocodeResult.success) {
         console.error("Geocoding error:", geocodeResult.error);
-        alert("Could not find location for this address");
+        showToast("לא ניתן למצוא מיקום עבור כתובת זו");
         return;
       }
 
@@ -131,9 +133,9 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
           const geometryUrl = `${
             import.meta.env.VITE_SUPABASE_URL
           }/functions/v1/get-street-geometry?streetName=${encodeURIComponent(
-            prediction.mainText || prediction.description
+            prediction.mainText || prediction.description,
           )}&lat=${result.lat}&lng=${result.lng}&viewport=${encodeURIComponent(
-            JSON.stringify(result.viewport)
+            JSON.stringify(result.viewport),
           )}`;
 
           const geometryResponse = await fetch(geometryUrl, {
@@ -169,7 +171,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
       setSessionToken(generateSessionToken());
     } catch (error) {
       console.error("Error processing selection:", error);
-      alert("Error processing your search. Please try again.");
+      showToast("שגיאה בעיבוד החיפוש. אנא נסה שוב.");
     } finally {
       setIsLoading(false);
     }
@@ -190,7 +192,10 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
   // Close predictions when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (inputRef.current && !inputRef.current.closest(".search-bar-container")?.contains(e.target)) {
+      if (
+        inputRef.current &&
+        !inputRef.current.closest(".search-bar-container")?.contains(e.target)
+      ) {
         setShowPredictions(false);
       }
     };
@@ -235,7 +240,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
           ref={inputRef}
           type="text"
           className="search-input"
-          placeholder="Where to?"
+          placeholder="לאן?"
           value={query}
           onChange={handleInputChange}
           onFocus={() => query.length >= 2 && setShowPredictions(true)}

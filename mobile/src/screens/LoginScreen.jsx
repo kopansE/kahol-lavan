@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri } from 'expo-auth-session';
-import { supabase } from '../config/supabase';
-import { colors } from '../styles/colors';
-import { Svg, Path } from 'react-native-svg';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import * as WebBrowser from "expo-web-browser";
+import { makeRedirectUri } from "expo-auth-session";
+import { supabase } from "../config/supabase";
+import { colors } from "../styles/colors";
+import { useToast } from "../contexts/ToastContext";
+import { Svg, Path } from "react-native-svg";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -38,6 +38,7 @@ const GoogleIcon = () => (
 );
 
 const LoginScreen = () => {
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
@@ -45,12 +46,12 @@ const LoginScreen = () => {
       setLoading(true);
 
       const redirectUrl = makeRedirectUri({
-        scheme: 'kahollavan',
-        path: 'auth/callback',
+        scheme: "kahollavan",
+        path: "auth/callback",
       });
 
       const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: redirectUrl,
           skipBrowserRedirect: false,
@@ -62,14 +63,14 @@ const LoginScreen = () => {
       if (data?.url) {
         const result = await WebBrowser.openAuthSessionAsync(
           data.url,
-          redirectUrl
+          redirectUrl,
         );
 
-        if (result.type === 'success' && result.url) {
+        if (result.type === "success" && result.url) {
           // Extract the access_token and refresh_token from the URL
           const url = new URL(result.url);
-          const access_token = url.searchParams.get('access_token');
-          const refresh_token = url.searchParams.get('refresh_token');
+          const access_token = url.searchParams.get("access_token");
+          const refresh_token = url.searchParams.get("refresh_token");
 
           if (access_token && refresh_token) {
             await supabase.auth.setSession({
@@ -80,8 +81,8 @@ const LoginScreen = () => {
         }
       }
     } catch (error) {
-      console.error('Error signing in:', error);
-      Alert.alert('Sign In Error', error.message || 'Failed to sign in with Google');
+      console.error("Error signing in:", error);
+      showToast("ההתחברות עם Google נכשלה");
     } finally {
       setLoading(false);
     }
@@ -93,11 +94,11 @@ const LoginScreen = () => {
       style={styles.container}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>🅿️ Kahol-Lavan</Text>
+        <Text style={styles.title}>🅿️ כחול-לבן</Text>
         <Text style={styles.description}>
-          Exchange blue-white parking spots with Tel Aviv residents
+          החלפת חניות כחול-לבן עם תושבי תל אביב
         </Text>
-        
+
         <TouchableOpacity
           style={styles.button}
           onPress={handleGoogleSignIn}
@@ -109,15 +110,13 @@ const LoginScreen = () => {
             ) : (
               <>
                 <GoogleIcon />
-                <Text style={styles.buttonText}>Continue with Google</Text>
+                <Text style={styles.buttonText}>המשך עם Google</Text>
               </>
             )}
           </View>
         </TouchableOpacity>
-        
-        <Text style={styles.disclaimer}>
-          Secure authentication powered by Supabase
-        </Text>
+
+        <Text style={styles.disclaimer}>אימות מאובטח מבית Supabase</Text>
       </View>
     </LinearGradient>
   );
@@ -126,18 +125,18 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   content: {
-    alignItems: 'center',
+    alignItems: "center",
     maxWidth: 400,
-    width: '100%',
+    width: "100%",
   },
   title: {
     fontSize: 36,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.white,
     marginBottom: 16,
   },
@@ -145,7 +144,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.white,
     opacity: 0.9,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 40,
     lineHeight: 24,
   },
@@ -161,13 +160,13 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.darkGray,
   },
   disclaimer: {

@@ -17,6 +17,7 @@ import CarDataBanner from "./components/CarDataBanner";
 import CarDataFormModal from "./components/CarDataFormModal";
 import SearchBar from "./components/SearchBar";
 import { StreamChatProvider } from "./contexts/StreamChatContext";
+import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { getParkingZone } from "./utils/parkingZoneUtils";
 import "./App.css";
 
@@ -42,9 +43,10 @@ function App() {
   const [userDataComplete, setUserDataComplete] = useState(true); // Assume true initially
   const [showCarDataModal, setShowCarDataModal] = useState(false);
   const [publishedPins, setPublishedPins] = useState([]);
-  const [selectedPublishedParking, setSelectedPublishedParking] = useState(null);
+  const [selectedPublishedParking, setSelectedPublishedParking] =
+    useState(null);
   const [searchResult, setSearchResult] = useState(null);
-  const [toastMessage, setToastMessage] = useState(null);
+  const { showToast } = useToast();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -109,40 +111,38 @@ function App() {
           const result = await response.json();
 
           if (response.ok && result.success) {
-            alert(
-              `Payment method added successfully! Last 4 digits: ${result.payment_method.last4}`
+            showToast(
+              `אמצעי תשלום נוסף בהצלחה! 4 ספרות אחרונות: ${result.payment_method.last4}`,
             );
           } else {
             console.error("❌ Failed to complete payment setup:", result.error);
-            alert(
-              result.error || "Failed to save payment method. Please try again."
-            );
+            showToast("שמירת אמצעי התשלום נכשלה. אנא נסה שוב.");
           }
         } catch (error) {
           console.error("❌ Error completing payment setup:", error);
-          alert("Failed to save payment method. Please try again.");
+          showToast("שמירת אמצעי התשלום נכשלה. אנא נסה שוב.");
         } finally {
           // Clean up URL
           window.history.replaceState(
             {},
             document.title,
-            window.location.pathname
+            window.location.pathname,
           );
         }
       } else if (paymentSetup === "cancelled") {
-        alert("Payment setup was cancelled.");
+        showToast("הגדרת התשלום בוטלה.");
         window.history.replaceState(
           {},
           document.title,
-          window.location.pathname
+          window.location.pathname,
         );
       } else if (paymentSetup === "error") {
         console.error("❌ Payment setup error");
-        alert("An error occurred during payment setup.");
+        showToast("אירעה שגיאה בהגדרת התשלום.");
         window.history.replaceState(
           {},
           document.title,
-          window.location.pathname
+          window.location.pathname,
         );
       }
     };
@@ -156,7 +156,9 @@ function App() {
     try {
       const { data, error } = await supabase
         .from("pins")
-        .select("id, position, parking_zone, status, created_at, reserved_by, address")
+        .select(
+          "id, position, parking_zone, status, created_at, reserved_by, address",
+        )
         .eq("user_id", userId)
         .in("status", ["waiting", "active", "reserved", "published"])
         .order("created_at", { ascending: false })
@@ -204,23 +206,23 @@ function App() {
 
       if (error) {
         console.error("Error fetching reserved user name:", error);
-        setReservedByName("Unknown User");
+        setReservedByName("משתמש לא ידוע");
         return;
       }
 
       if (data) {
-        setReservedByName(data.full_name || "Unknown User");
+        setReservedByName(data.full_name || "משתמש לא ידוע");
         // Store the full user data for display
         if (userOwnPin) {
-          setUserOwnPin(prev => ({
+          setUserOwnPin((prev) => ({
             ...prev,
-            reserved_by_user: data
+            reserved_by_user: data,
           }));
         }
       }
     } catch (error) {
       console.error("Error fetching reserved user name:", error);
-      setReservedByName("Unknown User");
+      setReservedByName("משתמש לא ידוע");
     }
   };
 
@@ -320,7 +322,7 @@ function App() {
           headers: {
             "Accept-Language": "he,en",
           },
-        }
+        },
       );
       const data = await response.json();
 
@@ -358,7 +360,7 @@ function App() {
 
       if (sessionError) {
         console.error("❌ Session error:", sessionError);
-        alert("Authentication error. Please log in again.");
+        showToast("שגיאת אימות. אנא התחבר מחדש.");
         return false;
       }
 
@@ -366,7 +368,7 @@ function App() {
 
       if (!token) {
         console.error("❌ No access token found");
-        alert("Authentication error. Please log in again.");
+        showToast("שגיאת אימות. אנא התחבר מחדש.");
         return false;
       }
 
@@ -405,7 +407,7 @@ function App() {
       return true;
     } catch (error) {
       console.error("❌ Error saving pin:", error);
-      alert(`Failed to save pin location: ${error.message}`);
+      showToast(`שמירת מיקום החניה נכשלה: ${error.message}`);
       return false;
     }
   };
@@ -418,7 +420,7 @@ function App() {
       const token = sessionData?.session?.access_token;
 
       if (!token) {
-        alert("Authentication error. Please log in again.");
+        showToast("שגיאת אימות. אנא התחבר מחדש.");
         return false;
       }
 
@@ -446,7 +448,7 @@ function App() {
       return true;
     } catch (error) {
       console.error("Error activating pin:", error);
-      alert(`Failed to activate pin: ${error.message}`);
+      showToast(`הפעלת הסימון נכשלה: ${error.message}`);
       return false;
     }
   };
@@ -459,7 +461,7 @@ function App() {
       const token = sessionData?.session?.access_token;
 
       if (!token) {
-        alert("Authentication error. Please log in again.");
+        showToast("שגיאת אימות. אנא התחבר מחדש.");
         return false;
       }
 
@@ -487,7 +489,7 @@ function App() {
       return true;
     } catch (error) {
       console.error("Error deactivating pin:", error);
-      alert(`Failed to deactivate pin: ${error.message}`);
+      showToast(`ביטול הסימון נכשל: ${error.message}`);
       return false;
     }
   };
@@ -507,7 +509,7 @@ function App() {
           enableHighAccuracy: true,
           timeout: 10000,
           maximumAge: 300000,
-        }
+        },
       );
     }
   }, [user]);
@@ -524,7 +526,7 @@ function App() {
       if (error) throw error;
     } catch (error) {
       console.error("Error signing in:", error.message);
-      alert("Failed to sign in with Google");
+      showToast("ההתחברות עם Google נכשלה");
     }
   };
 
@@ -544,7 +546,7 @@ function App() {
   const handleMapClick = async (latlng) => {
     // Calculate parking zone
     const parkingZoneInfo = getParkingZone(latlng.lat, latlng.lng);
-    
+
     const newPin = {
       id: Date.now(),
       position: [latlng.lat, latlng.lng],
@@ -588,8 +590,8 @@ function App() {
       const address = await reverseGeocode(pin.position[0], pin.position[1]);
       pin.address = address;
     }
-    
-    if (pinType === 'reserved') {
+
+    if (pinType === "reserved") {
       setSelectedReservedParking(pin);
     } else {
       setSelectedParking(pin);
@@ -638,7 +640,7 @@ function App() {
       const token = sessionData?.session?.access_token;
 
       if (!token) {
-        alert("Authentication error. Please log in again.");
+        showToast("שגיאת אימות. אנא התחבר מחדש.");
         setShowCancelModal(false);
         return;
       }
@@ -662,7 +664,7 @@ function App() {
         throw new Error(result.error || "Failed to cancel reservation");
       }
 
-      alert(`✅ ${result.message}\nRefund amount: ₪${result.refund_amount}`);
+      showToast(`ההזמנה בוטלה בהצלחה. סכום החזר: ₪${result.refund_amount}`);
 
       // Reload data
       await loadUserOwnPin(user.id);
@@ -673,7 +675,7 @@ function App() {
       setCancelUserType(null);
     } catch (error) {
       console.error("Error canceling reservation:", error);
-      alert(`Failed to cancel reservation: ${error.message}`);
+      showToast(`ביטול ההזמנה נכשל: ${error.message}`);
     }
   };
 
@@ -733,14 +735,6 @@ function App() {
     setSearchResult(null);
   };
 
-  const showToast = (message) => {
-    setToastMessage(message);
-    // Auto-hide after 3 seconds
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3000);
-  };
-
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -757,9 +751,18 @@ function App() {
         <button
           className="menu-toggle-button"
           onClick={() => setIsPaymentMenuOpen(true)}
-          title="Menu"
+          title="תפריט"
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <line x1="3" y1="12" x2="21" y2="12" />
             <line x1="3" y1="6" x2="21" y2="6" />
             <line x1="3" y1="18" x2="21" y2="18" />
@@ -860,14 +863,17 @@ function App() {
             onSuccess={handleCarDataSuccess}
           />
         )}
-        {toastMessage && (
-          <div className="toast-notification">
-            {toastMessage}
-          </div>
-        )}
       </div>
     </StreamChatProvider>
   );
 }
 
-export default App;
+function AppWrapper() {
+  return (
+    <ToastProvider>
+      <App />
+    </ToastProvider>
+  );
+}
+
+export default AppWrapper;

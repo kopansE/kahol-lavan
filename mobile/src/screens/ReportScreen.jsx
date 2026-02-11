@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,27 +6,28 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Modal,
   FlatList,
-} from 'react-native';
-import { supabase } from '../config/supabase';
-import { colors } from '../styles/colors';
+} from "react-native";
+import { supabase } from "../config/supabase";
+import { colors } from "../styles/colors";
+import { useToast } from "../contexts/ToastContext";
 
 const REPORT_REASONS = [
-  { value: 'no_show', label: 'No Show - User didn\'t show up' },
-  { value: 'wrong_location', label: 'Wrong Location - Parking spot was incorrect' },
-  { value: 'harassment', label: 'Harassment - Inappropriate behavior' },
-  { value: 'fraud', label: 'Fraud - Deceptive or fraudulent activity' },
-  { value: 'other', label: 'Other' },
+  { value: "no_show", label: "לא הופיע - המשתמש לא הגיע" },
+  { value: "wrong_location", label: "מיקום שגוי - מקום החניה לא היה נכון" },
+  { value: "harassment", label: "הטרדה - התנהגות לא ראויה" },
+  { value: "fraud", label: "הונאה - פעילות מרמה" },
+  { value: "other", label: "אחר" },
 ];
 
 const ReportScreen = ({ route, navigation }) => {
   const { reportedUserId, reportedUserName, transferRequestId } = route.params;
-  const [reportType, setReportType] = useState('');
-  const [reportTypeLabel, setReportTypeLabel] = useState('');
-  const [description, setDescription] = useState('');
+  const { showToast } = useToast();
+  const [reportType, setReportType] = useState("");
+  const [reportTypeLabel, setReportTypeLabel] = useState("");
+  const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
@@ -38,69 +39,61 @@ const ReportScreen = ({ route, navigation }) => {
 
   const handleSubmit = async () => {
     if (!reportType) {
-      Alert.alert('Error', 'Please select a reason for your report');
+      showToast("אנא בחר סיבה לדיווח");
       return;
     }
-    
+
     if (!description.trim()) {
-      Alert.alert('Error', 'Please provide a description of the issue');
+      showToast("אנא ספק תיאור של הבעיה");
       return;
     }
 
     if (description.trim().length < 10) {
-      Alert.alert('Error', 'Please provide a more detailed description (at least 10 characters)');
+      showToast("אנא ספק תיאור מפורט יותר (לפחות 10 תווים)");
       return;
     }
 
     try {
       setIsSubmitting(true);
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (!user) {
-        Alert.alert('Error', 'Authentication error. Please log in again.');
+        showToast("שגיאת אימות. אנא התחבר מחדש.");
         return;
       }
 
       // Determine severity based on report type
-      let severity = 'medium';
-      if (reportType === 'fraud' || reportType === 'harassment') {
-        severity = 'high';
-      } else if (reportType === 'other') {
-        severity = 'low';
+      let severity = "medium";
+      if (reportType === "fraud" || reportType === "harassment") {
+        severity = "high";
+      } else if (reportType === "other") {
+        severity = "low";
       }
 
-      const { error: insertError } = await supabase
-        .from('reports')
-        .insert({
-          reporter_id: user.id,
-          reported_user_id: reportedUserId,
-          transfer_request_id: transferRequestId,
-          report_type: reportType,
-          description: description.trim(),
-          severity: severity,
-          status: 'pending',
-        });
+      const { error: insertError } = await supabase.from("reports").insert({
+        reporter_id: user.id,
+        reported_user_id: reportedUserId,
+        transfer_request_id: transferRequestId,
+        report_type: reportType,
+        description: description.trim(),
+        severity: severity,
+        status: "pending",
+      });
 
       if (insertError) {
-        console.error('Error submitting report:', insertError);
-        Alert.alert('Error', 'Failed to submit report. Please try again.');
+        console.error("Error submitting report:", insertError);
+        showToast("שליחת הדיווח נכשלה. אנא נסה שוב.");
         return;
       }
 
-      Alert.alert(
-        'Report Submitted',
-        'Your report has been submitted successfully. We will review it shortly.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      showToast("הדיווח נשלח בהצלחה. נבדוק אותו בהקדם.");
+      navigation.goBack();
     } catch (err) {
-      console.error('Error submitting report:', err);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      console.error("Error submitting report:", err);
+      showToast("אירעה שגיאה בלתי צפויה. אנא נסה שוב.");
     } finally {
       setIsSubmitting(false);
     }
@@ -116,9 +109,7 @@ const ReportScreen = ({ route, navigation }) => {
       onPress={() => handleSelectReason(item)}
     >
       <Text style={styles.reasonItemText}>{item.label}</Text>
-      {reportType === item.value && (
-        <Text style={styles.checkmark}>✓</Text>
-      )}
+      {reportType === item.value && <Text style={styles.checkmark}>✓</Text>}
     </TouchableOpacity>
   );
 
@@ -128,38 +119,49 @@ const ReportScreen = ({ route, navigation }) => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backButton}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Report User</Text>
+        <Text style={styles.headerTitle}>דווח על משתמש</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+      >
         <View style={styles.infoBox}>
           <Text style={styles.infoText}>
-            You are reporting: <Text style={styles.infoName}>{reportedUserName || 'Unknown User'}</Text>
+            אתה מדווח על:{" "}
+            <Text style={styles.infoName}>
+              {reportedUserName || "משתמש לא ידוע"}
+            </Text>
           </Text>
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Reason for Report *</Text>
+          <Text style={styles.label}>סיבת הדיווח *</Text>
           <TouchableOpacity
             style={styles.selectButton}
             onPress={() => setShowPicker(true)}
             disabled={isSubmitting}
           >
-            <Text style={[styles.selectButtonText, !reportType && styles.placeholderText]}>
-              {reportTypeLabel || 'Select a reason...'}
+            <Text
+              style={[
+                styles.selectButtonText,
+                !reportType && styles.placeholderText,
+              ]}
+            >
+              {reportTypeLabel || "בחר סיבה..."}
             </Text>
             <Text style={styles.selectArrow}>▼</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Description *</Text>
+          <Text style={styles.label}>תיאור *</Text>
           <TextInput
             style={styles.textArea}
             value={description}
             onChangeText={setDescription}
-            placeholder="Please describe what happened in detail..."
+            placeholder="אנא תאר בפירוט מה קרה..."
             placeholderTextColor="#999"
             multiline
             numberOfLines={5}
@@ -174,14 +176,15 @@ const ReportScreen = ({ route, navigation }) => {
             onPress={handleCancel}
             disabled={isSubmitting}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={styles.cancelButtonText}>ביטול</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.button,
               styles.submitButton,
-              (!reportType || !description.trim() || isSubmitting) && styles.disabledButton,
+              (!reportType || !description.trim() || isSubmitting) &&
+                styles.disabledButton,
             ]}
             onPress={handleSubmit}
             disabled={!reportType || !description.trim() || isSubmitting}
@@ -189,7 +192,7 @@ const ReportScreen = ({ route, navigation }) => {
             {isSubmitting ? (
               <ActivityIndicator size="small" color="white" />
             ) : (
-              <Text style={styles.submitButtonText}>Submit Report</Text>
+              <Text style={styles.submitButtonText}>שלח דיווח</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -209,7 +212,7 @@ const ReportScreen = ({ route, navigation }) => {
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Reason</Text>
+              <Text style={styles.modalTitle}>בחר סיבה</Text>
               <TouchableOpacity onPress={() => setShowPicker(false)}>
                 <Text style={styles.modalClose}>×</Text>
               </TouchableOpacity>
@@ -230,24 +233,24 @@ const ReportScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 15,
     backgroundColor: colors.primaryGradientStart,
   },
   backButton: {
     fontSize: 28,
-    color: 'white',
+    color: "white",
     width: 40,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: "bold",
+    color: "white",
   },
   content: {
     flex: 1,
@@ -256,63 +259,63 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   infoBox: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     padding: 12,
     borderRadius: 8,
     marginBottom: 20,
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   infoName: {
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
   formGroup: {
     marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: "500",
+    color: "#333",
     marginBottom: 8,
   },
   selectButton: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     padding: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   selectButtonText: {
     fontSize: 14,
-    color: '#333',
+    color: "#333",
     flex: 1,
   },
   placeholderText: {
-    color: '#999',
+    color: "#999",
   },
   selectArrow: {
     fontSize: 10,
-    color: '#666',
+    color: "#666",
     marginLeft: 8,
   },
   textArea: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     padding: 12,
     fontSize: 14,
     minHeight: 120,
-    color: '#333',
+    color: "#333",
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginTop: 10,
   },
@@ -320,76 +323,76 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   cancelButton: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   cancelButtonText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
   },
   submitButton: {
     backgroundColor: colors.primaryGradientStart,
   },
   submitButtonText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: 'white',
+    fontWeight: "600",
+    color: "white",
   },
   disabledButton: {
     opacity: 0.6,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: '60%',
+    maxHeight: "60%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: "600",
+    color: "#333",
   },
   modalClose: {
     fontSize: 28,
-    color: '#666',
+    color: "#666",
     lineHeight: 28,
   },
   reasonItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     padding: 16,
   },
   reasonItemText: {
     fontSize: 15,
-    color: '#333',
+    color: "#333",
     flex: 1,
   },
   checkmark: {
     fontSize: 18,
     color: colors.primaryGradientStart,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   separator: {
     height: 1,
-    backgroundColor: '#eee',
+    backgroundColor: "#eee",
   },
 });
 

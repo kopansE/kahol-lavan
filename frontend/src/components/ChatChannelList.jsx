@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useStreamChat } from '../contexts/StreamChatContext';
-import { supabase } from '../supabaseClient';
-import ChatThread from './ChatThread';
-import './ChatChannelList.css';
+import React, { useState, useEffect } from "react";
+import { useStreamChat } from "../contexts/StreamChatContext";
+import { supabase } from "../supabaseClient";
+import ChatThread from "./ChatThread";
+import "./ChatChannelList.css";
 
 const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
   const { chatClient, isReady } = useStreamChat();
@@ -25,26 +25,28 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
       const token = sessionData?.session?.access_token;
 
       if (!token) {
-        throw new Error('No authentication token');
+        throw new Error("No authentication token");
       }
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-user-channels`;
       const response = await fetch(url, {
-        method: 'GET',
+        method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
       const result = await response.json();
 
       if (!response.ok || !result.channels) {
-        console.error('Failed to load channels, refreshing page in 2 seconds...');
+        console.error(
+          "Failed to load channels, refreshing page in 2 seconds...",
+        );
         setTimeout(() => {
           window.location.reload();
         }, 2000);
-        throw new Error('Failed to load channels');
+        throw new Error("Failed to load channels");
       }
 
       // Get Stream channels with their state
@@ -53,7 +55,7 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
           try {
             const channel = chatClient.channel(
               channelData.stream_channel_type,
-              channelData.stream_channel_id
+              channelData.stream_channel_id,
             );
             await channel.watch();
             return {
@@ -61,47 +63,62 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
               streamChannel: channel,
             };
           } catch (err) {
-            console.error(`Failed to load channel ${channelData.stream_channel_id}:`, err);
-            console.error('Refreshing page in 2 seconds...');
+            console.error(
+              `Failed to load channel ${channelData.stream_channel_id}:`,
+              err,
+            );
+            console.error("Refreshing page in 2 seconds...");
             setTimeout(() => {
               window.location.reload();
             }, 2000);
             return null;
           }
-        })
+        }),
       );
 
-      setChannels(streamChannels.filter(c => c !== null));
+      setChannels(streamChannels.filter((c) => c !== null));
     } catch (error) {
-      console.error('Error loading channels:', error);
+      console.error("Error loading channels:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const formatTime = (timestamp) => {
-    if (!timestamp) return '';
+    if (!timestamp) return "";
     const date = new Date(timestamp);
     const now = new Date();
     const diffInHours = (now - date) / (1000 * 60 * 60);
 
     if (diffInHours < 24) {
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      return date.toLocaleTimeString("he-IL", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
     } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return date.toLocaleDateString("he-IL", {
+        month: "short",
+        day: "numeric",
+      });
     }
   };
 
   const getInitials = (name) => {
-    if (!name) return '?';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    if (!name) return "?";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   const renderChannelItem = (channelData) => {
     const channel = channelData.streamChannel;
     const otherUser = channelData.other_user;
     const unreadCount = channel.countUnread();
-    const lastMessage = channel.state.messages[channel.state.messages.length - 1];
+    const lastMessage =
+      channel.state.messages[channel.state.messages.length - 1];
 
     return (
       <div
@@ -118,7 +135,7 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
             {otherUser.car_license_plate && ` • ${otherUser.car_license_plate}`}
           </div>
           <div className="chat-channel-preview">
-            {lastMessage?.text || 'No messages yet'}
+            {lastMessage?.text || "אין הודעות עדיין"}
           </div>
         </div>
         <div className="chat-channel-meta">
@@ -127,7 +144,7 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
           </div>
           {unreadCount > 0 && (
             <div className="chat-channel-unread">
-              {unreadCount > 9 ? '9+' : unreadCount}
+              {unreadCount > 9 ? "9+" : unreadCount}
             </div>
           )}
         </div>
@@ -136,8 +153,8 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
   };
 
   // Find selected session by ID (ensures correct session even when multiple share same Stream channel)
-  const selectedChannelData = selectedSessionId 
-    ? channels.find(c => c.id === selectedSessionId) 
+  const selectedChannelData = selectedSessionId
+    ? channels.find((c) => c.id === selectedSessionId)
     : null;
 
   if (selectedChannelData) {
@@ -154,9 +171,15 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
   }
 
   // Separate channels into active, future reservations, and history
-  const activeChannels = channels.filter(c => c.status === 'active');
-  const futureReservationChannels = channels.filter(c => c.type === 'future_reservation' && c.status === 'future_reservation');
-  const historyChannels = channels.filter(c => c.status !== 'active' && !(c.type === 'future_reservation' && c.status === 'future_reservation'));
+  const activeChannels = channels.filter((c) => c.status === "active");
+  const futureReservationChannels = channels.filter(
+    (c) => c.type === "future_reservation" && c.status === "future_reservation",
+  );
+  const historyChannels = channels.filter(
+    (c) =>
+      c.status !== "active" &&
+      !(c.type === "future_reservation" && c.status === "future_reservation"),
+  );
 
   // Render inside side menu
   if (inSideMenu) {
@@ -166,7 +189,7 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
           <button className="back-button" onClick={onBack}>
             ‹
           </button>
-          <h2 className="page-title">Chats</h2>
+          <h2 className="page-title">צ׳אטים</h2>
           <button className="page-close-button" onClick={onClose}>
             ×
           </button>
@@ -175,38 +198,43 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
           {loading ? (
             <div className="chat-loading-state">
               <div className="chat-loading-spinner"></div>
-              <p>Loading conversations...</p>
+              <p>טוען שיחות...</p>
             </div>
           ) : channels.length === 0 ? (
             <div className="chat-empty-state">
               <div className="chat-empty-state-icon">💬</div>
-              <h3>No conversations yet</h3>
-              <p>Reserve a parking spot to start chatting with other users!</p>
+              <h3>אין שיחות עדיין</h3>
+              <p>הזמן חניה כדי להתחיל לשוחח עם משתמשים אחרים!</p>
             </div>
           ) : (
             <>
               <div className="chat-section">
-                <div className="chat-section-header">Active</div>
+                <div className="chat-section-header">פעיל</div>
                 {activeChannels.length > 0 ? (
                   activeChannels.map(renderChannelItem)
                 ) : (
-                  <div className="chat-section-empty">No active chats</div>
+                  <div className="chat-section-empty">אין צ׳אטים פעילים</div>
                 )}
               </div>
 
               {futureReservationChannels.length > 0 && (
                 <div className="chat-section">
-                  <div className="chat-section-header" style={{ color: '#34A853' }}>Future Reservations</div>
+                  <div
+                    className="chat-section-header"
+                    style={{ color: "#34A853" }}
+                  >
+                    הזמנות עתידיות
+                  </div>
                   {futureReservationChannels.map(renderChannelItem)}
                 </div>
               )}
 
               <div className="chat-section">
-                <div className="chat-section-header">History</div>
+                <div className="chat-section-header">היסטוריה</div>
                 {historyChannels.length > 0 ? (
                   historyChannels.map(renderChannelItem)
                 ) : (
-                  <div className="chat-section-empty">No chat history</div>
+                  <div className="chat-section-empty">אין היסטוריית צ׳אט</div>
                 )}
               </div>
             </>
@@ -219,9 +247,12 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
   // Render as overlay (original behavior)
   return (
     <div className="chat-channel-list-overlay" onClick={onClose}>
-      <div className="chat-channel-list-container" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="chat-channel-list-container"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="chat-channel-list-header">
-          <h2>Messages</h2>
+          <h2>הודעות</h2>
           <button className="chat-close-button" onClick={onClose}>
             ×
           </button>
@@ -231,38 +262,43 @@ const ChatChannelList = ({ onClose, onBack, inSideMenu = false }) => {
           {loading ? (
             <div className="chat-loading-state">
               <div className="chat-loading-spinner"></div>
-              <p>Loading conversations...</p>
+              <p>טוען שיחות...</p>
             </div>
           ) : channels.length === 0 ? (
             <div className="chat-empty-state">
               <div className="chat-empty-state-icon">💬</div>
-              <h3>No conversations yet</h3>
-              <p>Reserve a parking spot to start chatting with other users!</p>
+              <h3>אין שיחות עדיין</h3>
+              <p>הזמן חניה כדי להתחיל לשוחח עם משתמשים אחרים!</p>
             </div>
           ) : (
             <>
               <div className="chat-section">
-                <div className="chat-section-header">Active</div>
+                <div className="chat-section-header">פעיל</div>
                 {activeChannels.length > 0 ? (
                   activeChannels.map(renderChannelItem)
                 ) : (
-                  <div className="chat-section-empty">No active chats</div>
+                  <div className="chat-section-empty">אין צ׳אטים פעילים</div>
                 )}
               </div>
 
               {futureReservationChannels.length > 0 && (
                 <div className="chat-section">
-                  <div className="chat-section-header" style={{ color: '#34A853' }}>Future Reservations</div>
+                  <div
+                    className="chat-section-header"
+                    style={{ color: "#34A853" }}
+                  >
+                    הזמנות עתידיות
+                  </div>
                   {futureReservationChannels.map(renderChannelItem)}
                 </div>
               )}
 
               <div className="chat-section">
-                <div className="chat-section-header">History</div>
+                <div className="chat-section-header">היסטוריה</div>
                 {historyChannels.length > 0 ? (
                   historyChannels.map(renderChannelItem)
                 ) : (
-                  <div className="chat-section-empty">No chat history</div>
+                  <div className="chat-section-empty">אין היסטוריית צ׳אט</div>
                 )}
               </div>
             </>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Modal,
   View,
@@ -8,28 +8,32 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { commonStyles } from '../styles/common';
-import { colors } from '../styles/colors';
-import { reserveParking, cancelFutureReservation } from '../utils/edgeFunctions';
-import { formatParkingZone } from '../utils/parkingZoneUtils';
+} from "react-native";
+import { commonStyles } from "../styles/common";
+import { colors } from "../styles/colors";
+import { useToast } from "../contexts/ToastContext";
+import {
+  reserveParking,
+  cancelFutureReservation,
+} from "../utils/edgeFunctions";
+import { formatParkingZone } from "../utils/parkingZoneUtils";
 
 const formatScheduledTime = (isoString) => {
-  if (!isoString) return 'Unknown time';
+  if (!isoString) return "זמן לא ידוע";
   const date = new Date(isoString);
   const now = new Date();
   const diffMs = date.getTime() - now.getTime();
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
-  const timeStr = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
+  const timeStr = date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
   });
-  const dateStr = date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
+  const dateStr = date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
   });
 
   if (diffMs < 0) return `${dateStr} at ${timeStr} (past due)`;
@@ -39,26 +43,33 @@ const formatScheduledTime = (isoString) => {
   return `${dateStr} at ${timeStr} (in ${diffMinutes}m)`;
 };
 
-const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPins, currentUserId }) => {
+const PublishedParkingDetailModal = ({
+  visible,
+  parking,
+  onClose,
+  userReservedPins,
+  currentUserId,
+}) => {
+  const { showToast } = useToast();
   const [isScheduling, setIsScheduling] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  const hasExistingReservation = userReservedPins && userReservedPins.length > 0;
+  const hasExistingReservation =
+    userReservedPins && userReservedPins.length > 0;
 
   // Determine reservation status from data passed by get-active-pins (no RLS issues)
   const futureReservedBy = parking?.future_reserved_by || null;
   const futureReservationId = parking?.future_reservation_id || null;
-  const isScheduledByMe = futureReservedBy && futureReservedBy === currentUserId;
-  const isScheduledByOther = futureReservedBy && futureReservedBy !== currentUserId;
+  const isScheduledByMe =
+    futureReservedBy && futureReservedBy === currentUserId;
+  const isScheduledByOther =
+    futureReservedBy && futureReservedBy !== currentUserId;
   const alreadyScheduled = isScheduledByMe || isScheduledByOther;
 
   const handleScheduleClick = async () => {
     if (isScheduling) return;
 
     if (hasExistingReservation) {
-      Alert.alert(
-        'Already Reserved',
-        'You already have an active reservation. Please cancel it before scheduling another spot.'
-      );
+      showToast("כבר יש לך הזמנה פעילה. אנא בטל אותה לפני תזמון מקום נוסף.");
       return;
     }
 
@@ -67,11 +78,11 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
 
       const result = await reserveParking(parking.id);
 
-      Alert.alert('Success', result.message);
+      showToast("החניה תוזמנה בהצלחה!");
       onClose();
     } catch (error) {
-      console.error('Error scheduling parking:', error);
-      Alert.alert('Error', `Failed to schedule parking: ${error.message}`);
+      console.error("Error scheduling parking:", error);
+      showToast(`תזמון החניה נכשל: ${error.message}`);
     } finally {
       setIsScheduling(false);
     }
@@ -81,35 +92,35 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
     if (isCancelling || !futureReservationId) return;
 
     Alert.alert(
-      'Cancel Reservation',
-      'Are you sure you want to cancel your scheduled reservation?',
+      "ביטול הזמנה",
+      "האם אתה בטוח שברצונך לבטל את ההזמנה המתוזמנת?",
       [
-        { text: 'No', style: 'cancel' },
+        { text: "לא", style: "cancel" },
         {
-          text: 'Yes, Cancel',
-          style: 'destructive',
+          text: "כן, בטל",
+          style: "destructive",
           onPress: async () => {
             try {
               setIsCancelling(true);
               const result = await cancelFutureReservation(futureReservationId);
-              Alert.alert('Cancelled', result.message);
+              showToast("ההזמנה בוטלה בהצלחה.");
               onClose();
             } catch (error) {
-              console.error('Error cancelling future reservation:', error);
-              Alert.alert('Error', `Failed to cancel reservation: ${error.message}`);
+              console.error("Error cancelling future reservation:", error);
+              showToast(`ביטול ההזמנה נכשל: ${error.message}`);
             } finally {
               setIsCancelling(false);
             }
           },
         },
-      ]
+      ],
     );
   };
 
   if (!parking) return null;
 
   const userData = parking.user || parking.users || parking;
-  const ownerName = userData?.full_name || 'Unknown Owner';
+  const ownerName = userData?.full_name || "בעלים לא ידוע";
   const carMake = userData?.car_make;
   const carModel = userData?.car_model;
   const carColor = userData?.car_color;
@@ -131,10 +142,15 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
 
             {/* Scheduled Departure Time */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Scheduled Departure</Text>
+              <Text style={styles.sectionTitle}>יציאה מתוזמנת</Text>
               <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>🕐</Text>
-                <Text style={[styles.infoText, { fontWeight: '600', color: '#34A853' }]}>
+                <Text
+                  style={[
+                    styles.infoText,
+                    { fontWeight: "600", color: "#34A853" },
+                  ]}
+                >
                   {formatScheduledTime(parking.scheduled_for)}
                 </Text>
               </View>
@@ -142,16 +158,18 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
 
             {/* Location */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Location</Text>
+              <Text style={styles.sectionTitle}>מיקום</Text>
               <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>🅿️</Text>
-                <Text style={styles.infoText}>{formatParkingZone(parking.parking_zone)}</Text>
+                <Text style={styles.infoText}>
+                  {formatParkingZone(parking.parking_zone)}
+                </Text>
               </View>
             </View>
 
             {/* Owner */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Owner</Text>
+              <Text style={styles.sectionTitle}>בעלים</Text>
               <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>👤</Text>
                 <Text style={styles.infoText}>{ownerName}</Text>
@@ -161,7 +179,7 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
             {/* Vehicle Details */}
             {(carMake || carModel || carColor || licensePlate) && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Vehicle Details</Text>
+                <Text style={styles.sectionTitle}>פרטי רכב</Text>
                 {(carMake || carModel) && (
                   <View style={styles.infoItem}>
                     <Text style={styles.infoIcon}>🚗</Text>
@@ -190,8 +208,7 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
             {hasExistingReservation && !isScheduledByMe && (
               <View style={styles.warningContainer}>
                 <Text style={styles.warningText}>
-                  You already have an active reservation. Cancel it first to
-                  schedule another spot.
+                  כבר יש לך הזמנה פעילה. בטל אותה קודם כדי לתזמן מקום אחר.
                 </Text>
               </View>
             )}
@@ -199,7 +216,7 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
             {isScheduledByMe && (
               <View style={[styles.warningContainer, styles.successContainer]}>
                 <Text style={[styles.warningText, styles.successText]}>
-                  You have scheduled this spot. It will activate at the scheduled time.
+                  תזמנת מקום זה. הוא יופעל בזמן המתוזמן.
                 </Text>
               </View>
             )}
@@ -207,7 +224,7 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
             {isScheduledByOther && (
               <View style={styles.warningContainer}>
                 <Text style={styles.warningText}>
-                  This parking spot is already scheduled by another user.
+                  חניה זו כבר תוזמנה על ידי משתמש אחר.
                 </Text>
               </View>
             )}
@@ -222,17 +239,24 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
                   {isCancelling ? (
                     <ActivityIndicator color={colors.white} />
                   ) : (
-                    <Text style={styles.scheduleButtonText}>Cancel My Reservation</Text>
+                    <Text style={styles.scheduleButtonText}>
+                      בטל את ההזמנה שלי
+                    </Text>
                   )}
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
                   style={[
                     styles.scheduleButton,
-                    (isScheduling || hasExistingReservation || isScheduledByOther) && styles.scheduleButtonDisabled,
+                    (isScheduling ||
+                      hasExistingReservation ||
+                      isScheduledByOther) &&
+                      styles.scheduleButtonDisabled,
                   ]}
                   onPress={handleScheduleClick}
-                  disabled={isScheduling || hasExistingReservation || isScheduledByOther}
+                  disabled={
+                    isScheduling || hasExistingReservation || isScheduledByOther
+                  }
                 >
                   {isScheduling ? (
                     <ActivityIndicator color={colors.white} />
@@ -240,19 +264,21 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
                     <>
                       <Text style={styles.scheduleButtonText}>
                         {isScheduledByOther
-                          ? 'Already Scheduled'
+                          ? "כבר מתוזמן"
                           : hasExistingReservation
-                          ? 'Already Reserved'
-                          : 'Schedule This Spot'}
+                            ? "כבר הוזמנה"
+                            : "תזמן מקום זה"}
                       </Text>
-                      {!isScheduledByOther && <Text style={styles.scheduleButtonPrice}>Free</Text>}
+                      {!isScheduledByOther && (
+                        <Text style={styles.scheduleButtonPrice}>חינם</Text>
+                      )}
                     </>
                   )}
                 </TouchableOpacity>
               )}
 
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                <Text style={styles.closeButtonText}>Close</Text>
+                <Text style={styles.closeButtonText}>סגור</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -264,29 +290,29 @@ const PublishedParkingDetailModal = ({ visible, parking, onClose, userReservedPi
 
 const styles = StyleSheet.create({
   modalContent: {
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   header: {
     marginBottom: 24,
   },
   address: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.darkGray,
-    textAlign: 'center',
+    textAlign: "center",
   },
   section: {
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.darkGray,
     marginBottom: 12,
   },
   infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginBottom: 8,
   },
@@ -298,42 +324,42 @@ const styles = StyleSheet.create({
     color: colors.darkGray,
   },
   licensePlate: {
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 2,
   },
   warningContainer: {
-    backgroundColor: '#FFF3CD',
+    backgroundColor: "#FFF3CD",
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   warningText: {
     fontSize: 14,
-    color: '#856404',
-    textAlign: 'center',
+    color: "#856404",
+    textAlign: "center",
   },
   successContainer: {
-    backgroundColor: '#e8f5e9',
-    borderColor: '#34A853',
+    backgroundColor: "#e8f5e9",
+    borderColor: "#34A853",
     borderWidth: 1,
   },
   successText: {
-    color: '#2e7d32',
+    color: "#2e7d32",
   },
   cancelButton: {
-    backgroundColor: '#dc3545',
+    backgroundColor: "#dc3545",
   },
   buttonContainer: {
     gap: 12,
     marginTop: 8,
   },
   scheduleButton: {
-    backgroundColor: '#34A853',
+    backgroundColor: "#34A853",
     paddingVertical: 16,
     borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   scheduleButtonDisabled: {
@@ -342,23 +368,23 @@ const styles = StyleSheet.create({
   scheduleButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   scheduleButtonPrice: {
     color: colors.white,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   closeButton: {
     backgroundColor: colors.lightGray,
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   closeButtonText: {
     color: colors.gray,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

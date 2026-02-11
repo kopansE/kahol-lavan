@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   View,
@@ -8,11 +8,11 @@ import {
   Image,
   Animated,
   Dimensions,
-} from 'react-native';
-import { useStreamChat } from '../contexts/StreamChatContext';
-import { colors } from '../styles/colors';
+} from "react-native";
+import { useStreamChat } from "../contexts/StreamChatContext";
+import { colors } from "../styles/colors";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 const SideMenu = ({
   visible,
@@ -54,12 +54,12 @@ const SideMenu = ({
 
     updateUnreadCount();
 
-    chatClient.on('message.new', updateUnreadCount);
-    chatClient.on('notification.mark_read', updateUnreadCount);
+    chatClient.on("message.new", updateUnreadCount);
+    chatClient.on("notification.mark_read", updateUnreadCount);
 
     return () => {
-      chatClient.off('message.new', updateUnreadCount);
-      chatClient.off('notification.mark_read', updateUnreadCount);
+      chatClient.off("message.new", updateUnreadCount);
+      chatClient.off("notification.mark_read", updateUnreadCount);
     };
   }, [chatClient, isReady]);
 
@@ -105,11 +105,11 @@ const SideMenu = ({
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Text style={styles.avatarText}>
-                    {user?.email?.charAt(0).toUpperCase() || 'U'}
+                    {user?.email?.charAt(0).toUpperCase() || "U"}
                   </Text>
                 </View>
               )}
-              <Text style={styles.email}>{user?.email || ''}</Text>
+              <Text style={styles.email}>{user?.email || ""}</Text>
             </View>
           </View>
 
@@ -124,7 +124,7 @@ const SideMenu = ({
                 <View style={styles.menuIcon}>
                   <WalletIcon />
                 </View>
-                <Text style={styles.menuLabel}>Wallet</Text>
+                <Text style={styles.menuLabel}>ארנק</Text>
                 <Text style={styles.menuArrow}>›</Text>
               </TouchableOpacity>
 
@@ -136,11 +136,11 @@ const SideMenu = ({
                 <View style={styles.menuIcon}>
                   <ChatIcon />
                 </View>
-                <Text style={styles.menuLabel}>Chats</Text>
+                <Text style={styles.menuLabel}>צ׳אטים</Text>
                 {unreadCount > 0 && (
                   <View style={styles.menuBadge}>
                     <Text style={styles.menuBadgeText}>
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                      {unreadCount > 9 ? "9+" : unreadCount}
                     </Text>
                   </View>
                 )}
@@ -155,7 +155,7 @@ const SideMenu = ({
                 <View style={styles.menuIcon}>
                   <ReportsIcon />
                 </View>
-                <Text style={styles.menuLabel}>My Reports</Text>
+                <Text style={styles.menuLabel}>הדיווחים שלי</Text>
                 <Text style={styles.menuArrow}>›</Text>
               </TouchableOpacity>
 
@@ -167,7 +167,7 @@ const SideMenu = ({
                 <View style={styles.menuIcon}>
                   <SettingsIcon />
                 </View>
-                <Text style={styles.menuLabel}>Settings</Text>
+                <Text style={styles.menuLabel}>הגדרות</Text>
                 <Text style={styles.menuArrow}>›</Text>
               </TouchableOpacity>
             </View>
@@ -182,7 +182,9 @@ const SideMenu = ({
               <View style={[styles.menuIcon, styles.signoutIcon]}>
                 <SignOutIcon />
               </View>
-              <Text style={[styles.menuLabel, styles.signoutLabel]}>Sign Out</Text>
+              <Text style={[styles.menuLabel, styles.signoutLabel]}>
+                התנתקות
+              </Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -229,19 +231,19 @@ const iconStyles = StyleSheet.create({
   container: {
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   rect: {
     borderWidth: 2,
     borderColor: colors.primaryGradientStart,
     borderRadius: 4,
-    position: 'absolute',
+    position: "absolute",
   },
   line: {
     height: 2,
     backgroundColor: colors.primaryGradientStart,
-    position: 'absolute',
+    position: "absolute",
   },
   chatBubble: {
     width: 20,
@@ -274,7 +276,7 @@ const iconStyles = StyleSheet.create({
     borderRadius: 3,
   },
   reportsPlus: {
-    position: 'absolute',
+    position: "absolute",
     width: 8,
     height: 2,
     backgroundColor: colors.primaryGradientStart,
@@ -285,14 +287,14 @@ const iconStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    flexDirection: 'row',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    flexDirection: "row",
   },
   overlayTouch: {
     flex: 1,
   },
   menu: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     top: 0,
     bottom: 0,
@@ -311,23 +313,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   closeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 50,
     right: 16,
     width: 36,
     height: 36,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeButtonText: {
     color: colors.white,
     fontSize: 24,
-    fontWeight: '300',
+    fontWeight: "300",
   },
   profileSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
   },
   avatar: {
@@ -335,29 +337,29 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: "rgba(255, 255, 255, 0.3)",
     marginBottom: 12,
   },
   avatarPlaceholder: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderWidth: 3,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 12,
   },
   avatarText: {
     fontSize: 32,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.white,
   },
   email: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
-    textAlign: 'center',
+    color: "rgba(255, 255, 255, 0.9)",
+    textAlign: "center",
   },
   content: {
     flex: 1,
@@ -367,8 +369,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 12,
@@ -377,17 +379,17 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     marginRight: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   menuLabel: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.darkGray,
   },
   menuBadge: {
-    backgroundColor: '#ff4444',
+    backgroundColor: "#ff4444",
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -396,12 +398,12 @@ const styles = StyleSheet.create({
   menuBadgeText: {
     color: colors.white,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   menuArrow: {
     fontSize: 20,
     color: colors.gray,
-    fontWeight: '300',
+    fontWeight: "300",
   },
   divider: {
     height: 1,
@@ -409,7 +411,7 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   signoutItem: {
-    marginTop: 'auto',
+    marginTop: "auto",
   },
   signoutIcon: {
     color: colors.red,

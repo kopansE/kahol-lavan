@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors } from '../styles/colors';
+import React, { useState, useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { colors } from "../styles/colors";
 
 const ReservationNotification = ({ notification, onAccept, onDecline }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState('');
+  const [timeRemaining, setTimeRemaining] = useState("");
 
   useEffect(() => {
     const updateTimer = () => {
@@ -13,7 +13,7 @@ const ReservationNotification = ({ notification, onAccept, onDecline }) => {
       const diff = expiration - now;
 
       if (diff <= 0) {
-        setTimeRemaining('Expired');
+        setTimeRemaining("פג תוקף");
         return;
       }
 
@@ -21,9 +21,9 @@ const ReservationNotification = ({ notification, onAccept, onDecline }) => {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
       if (hours > 0) {
-        setTimeRemaining(`${hours}h ${minutes}m remaining`);
+        setTimeRemaining(`נותרו ${hours}ש ${minutes}ד`);
       } else {
-        setTimeRemaining(`${minutes}m remaining`);
+        setTimeRemaining(`נותרו ${minutes}ד`);
       }
     };
 
@@ -57,13 +57,13 @@ const ReservationNotification = ({ notification, onAccept, onDecline }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.icon}>🚗</Text>
-        <Text style={styles.title}>Parking Reservation Request</Text>
+        <Text style={styles.title}>בקשת הזמנת חניה</Text>
       </View>
 
       <View style={styles.content}>
         <Text style={styles.message}>
-          <Text style={styles.senderName}>{notification.sender_name}</Text> wants to
-          reserve your parking spot
+          <Text style={styles.senderName}>{notification.sender_name}</Text> רוצה
+          להזמין את החניה שלך
         </Text>
 
         {notification.pins && notification.pins.address && (
@@ -72,7 +72,7 @@ const ReservationNotification = ({ notification, onAccept, onDecline }) => {
 
         <View style={styles.details}>
           <View style={styles.amountContainer}>
-            <Text style={styles.amountLabel}>Amount:</Text>
+            <Text style={styles.amountLabel}>סכום:</Text>
             <Text style={styles.amountValue}>
               ₪{notification.amount.toFixed(2)}
             </Text>
@@ -88,7 +88,7 @@ const ReservationNotification = ({ notification, onAccept, onDecline }) => {
           disabled={isProcessing}
         >
           <Text style={styles.buttonText}>
-            {isProcessing ? 'Processing...' : 'Accept'}
+            {isProcessing ? "מעבד..." : "אשר"}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -97,7 +97,7 @@ const ReservationNotification = ({ notification, onAccept, onDecline }) => {
           disabled={isProcessing}
         >
           <Text style={styles.buttonText}>
-            {isProcessing ? 'Processing...' : 'Decline'}
+            {isProcessing ? "מעבד..." : "דחה"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -118,8 +118,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginBottom: 12,
   },
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.darkGray,
   },
   content: {
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   senderName: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   address: {
     fontSize: 13,
@@ -148,13 +148,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   details: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   amountContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   amountLabel: {
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   amountValue: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.primaryGradientStart,
   },
   expiry: {
@@ -171,14 +171,14 @@ const styles = StyleSheet.create({
     color: colors.gray,
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   button: {
     flex: 1,
     paddingVertical: 10,
     borderRadius: 8,
-    alignItems: 'center',
+    alignItems: "center",
   },
   acceptButton: {
     backgroundColor: colors.primaryGradientStart,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: colors.white,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

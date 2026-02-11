@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import { useToast } from "../contexts/ToastContext";
 import "./PaymentSideMenu.css";
 
-const PaymentSideMenu = ({ 
-  isOpen, 
-  onClose, 
-  user, 
-  onSignOut
-}) => {
+const PaymentSideMenu = ({ isOpen, onClose, user, onSignOut }) => {
+  const { showToast } = useToast();
   const [paymentSetupCompleted, setPaymentSetupCompleted] = useState(false);
   const [walletAmount, setWalletAmount] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -48,7 +45,7 @@ const PaymentSideMenu = ({
       const { data, error } = await supabase
         .from("users")
         .select(
-          "rapyd_customer_id, rapyd_payment_method_id, payment_setup_completed, rapyd_wallet_id"
+          "rapyd_customer_id, rapyd_payment_method_id, payment_setup_completed, rapyd_wallet_id",
         )
         .eq("id", user.id)
         .single();
@@ -121,12 +118,12 @@ const PaymentSideMenu = ({
         await supabase.auth.getSession();
 
       if (sessionError) {
-        throw new Error("Authentication error. Please log in again.");
+        throw new Error("שגיאת אימות. אנא התחבר מחדש.");
       }
 
       const token = sessionData?.session?.access_token;
       if (!token) {
-        throw new Error("No session token found. Please log in again.");
+        throw new Error("לא נמצא טוקן. אנא התחבר מחדש.");
       }
 
       const url = `${
@@ -155,13 +152,13 @@ const PaymentSideMenu = ({
         result = JSON.parse(resultText);
       } catch (e) {
         throw new Error(
-          `Unexpected server response (${response.status}): ${resultText}`
+          `Unexpected server response (${response.status}): ${resultText}`,
         );
       }
 
       if (!response.ok || !result?.success || !result?.hosted_page_url) {
         const message =
-          result?.error || result?.message || "Failed to start payment setup";
+          result?.error || result?.message || "הגדרת התשלום נכשלה";
         throw new Error(message);
       }
 
@@ -169,14 +166,14 @@ const PaymentSideMenu = ({
       window.location.href = result.hosted_page_url;
     } catch (err) {
       console.error("Failed to update payment details:", err);
-      alert(err.message || "Failed to update payment details");
+      showToast(err.message || "עדכון פרטי התשלום נכשל");
     } finally {
       setIsUpdatingPayment(false);
     }
   };
 
   const handleWithdrawToBank = () => {
-    alert("Withdraw to bank account button clicked! (Coming soon)");
+    showToast("משיכה לחשבון בנק - בקרוב!");
   };
 
   if (!isOpen) return null;
@@ -187,7 +184,7 @@ const PaymentSideMenu = ({
       <div className={`payment-side-menu ${isOpen ? "open" : ""}`}>
         <div className="payment-side-menu-header">
           <div className="header-top">
-            <h2>Payment Settings</h2>
+            <h2>הגדרות תשלום</h2>
             <button className="close-button" onClick={onClose}>
               ×
             </button>
@@ -215,15 +212,15 @@ const PaymentSideMenu = ({
             onClick={handleUpdatePaymentDetails}
             disabled={isUpdatingPayment}
           >
-            {isUpdatingPayment ? "Redirecting..." : "Update Payment Details"}
+            {isUpdatingPayment ? "מפנה..." : "עדכון פרטי תשלום"}
           </button>
 
           {loading ? (
-            <div className="loading-state">Loading...</div>
+            <div className="loading-state">טוען...</div>
           ) : paymentSetupCompleted ? (
             <div className="payment-setup-section">
               <div className="wallet-balance-section">
-                <h3>Wallet Balance</h3>
+                <h3>יתרת ארנק</h3>
                 {walletAmount !== null ? (
                   <div className="wallet-amount">
                     ₪{walletAmount.toFixed(2)}
@@ -237,15 +234,12 @@ const PaymentSideMenu = ({
                 className="payment-menu-button withdraw-button"
                 onClick={handleWithdrawToBank}
               >
-                Withdraw to Bank Account
+                משיכה לחשבון בנק
               </button>
             </div>
           ) : (
             <div className="payment-not-setup">
-              <p>
-                Complete payment setup to view wallet balance and withdraw
-                funds.
-              </p>
+              <p>השלם את הגדרת התשלום כדי לצפות ביתרה ולמשוך כספים.</p>
             </div>
           )}
 
@@ -255,7 +249,7 @@ const PaymentSideMenu = ({
             className="payment-menu-button signout-button"
             onClick={onSignOut}
           >
-            Sign Out
+            התנתקות
           </button>
         </div>
       </div>

@@ -2,21 +2,27 @@ import React from "react";
 import { formatParkingZone } from "../utils/parkingZoneUtils";
 import "./PinConfirmationModal.css";
 
-const PinConfirmationModal = ({ address, parkingZone, isLoading, onConfirm, onCancel }) => {
+const PinConfirmationModal = ({
+  address,
+  parkingZone,
+  isLoading,
+  onConfirm,
+  onCancel,
+}) => {
   return (
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-icon">📍</div>
 
-        <h2 className="modal-title">Pin Location</h2>
+        <h2 className="modal-title">מיקום סימון</h2>
 
-        <p className="modal-message">You dropped a pin at:</p>
+        <p className="modal-message">סימנת מיקום ב:</p>
 
         <div className="modal-address">
           {isLoading ? (
             <div className="address-loading">
               <div className="spinner-small"></div>
-              <span>Finding address...</span>
+              <span>מחפש כתובת...</span>
             </div>
           ) : (
             <strong>{address}</strong>
@@ -29,7 +35,7 @@ const PinConfirmationModal = ({ address, parkingZone, isLoading, onConfirm, onCa
           </div>
         )}
 
-        <p className="modal-question">Did you park here? 🙂</p>
+        <p className="modal-question">חנית כאן? 🙂</p>
 
         <div className="modal-buttons">
           <button
@@ -37,14 +43,14 @@ const PinConfirmationModal = ({ address, parkingZone, isLoading, onConfirm, onCa
             onClick={onConfirm}
             disabled={isLoading}
           >
-            Yes, I did!
+            כן, חניתי!
           </button>
           <button
             className="modal-btn modal-btn-cancel"
             onClick={onCancel}
             disabled={isLoading}
           >
-            Cancel
+            ביטול
           </button>
         </div>
       </div>

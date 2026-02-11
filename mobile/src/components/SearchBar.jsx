@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   TextInput,
@@ -9,13 +9,13 @@ import {
   FlatList,
   Keyboard,
   Platform,
-} from 'react-native';
-import { colors } from '../styles/colors';
+} from "react-native";
+import { colors } from "../styles/colors";
 import {
   placesAutocomplete,
   geocodeAddress,
   getStreetGeometry,
-} from '../utils/edgeFunctions';
+} from "../utils/edgeFunctions";
 
 // Generate a unique session token for billing optimization
 const generateSessionToken = () => {
@@ -23,7 +23,7 @@ const generateSessionToken = () => {
 };
 
 const SearchBar = ({ onSearchResult, onClearSearch }) => {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [predictions, setPredictions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showPredictions, setShowPredictions] = useState(false);
@@ -44,13 +44,13 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
         const result = await placesAutocomplete(searchQuery, sessionToken);
         setPredictions(result.predictions || []);
       } catch (error) {
-        console.error('Error fetching predictions:', error);
+        console.error("Error fetching predictions:", error);
         setPredictions([]);
       } finally {
         setIsLoading(false);
       }
     },
-    [sessionToken]
+    [sessionToken],
   );
 
   // Handle input change with debounce
@@ -80,7 +80,10 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
       setIsLoading(true);
 
       // Geocode the place
-      const geocodeResult = await geocodeAddress(prediction.placeId, sessionToken);
+      const geocodeResult = await geocodeAddress(
+        prediction.placeId,
+        sessionToken,
+      );
       const { result } = geocodeResult;
 
       // If it's a street, fetch the geometry for highlighting
@@ -91,11 +94,11 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
             prediction.mainText || prediction.description,
             result.lat,
             result.lng,
-            result.viewport
+            result.viewport,
           );
           streetGeometry = geometryResult.geometry;
         } catch (error) {
-          console.error('Error fetching street geometry:', error);
+          console.error("Error fetching street geometry:", error);
         }
       }
 
@@ -113,7 +116,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
       // Generate a new session token for the next search
       setSessionToken(generateSessionToken());
     } catch (error) {
-      console.error('Error processing selection:', error);
+      console.error("Error processing selection:", error);
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +124,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
 
   // Handle clear button
   const handleClear = () => {
-    setQuery('');
+    setQuery("");
     setPredictions([]);
     setShowPredictions(false);
     setSessionToken(generateSessionToken());
@@ -148,7 +151,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
     >
       <View style={styles.predictionIcon}>
         <Text style={styles.predictionIconText}>
-          {item.types?.includes('route') ? '🛣️' : '📍'}
+          {item.types?.includes("route") ? "🛣️" : "📍"}
         </Text>
       </View>
       <View style={styles.predictionText}>
@@ -181,7 +184,10 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
       <View style={styles.searchBar}>
         <View style={styles.searchIcon}>
           {isLoading ? (
-            <ActivityIndicator size="small" color={colors.primaryGradientStart} />
+            <ActivityIndicator
+              size="small"
+              color={colors.primaryGradientStart}
+            />
           ) : (
             <Text style={styles.searchIconText}>🔍</Text>
           )}
@@ -190,7 +196,7 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
         <TextInput
           ref={inputRef}
           style={styles.input}
-          placeholder="Where to?"
+          placeholder="לאן?"
           placeholderTextColor="#999"
           value={query}
           onChangeText={handleInputChange}
@@ -214,19 +220,19 @@ const SearchBar = ({ onSearchResult, onClearSearch }) => {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 30,
     left: 20,
     right: 20,
     zIndex: 1000,
   },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.white,
     borderRadius: 28,
     paddingHorizontal: 16,
-    paddingVertical: Platform.OS === 'ios' ? 14 : 8,
+    paddingVertical: Platform.OS === "ios" ? 14 : 8,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -237,8 +243,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   searchIconText: {
     fontSize: 18,
@@ -254,14 +260,14 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     backgroundColor: colors.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginLeft: 8,
   },
   clearButtonText: {
     fontSize: 14,
     color: colors.gray,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   predictionsContainer: {
     backgroundColor: colors.white,
@@ -273,11 +279,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   predictionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
@@ -287,9 +293,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f0f2ff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f0f2ff",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   predictionIconText: {
@@ -300,7 +306,7 @@ const styles = StyleSheet.create({
   },
   predictionMain: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: "500",
     color: colors.darkGray,
     marginBottom: 2,
   },

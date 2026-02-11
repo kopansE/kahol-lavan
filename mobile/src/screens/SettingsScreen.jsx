@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,22 +6,23 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { supabase } from '../config/supabase';
-import { colors } from '../styles/colors';
-import { updateUserCarData } from '../utils/edgeFunctions';
+} from "react-native";
+import { supabase } from "../config/supabase";
+import { colors } from "../styles/colors";
+import { useToast } from "../contexts/ToastContext";
+import { updateUserCarData } from "../utils/edgeFunctions";
 
 const SettingsScreen = ({ navigation, route }) => {
   const { user } = route.params;
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
-    car_license_plate: '',
-    car_make: '',
-    car_model: '',
-    car_color: '',
+    car_license_plate: "",
+    car_make: "",
+    car_model: "",
+    car_color: "",
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,23 +39,23 @@ const SettingsScreen = ({ navigation, route }) => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('users')
-        .select('car_license_plate, car_make, car_model, car_color')
-        .eq('id', user.id)
+        .from("users")
+        .select("car_license_plate, car_make, car_model, car_color")
+        .eq("id", user.id)
         .single();
 
       if (error) {
-        console.error('Error loading car data:', error);
+        console.error("Error loading car data:", error);
       } else if (data) {
         setFormData({
-          car_license_plate: data.car_license_plate || '',
-          car_make: data.car_make || '',
-          car_model: data.car_model || '',
-          car_color: data.car_color || '',
+          car_license_plate: data.car_license_plate || "",
+          car_make: data.car_make || "",
+          car_model: data.car_model || "",
+          car_color: data.car_color || "",
         });
       }
     } catch (error) {
-      console.error('Error loading car data:', error);
+      console.error("Error loading car data:", error);
     } finally {
       setLoading(false);
     }
@@ -62,25 +63,25 @@ const SettingsScreen = ({ navigation, route }) => {
 
   const validateLicensePlate = (plate) => {
     if (!plate || plate.trim().length === 0) {
-      return 'License plate is required';
+      return "מספר רישוי נדרש";
     }
     const plateRegex = /^\d{2,3}-?\d{2}-?\d{3}$/;
     if (!plateRegex.test(plate.trim())) {
-      return 'Invalid format. Expected: XX-XXX-XX or XXX-XX-XXX';
+      return "פורמט לא תקין. נדרש: XX-XXX-XX או XXX-XX-XXX";
     }
     return null;
   };
 
   const validateTextField = (value, fieldName, maxLength) => {
     if (!value || value.trim().length === 0) {
-      return `${fieldName} is required`;
+      return `${fieldName} נדרש`;
     }
     if (value.trim().length > maxLength) {
-      return `${fieldName} must be ${maxLength} characters or less`;
+      return `${fieldName} חייב להיות ${maxLength} תווים או פחות`;
     }
-    const textRegex = /^[a-zA-Z0-9\s\-'.]+$/;
+    const textRegex = /^[a-zA-Z0-9\s\-'.א-ת]+$/;
     if (!textRegex.test(value.trim())) {
-      return `${fieldName} contains invalid characters`;
+      return `${fieldName} מכיל תווים לא חוקיים`;
     }
     return null;
   };
@@ -105,13 +106,13 @@ const SettingsScreen = ({ navigation, route }) => {
     const plateError = validateLicensePlate(formData.car_license_plate);
     if (plateError) newErrors.car_license_plate = plateError;
 
-    const makeError = validateTextField(formData.car_make, 'Car make', 50);
+    const makeError = validateTextField(formData.car_make, "יצרן", 50);
     if (makeError) newErrors.car_make = makeError;
 
-    const modelError = validateTextField(formData.car_model, 'Car model', 50);
+    const modelError = validateTextField(formData.car_model, "דגם", 50);
     if (modelError) newErrors.car_model = modelError;
 
-    const colorError = validateTextField(formData.car_color, 'Car color', 30);
+    const colorError = validateTextField(formData.car_color, "צבע", 30);
     if (colorError) newErrors.car_color = colorError;
 
     setErrors(newErrors);
@@ -131,8 +132,8 @@ const SettingsScreen = ({ navigation, route }) => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
-      console.error('Error updating car data:', error);
-      Alert.alert('Error', `Failed to save car data: ${error.message}`);
+      console.error("Error updating car data:", error);
+      showToast(`שמירת פרטי הרכב נכשלה: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -141,7 +142,7 @@ const SettingsScreen = ({ navigation, route }) => {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Header */}
       <View style={styles.header}>
@@ -151,7 +152,7 @@ const SettingsScreen = ({ navigation, route }) => {
         >
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerTitle}>הגדרות</Text>
         <View style={styles.headerSpacer} />
       </View>
 
@@ -169,23 +170,25 @@ const SettingsScreen = ({ navigation, route }) => {
             {/* Section Header */}
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionIcon}>🚗</Text>
-              <Text style={styles.sectionTitle}>Car Details</Text>
+              <Text style={styles.sectionTitle}>פרטי רכב</Text>
             </View>
             <Text style={styles.sectionDescription}>
-              Help others identify your vehicle during parking exchanges
+              עזור לאחרים לזהות את הרכב שלך בזמן החלפת חניות
             </Text>
 
             {/* License Plate */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>License Plate *</Text>
+              <Text style={styles.label}>מספר רישוי *</Text>
               <TextInput
                 style={[
                   styles.input,
                   errors.car_license_plate && styles.inputError,
                 ]}
                 value={formData.car_license_plate}
-                onChangeText={(value) => handleChange('car_license_plate', value)}
-                placeholder="e.g., 12-345-67"
+                onChangeText={(value) =>
+                  handleChange("car_license_plate", value)
+                }
+                placeholder="לדוגמה: 12-345-67"
                 editable={!isSubmitting}
                 autoCapitalize="none"
               />
@@ -196,12 +199,12 @@ const SettingsScreen = ({ navigation, route }) => {
 
             {/* Car Make */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Car Make *</Text>
+              <Text style={styles.label}>יצרן *</Text>
               <TextInput
                 style={[styles.input, errors.car_make && styles.inputError]}
                 value={formData.car_make}
-                onChangeText={(value) => handleChange('car_make', value)}
-                placeholder="e.g., Toyota, Honda, Mazda"
+                onChangeText={(value) => handleChange("car_make", value)}
+                placeholder="לדוגמה: טויוטה, הונדה, מאזדה"
                 editable={!isSubmitting}
               />
               {errors.car_make && (
@@ -211,12 +214,12 @@ const SettingsScreen = ({ navigation, route }) => {
 
             {/* Car Model */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Car Model *</Text>
+              <Text style={styles.label}>דגם *</Text>
               <TextInput
                 style={[styles.input, errors.car_model && styles.inputError]}
                 value={formData.car_model}
-                onChangeText={(value) => handleChange('car_model', value)}
-                placeholder="e.g., Corolla, Civic, CX-5"
+                onChangeText={(value) => handleChange("car_model", value)}
+                placeholder="לדוגמה: קורולה, סיוויק, CX-5"
                 editable={!isSubmitting}
               />
               {errors.car_model && (
@@ -226,12 +229,12 @@ const SettingsScreen = ({ navigation, route }) => {
 
             {/* Car Color */}
             <View style={styles.formGroup}>
-              <Text style={styles.label}>Car Color *</Text>
+              <Text style={styles.label}>צבע *</Text>
               <TextInput
                 style={[styles.input, errors.car_color && styles.inputError]}
                 value={formData.car_color}
-                onChangeText={(value) => handleChange('car_color', value)}
-                placeholder="e.g., White, Black, Silver"
+                onChangeText={(value) => handleChange("car_color", value)}
+                placeholder="לדוגמה: לבן, שחור, כסוף"
                 editable={!isSubmitting}
               />
               {errors.car_color && (
@@ -241,7 +244,10 @@ const SettingsScreen = ({ navigation, route }) => {
 
             {/* Save Button */}
             <TouchableOpacity
-              style={[styles.saveButton, saveSuccess && styles.saveButtonSuccess]}
+              style={[
+                styles.saveButton,
+                saveSuccess && styles.saveButtonSuccess,
+              ]}
               onPress={handleSubmit}
               disabled={isSubmitting}
             >
@@ -249,7 +255,7 @@ const SettingsScreen = ({ navigation, route }) => {
                 <ActivityIndicator color={colors.white} />
               ) : (
                 <Text style={styles.saveButtonText}>
-                  {saveSuccess ? 'Saved!' : 'Save Changes'}
+                  {saveSuccess ? "נשמר!" : "שמור שינויים"}
                 </Text>
               )}
             </TouchableOpacity>
@@ -266,8 +272,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingTop: 50,
     paddingBottom: 16,
     paddingHorizontal: 16,
@@ -276,23 +282,23 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   backButtonText: {
     color: colors.white,
     fontSize: 28,
-    fontWeight: '300',
+    fontWeight: "300",
     marginTop: -2,
   },
   headerTitle: {
     flex: 1,
     fontSize: 20,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.white,
-    textAlign: 'center',
+    textAlign: "center",
   },
   headerSpacer: {
     width: 40,
@@ -303,14 +309,14 @@ const styles = StyleSheet.create({
   },
   loadingState: {
     paddingVertical: 60,
-    alignItems: 'center',
+    alignItems: "center",
   },
   form: {
     gap: 16,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     marginBottom: 4,
   },
@@ -319,7 +325,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.darkGray,
   },
   sectionDescription: {
@@ -333,7 +339,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.darkGray,
   },
   input: {
@@ -343,7 +349,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     fontSize: 15,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
   },
   inputError: {
     borderColor: colors.red,
@@ -356,7 +362,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryGradientStart,
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
     shadowColor: colors.primaryGradientStart,
     shadowOffset: { width: 0, height: 4 },
@@ -370,7 +376,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

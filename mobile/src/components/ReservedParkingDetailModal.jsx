@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Modal,
   View,
@@ -6,14 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
   Linking,
-} from 'react-native';
-import { commonStyles } from '../styles/common';
-import { colors } from '../styles/colors';
-import { formatParkingZone } from '../utils/parkingZoneUtils';
+} from "react-native";
+import { commonStyles } from "../styles/common";
+import { colors } from "../styles/colors";
+import { useToast } from "../contexts/ToastContext";
+import { formatParkingZone } from "../utils/parkingZoneUtils";
 
 /**
  * Opens the device's default navigation app with directions to the specified coordinates
@@ -21,15 +21,15 @@ import { formatParkingZone } from '../utils/parkingZoneUtils';
  * @param {number} lng - Longitude of the destination
  * @param {string} address - Address label for the destination (optional)
  */
-const openNavigation = async (lat, lng, address = '') => {
+const openNavigation = async (lat, lng, address = "") => {
   const destination = `${lat},${lng}`;
-  const label = encodeURIComponent(address || 'Parking Location');
-  
-  if (Platform.OS === 'ios') {
+  const label = encodeURIComponent(address || "מיקום חניה");
+
+  if (Platform.OS === "ios") {
     // Try Google Maps first, then Apple Maps
     const googleMapsUrl = `comgooglemaps://?daddr=${destination}&directionsmode=driving`;
     const appleMapsUrl = `maps://?daddr=${destination}&dirflg=d`;
-    
+
     try {
       const canOpenGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
       if (canOpenGoogleMaps) {
@@ -37,20 +37,20 @@ const openNavigation = async (lat, lng, address = '') => {
         return true;
       }
     } catch (error) {
-      console.log('Google Maps not available, trying Apple Maps');
+      console.log("Google Maps not available, trying Apple Maps");
     }
-    
+
     try {
       await Linking.openURL(appleMapsUrl);
       return true;
     } catch (error) {
-      console.error('Failed to open Apple Maps:', error);
+      console.error("Failed to open Apple Maps:", error);
     }
-  } else if (Platform.OS === 'android') {
+  } else if (Platform.OS === "android") {
     // Try Google Maps intent first, then geo URI
     const googleMapsUrl = `google.navigation:q=${destination}`;
     const geoUrl = `geo:${destination}?q=${destination}(${label})`;
-    
+
     try {
       const canOpenGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
       if (canOpenGoogleMaps) {
@@ -58,37 +58,39 @@ const openNavigation = async (lat, lng, address = '') => {
         return true;
       }
     } catch (error) {
-      console.log('Google Maps navigation not available, trying geo URI');
+      console.log("Google Maps navigation not available, trying geo URI");
     }
-    
+
     try {
       await Linking.openURL(geoUrl);
       return true;
     } catch (error) {
-      console.error('Failed to open geo URI:', error);
+      console.error("Failed to open geo URI:", error);
     }
   }
-  
+
   // Fallback to web Google Maps
   const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
   try {
     await Linking.openURL(webUrl);
     return true;
   } catch (error) {
-    console.error('Failed to open Google Maps web:', error);
+    console.error("Failed to open Google Maps web:", error);
     return false;
   }
 };
 
 const ReservedParkingDetailModal = ({ visible, parking, onClose }) => {
+  const { showToast } = useToast();
   const [isNavigating, setIsNavigating] = useState(false);
 
   // Check if we have valid coordinates
-  const hasValidCoordinates = parking?.position && 
-    Array.isArray(parking.position) && 
+  const hasValidCoordinates =
+    parking?.position &&
+    Array.isArray(parking.position) &&
     parking.position.length >= 2 &&
-    typeof parking.position[0] === 'number' &&
-    typeof parking.position[1] === 'number';
+    typeof parking.position[0] === "number" &&
+    typeof parking.position[1] === "number";
 
   const handleNavigateClick = async () => {
     if (isNavigating || !hasValidCoordinates) return;
@@ -97,22 +99,13 @@ const ReservedParkingDetailModal = ({ visible, parking, onClose }) => {
       setIsNavigating(true);
       const [lat, lng] = parking.position;
       const success = await openNavigation(lat, lng, parking.address);
-      
+
       if (!success) {
-        Alert.alert(
-          'Navigation Error',
-          `Could not open navigation app. The parking address is:\n\n${parking.address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`}`,
-          [
-            { text: 'OK' }
-          ]
-        );
+        showToast("לא ניתן לפתוח אפליקציית ניווט.");
       }
     } catch (error) {
-      console.error('Error opening navigation:', error);
-      Alert.alert(
-        'Error',
-        'Failed to open navigation. Please try again.'
-      );
+      console.error("Error opening navigation:", error);
+      showToast("פתיחת הניווט נכשלה. אנא נסה שוב.");
     } finally {
       setIsNavigating(false);
     }
@@ -121,7 +114,7 @@ const ReservedParkingDetailModal = ({ visible, parking, onClose }) => {
   if (!parking) return null;
 
   const userData = parking.user || parking.users || {};
-  const ownerName = userData?.full_name || 'Unknown Owner';
+  const ownerName = userData?.full_name || "בעלים לא ידוע";
   const carMake = userData?.car_make;
   const carModel = userData?.car_model;
   const carColor = userData?.car_color;
@@ -138,23 +131,27 @@ const ReservedParkingDetailModal = ({ visible, parking, onClose }) => {
         <View style={[commonStyles.modalContent, styles.modalContent]}>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-              <Text style={styles.address}>{parking.address || 'Reserved Parking Spot'}</Text>
+              <Text style={styles.address}>
+                {parking.address || "חניה שהוזמנה"}
+              </Text>
             </View>
 
             <View style={styles.successBadge}>
-              <Text style={styles.successText}>✅ You have reserved this parking spot</Text>
+              <Text style={styles.successText}>✅ הזמנת חניה זו</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Location</Text>
+              <Text style={styles.sectionTitle}>מיקום</Text>
               <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>🅿️</Text>
-                <Text style={styles.infoText}>{formatParkingZone(parking.parking_zone)}</Text>
+                <Text style={styles.infoText}>
+                  {formatParkingZone(parking.parking_zone)}
+                </Text>
               </View>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Owner</Text>
+              <Text style={styles.sectionTitle}>בעלים</Text>
               <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>👤</Text>
                 <Text style={styles.infoText}>{ownerName}</Text>
@@ -163,7 +160,7 @@ const ReservedParkingDetailModal = ({ visible, parking, onClose }) => {
 
             {(carMake || carModel || carColor || licensePlate) && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Vehicle Details</Text>
+                <Text style={styles.sectionTitle}>פרטי רכב</Text>
                 {(carMake || carModel) && (
                   <View style={styles.infoItem}>
                     <Text style={styles.infoIcon}>🚗</Text>
@@ -191,7 +188,7 @@ const ReservedParkingDetailModal = ({ visible, parking, onClose }) => {
 
             {parking.timestamp && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Reservation Details</Text>
+                <Text style={styles.sectionTitle}>פרטי הזמנה</Text>
                 <View style={styles.infoItem}>
                   <Text style={styles.infoIcon}>🕐</Text>
                   <Text style={styles.infoText}>
@@ -205,7 +202,8 @@ const ReservedParkingDetailModal = ({ visible, parking, onClose }) => {
               <TouchableOpacity
                 style={[
                   styles.navigateButton,
-                  (!hasValidCoordinates || isNavigating) && styles.navigateButtonDisabled,
+                  (!hasValidCoordinates || isNavigating) &&
+                    styles.navigateButtonDisabled,
                 ]}
                 onPress={handleNavigateClick}
                 disabled={!hasValidCoordinates || isNavigating}
@@ -215,17 +213,20 @@ const ReservedParkingDetailModal = ({ visible, parking, onClose }) => {
                 ) : (
                   <View style={styles.navigateButtonContent}>
                     <Text style={styles.navigateIcon}>🧭</Text>
-                    <Text style={[
-                      styles.navigateButtonText,
-                      !hasValidCoordinates && styles.navigateButtonTextDisabled,
-                    ]}>
-                      {hasValidCoordinates ? 'Navigate to Parking' : 'Location unavailable'}
+                    <Text
+                      style={[
+                        styles.navigateButtonText,
+                        !hasValidCoordinates &&
+                          styles.navigateButtonTextDisabled,
+                      ]}
+                    >
+                      {hasValidCoordinates ? "נווט לחניה" : "מיקום לא זמין"}
                     </Text>
                   </View>
                 )}
               </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                <Text style={styles.closeButtonText}>Close</Text>
+                <Text style={styles.closeButtonText}>סגור</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -237,43 +238,43 @@ const ReservedParkingDetailModal = ({ visible, parking, onClose }) => {
 
 const styles = StyleSheet.create({
   modalContent: {
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   header: {
     marginBottom: 16,
   },
   address: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.darkGray,
-    textAlign: 'center',
+    textAlign: "center",
   },
   successBadge: {
-    backgroundColor: '#d4edda',
+    backgroundColor: "#d4edda",
     borderWidth: 1,
-    borderColor: '#28a745',
+    borderColor: "#28a745",
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,
   },
   successText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#155724',
-    textAlign: 'center',
+    fontWeight: "600",
+    color: "#155724",
+    textAlign: "center",
   },
   section: {
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.darkGray,
     marginBottom: 12,
   },
   infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginBottom: 8,
   },
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     color: colors.darkGray,
   },
   licensePlate: {
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 2,
   },
   buttonContainer: {
@@ -298,17 +299,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: colors.primaryGradientStart,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   navigateButtonDisabled: {
     borderColor: colors.mediumGray,
     backgroundColor: colors.lightGray,
   },
   navigateButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   navigateIcon: {
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
   navigateButtonText: {
     color: colors.primaryGradientStart,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   navigateButtonTextDisabled: {
     color: colors.gray,
@@ -326,12 +327,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightGray,
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   closeButtonText: {
     color: colors.gray,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

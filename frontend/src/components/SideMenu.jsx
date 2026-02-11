@@ -7,7 +7,14 @@ import ReportsPage from "./ReportsPage";
 import ScheduleLeavePage from "./ScheduleLeavePage";
 import "./SideMenu.css";
 
-const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast }) => {
+const SideMenu = ({
+  isOpen,
+  onClose,
+  user,
+  onSignOut,
+  userOwnPin,
+  onShowToast,
+}) => {
   const { chatClient, isReady } = useStreamChat();
   const [currentPage, setCurrentPage] = useState("menu"); // 'menu', 'wallet', 'chats', 'settings', 'reports', 'scheduleleave'
   const [unreadCount, setUnreadCount] = useState(0);
@@ -65,7 +72,11 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast })
       <>
         <div className="side-menu-overlay" onClick={onClose} />
         <div className={`side-menu ${isOpen ? "open" : ""}`}>
-          <ChatChannelList onClose={onClose} onBack={handleBack} inSideMenu={true} />
+          <ChatChannelList
+            onClose={onClose}
+            onBack={handleBack}
+            inSideMenu={true}
+          />
         </div>
       </>
     );
@@ -98,10 +109,10 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast })
       <>
         <div className="side-menu-overlay" onClick={onClose} />
         <div className={`side-menu ${isOpen ? "open" : ""}`}>
-          <ScheduleLeavePage 
-            user={user} 
-            userOwnPin={userOwnPin} 
-            onBack={handleBack} 
+          <ScheduleLeavePage
+            user={user}
+            userOwnPin={userOwnPin}
+            onBack={handleBack}
             onClose={onClose}
             onScheduleSuccess={onShowToast}
           />
@@ -143,13 +154,22 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast })
               onClick={() => handleMenuItemClick("wallet")}
             >
               <span className="menu-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <rect x="2" y="4" width="20" height="16" rx="2" />
                   <path d="M2 10h20" />
                   <path d="M6 16h4" />
                 </svg>
               </span>
-              <span className="menu-label">Wallet</span>
+              <span className="menu-label">ארנק</span>
               <span className="menu-arrow">›</span>
             </button>
 
@@ -158,11 +178,20 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast })
               onClick={() => handleMenuItemClick("chats")}
             >
               <span className="menu-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
               </span>
-              <span className="menu-label">Chats</span>
+              <span className="menu-label">צ׳אטים</span>
               {unreadCount > 0 && (
                 <span className="menu-badge">
                   {unreadCount > 9 ? "9+" : unreadCount}
@@ -176,12 +205,21 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast })
               onClick={() => handleMenuItemClick("scheduleleave")}
             >
               <span className="menu-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12,6 12,12 16,14" />
                 </svg>
               </span>
-              <span className="menu-label">Schedule Leave</span>
+              <span className="menu-label">תזמון יציאה</span>
               <span className="menu-arrow">›</span>
             </button>
 
@@ -190,14 +228,23 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast })
               onClick={() => handleMenuItemClick("reports")}
             >
               <span className="menu-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <polyline points="14,2 14,8 20,8" />
                   <line x1="12" y1="18" x2="12" y2="12" />
                   <line x1="9" y1="15" x2="15" y2="15" />
                 </svg>
               </span>
-              <span className="menu-label">My Reports</span>
+              <span className="menu-label">הדיווחים שלי</span>
               <span className="menu-arrow">›</span>
             </button>
 
@@ -206,12 +253,21 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast })
               onClick={() => handleMenuItemClick("settings")}
             >
               <span className="menu-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <circle cx="12" cy="12" r="3" />
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                 </svg>
               </span>
-              <span className="menu-label">Settings</span>
+              <span className="menu-label">הגדרות</span>
               <span className="menu-arrow">›</span>
             </button>
           </nav>
@@ -220,13 +276,22 @@ const SideMenu = ({ isOpen, onClose, user, onSignOut, userOwnPin, onShowToast })
 
           <button className="menu-item signout-item" onClick={onSignOut}>
             <span className="menu-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16,17 21,12 16,7" />
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </span>
-            <span className="menu-label">Sign Out</span>
+            <span className="menu-label">התנתקות</span>
           </button>
         </div>
       </div>

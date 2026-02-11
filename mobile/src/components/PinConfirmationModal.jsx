@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   Modal,
   View,
@@ -6,12 +6,19 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-} from 'react-native';
-import { commonStyles } from '../styles/common';
-import { colors } from '../styles/colors';
-import { formatParkingZone } from '../utils/parkingZoneUtils';
+} from "react-native";
+import { commonStyles } from "../styles/common";
+import { colors } from "../styles/colors";
+import { formatParkingZone } from "../utils/parkingZoneUtils";
 
-const PinConfirmationModal = ({ visible, address, parkingZone, isLoading, onConfirm, onCancel }) => {
+const PinConfirmationModal = ({
+  visible,
+  address,
+  parkingZone,
+  isLoading,
+  onConfirm,
+  onCancel,
+}) => {
   return (
     <Modal
       visible={visible}
@@ -22,14 +29,14 @@ const PinConfirmationModal = ({ visible, address, parkingZone, isLoading, onConf
       <View style={commonStyles.modalOverlay}>
         <View style={commonStyles.modalContent}>
           <Text style={commonStyles.modalIcon}>📍</Text>
-          <Text style={commonStyles.modalTitle}>Pin Location</Text>
-          <Text style={commonStyles.modalMessage}>You dropped a pin at:</Text>
+          <Text style={commonStyles.modalTitle}>מיקום סימון</Text>
+          <Text style={commonStyles.modalMessage}>סימנת מיקום ב:</Text>
 
           <View style={styles.addressContainer}>
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator color={colors.primaryGradientStart} />
-                <Text style={styles.loadingText}>Finding address...</Text>
+                <Text style={styles.loadingText}>מחפש כתובת...</Text>
               </View>
             ) : (
               <>
@@ -42,7 +49,7 @@ const PinConfirmationModal = ({ visible, address, parkingZone, isLoading, onConf
           </View>
 
           <Text style={[commonStyles.modalMessage, styles.question]}>
-            Did you park here? 🙂
+            חנית כאן? 🙂
           </Text>
 
           <View style={styles.buttonContainer}>
@@ -51,14 +58,14 @@ const PinConfirmationModal = ({ visible, address, parkingZone, isLoading, onConf
               onPress={onConfirm}
               disabled={isLoading}
             >
-              <Text style={styles.confirmButtonText}>Yes, I did!</Text>
+              <Text style={styles.confirmButtonText}>כן, חניתי!</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.button, styles.cancelButton]}
               onPress={onCancel}
               disabled={isLoading}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.cancelButtonText}>ביטול</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -69,15 +76,15 @@ const PinConfirmationModal = ({ visible, address, parkingZone, isLoading, onConf
 
 const styles = StyleSheet.create({
   addressContainer: {
-    width: '100%',
+    width: "100%",
     minHeight: 50,
     marginVertical: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   loadingText: {
@@ -86,14 +93,14 @@ const styles = StyleSheet.create({
   },
   address: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.darkGray,
-    textAlign: 'center',
+    textAlign: "center",
   },
   parkingZone: {
     fontSize: 14,
     color: colors.gray,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 8,
   },
   question: {
@@ -101,13 +108,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   buttonContainer: {
-    width: '100%',
+    width: "100%",
     gap: 12,
   },
   button: {
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   confirmButton: {
     backgroundColor: colors.primaryGradientStart,
@@ -115,7 +122,7 @@ const styles = StyleSheet.create({
   confirmButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   cancelButton: {
     backgroundColor: colors.lightGray,
@@ -123,7 +130,7 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: colors.gray,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

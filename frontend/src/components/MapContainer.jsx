@@ -76,8 +76,14 @@ function MapRefHandler({ onMapReady, searchResult }) {
       if (searchResult.isStreet && searchResult.viewport) {
         // For streets, fit to viewport bounds
         const bounds = L.latLngBounds(
-          [searchResult.viewport.southwest.lat, searchResult.viewport.southwest.lng],
-          [searchResult.viewport.northeast.lat, searchResult.viewport.northeast.lng]
+          [
+            searchResult.viewport.southwest.lat,
+            searchResult.viewport.southwest.lng,
+          ],
+          [
+            searchResult.viewport.northeast.lat,
+            searchResult.viewport.northeast.lng,
+          ],
         );
         map.flyToBounds(bounds, {
           animate: true,
@@ -162,7 +168,7 @@ const MapContainer = ({
             setIsGpsLoading(false);
           }
         },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 }
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 120000 },
       );
     } else {
       // Fallback to existing user location if available
@@ -187,7 +193,7 @@ const MapContainer = ({
           fontSize: "18px",
         }}
       >
-        Loading map...
+        טוען מפה...
       </div>
     );
   }
@@ -209,7 +215,7 @@ const MapContainer = ({
         <Marker position={userLocation} icon={userLocationIcon}>
           <Popup>
             <div>
-              <strong>Your Location</strong>
+              <strong>המיקום שלך</strong>
               <br />
               Lat: {userLocation[0].toFixed(6)}
               <br />
@@ -266,7 +272,7 @@ const MapContainer = ({
                 click: (e) => {
                   e.originalEvent.stopPropagation();
                   if (onPinClick) {
-                    onPinClick(pin, 'reserved');
+                    onPinClick(pin, "reserved");
                   }
                 },
               }}
@@ -302,7 +308,7 @@ const MapContainer = ({
             >
               <Popup>
                 <div>
-                  <strong>{searchResult.name || "Search Result"}</strong>
+                  <strong>{searchResult.name || "תוצאת חיפוש"}</strong>
                   <br />
                   {searchResult.formattedAddress}
                 </div>
@@ -310,7 +316,8 @@ const MapContainer = ({
             </Marker>
 
             {/* Street highlight polylines (multiple segments) */}
-            {searchResult.isStreet && searchResult.streetGeometry?.segments && 
+            {searchResult.isStreet &&
+              searchResult.streetGeometry?.segments &&
               searchResult.streetGeometry.segments.map((segment, index) => (
                 <Polyline
                   key={`street-segment-${index}`}
@@ -323,13 +330,15 @@ const MapContainer = ({
                     lineJoin: "round",
                   }}
                 />
-              ))
-            }
+              ))}
           </>
         )}
 
         {/* Handle map reference and clicks */}
-        <MapRefHandler onMapReady={handleMapReady} searchResult={searchResult} />
+        <MapRefHandler
+          onMapReady={handleMapReady}
+          searchResult={searchResult}
+        />
         <MapClickHandler onMapClick={onMapClick} />
       </LeafletMap>
 
@@ -338,7 +347,7 @@ const MapContainer = ({
         className={`gps-button ${isGpsLoading ? "loading" : ""}`}
         onClick={handleGpsClick}
         role="button"
-        title={isGpsLoading ? "Getting location..." : "Focus on my location"}
+        title={isGpsLoading ? "מתמקד במיקום שלך" : "מתמקד במיקום שלך"}
       >
         {/* GPS/locate icon or loading spinner */}
         {isGpsLoading ? (

@@ -1,8 +1,20 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import React from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 
-const ChatActionButtons = ({ onCancel, onApprove, onExtension, isProcessing = false, approvalState = {} }) => {
+const ChatActionButtons = ({
+  onCancel,
+  onApprove,
+  onExtension,
+  isProcessing = false,
+  approvalState = {},
+}) => {
   const { userApproved, otherUserApproved, bothApproved } = approvalState;
 
   const handleCancel = () => {
@@ -26,18 +38,18 @@ const ChatActionButtons = ({ onCancel, onApprove, onExtension, isProcessing = fa
   // Determine button states and text
   const approveButtonDisabled = isProcessing || bothApproved;
   const cancelButtonDisabled = isProcessing || bothApproved;
-  
+
   const getApproveButtonText = () => {
-    if (bothApproved) return 'COMPLETED';
-    if (isProcessing) return 'PROCESSING...';
-    if (userApproved && !otherUserApproved) return 'WAITING...';
-    return 'APPROVE';
+    if (bothApproved) return "הושלם";
+    if (isProcessing) return "מעבד...";
+    if (userApproved && !otherUserApproved) return "ממתין...";
+    return "אשר";
   };
 
   const getCancelButtonText = () => {
-    if (bothApproved) return 'COMPLETED';
-    if (isProcessing) return 'PROCESSING...';
-    return 'CANCEL';
+    if (bothApproved) return "הושלם";
+    if (isProcessing) return "מעבד...";
+    return "בטל";
   };
 
   return (
@@ -49,7 +61,11 @@ const ChatActionButtons = ({ onCancel, onApprove, onExtension, isProcessing = fa
         disabled={cancelButtonDisabled}
       >
         <LinearGradient
-          colors={cancelButtonDisabled ? ['#d0d0d0', '#b0b0b0'] : ['#ff6b6b', '#ee5a6f']}
+          colors={
+            cancelButtonDisabled
+              ? ["#d0d0d0", "#b0b0b0"]
+              : ["#ff6b6b", "#ee5a6f"]
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradient}
@@ -74,10 +90,10 @@ const ChatActionButtons = ({ onCancel, onApprove, onExtension, isProcessing = fa
         <LinearGradient
           colors={
             bothApproved
-              ? ['#4dabf7', '#339af0']
+              ? ["#4dabf7", "#339af0"]
               : approveButtonDisabled
-              ? ['#d0d0d0', '#b0b0b0']
-              : ['#51cf66', '#37b24d']
+                ? ["#d0d0d0", "#b0b0b0"]
+                : ["#51cf66", "#37b24d"]
           }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -88,9 +104,18 @@ const ChatActionButtons = ({ onCancel, onApprove, onExtension, isProcessing = fa
           ) : (
             <>
               <Text style={styles.icon}>
-                {bothApproved ? '✓✓' : userApproved && !otherUserApproved ? '⏳' : '✓'}
+                {bothApproved
+                  ? "✓✓"
+                  : userApproved && !otherUserApproved
+                    ? "⏳"
+                    : "✓"}
               </Text>
-              <Text style={[styles.label, (userApproved && !otherUserApproved) && styles.smallLabel]}>
+              <Text
+                style={[
+                  styles.label,
+                  userApproved && !otherUserApproved && styles.smallLabel,
+                ]}
+              >
                 {getApproveButtonText()}
               </Text>
             </>
@@ -104,13 +129,13 @@ const ChatActionButtons = ({ onCancel, onApprove, onExtension, isProcessing = fa
         activeOpacity={0.8}
       >
         <LinearGradient
-          colors={['#ffd43b', '#fab005']}
+          colors={["#ffd43b", "#fab005"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.gradient}
         >
           <Text style={[styles.icon, styles.darkIcon]}>+</Text>
-          <Text style={[styles.label, styles.darkLabel]}>EXTENSION</Text>
+          <Text style={[styles.label, styles.darkLabel]}>הארכה</Text>
         </LinearGradient>
       </TouchableOpacity>
     </View>
@@ -119,19 +144,19 @@ const ChatActionButtons = ({ onCancel, onApprove, onExtension, isProcessing = fa
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 15,
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: "white",
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: "#e0e0e0",
   },
   button: {
     flex: 1,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -142,29 +167,29 @@ const styles = StyleSheet.create({
   gradient: {
     paddingVertical: 20,
     paddingHorizontal: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   icon: {
     fontSize: 32,
-    fontWeight: '700',
-    color: 'white',
+    fontWeight: "700",
+    color: "white",
   },
   label: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 1,
-    color: 'white',
+    color: "white",
   },
   smallLabel: {
     fontSize: 13,
   },
   darkIcon: {
-    color: '#333',
+    color: "#333",
   },
   darkLabel: {
-    color: '#333',
+    color: "#333",
   },
 });
 

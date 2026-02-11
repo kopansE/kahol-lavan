@@ -1,13 +1,17 @@
-import React from 'react';
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { colors } from '../styles/colors';
+import React from "react";
+import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
+import { colors } from "../styles/colors";
 
 const CarDataBanner = ({ onClickBanner }) => {
   return (
-    <TouchableOpacity style={styles.container} onPress={onClickBanner} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={onClickBanner}
+      activeOpacity={0.8}
+    >
       <View style={styles.content}>
         <Text style={styles.icon}>🚗</Text>
-        <Text style={styles.text}>Please enter your car's data 😀</Text>
+        <Text style={styles.text}>אנא הזן את פרטי הרכב שלך 😀</Text>
         <Text style={styles.arrow}>→</Text>
       </View>
     </TouchableOpacity>
@@ -16,11 +20,11 @@ const CarDataBanner = ({ onClickBanner }) => {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFE066',
+    backgroundColor: "#FFE066",
     paddingVertical: 12,
     paddingHorizontal: 16,
     zIndex: 1000,
@@ -31,9 +35,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 12,
   },
   icon: {
@@ -41,7 +45,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.darkGray,
     flex: 1,
   },
