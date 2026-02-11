@@ -36,9 +36,9 @@ const CancelReservationModal = ({ onConfirm, onClose, userType }) => {
 
   const getMessage = () => {
     if (userType === "reserving") {
-      return "Are you sure you want to cancel your reservation? You will not receive a full refund.";
+      return "האם אתה בטוח שברצונך לבטל את ההזמנה? לא תקבל החזר מלא.";
     } else {
-      return "Are you sure you want to cancel this reservation? The reserving user will receive a full refund.";
+      return "האם אתה בטוח שברצונך לבטל הזמנה זו? המשתמש המזמין יקבל החזר מלא.";
     }
   };
 
@@ -46,7 +46,7 @@ const CancelReservationModal = ({ onConfirm, onClose, userType }) => {
     <div className="cancel-reservation-overlay">
       <div className="cancel-reservation-modal" ref={modalRef}>
         <div className="cancel-reservation-header">
-          <h2>Cancel Reservation</h2>
+          <h2>ביטול הזמנה</h2>
         </div>
         <div className="cancel-reservation-body">
           <p>{getMessage()}</p>
@@ -56,14 +56,14 @@ const CancelReservationModal = ({ onConfirm, onClose, userType }) => {
               onClick={handleConfirmClick}
               disabled={isCancelling}
             >
-              {isCancelling ? "Cancelling..." : "Yes, Cancel Reservation"}
+              {isCancelling ? "מבטל..." : "כן, בטל הזמנה"}
             </button>
             <button
               className="cancel-reservation-close-button"
               onClick={onClose}
               disabled={isCancelling}
             >
-              No, Keep Reservation
+              לא, שמור הזמנה
             </button>
           </div>
         </div>

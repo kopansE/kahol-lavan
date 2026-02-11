@@ -1,4 +1,4 @@
-import parkingZones from './parking_zones.json';
+import parkingZones from "./parking_zones.json";
 
 /**
  * Checks if a point is inside a polygon using the ray-casting algorithm
@@ -14,8 +14,8 @@ function isPointInPolygon(point, polygon) {
     const [xi, yi] = polygon[i];
     const [xj, yj] = polygon[j];
 
-    const intersect = ((yi > lat) !== (yj > lat)) &&
-      (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+    const intersect =
+      yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
 
     if (intersect) inside = !inside;
   }
@@ -37,9 +37,9 @@ export function getParkingZone(lat, lng) {
   const point = [lat, lng];
 
   for (const feature of parkingZones.features) {
-    if (feature.geometry.type === 'Polygon') {
+    if (feature.geometry.type === "Polygon") {
       const coordinates = feature.geometry.coordinates[0];
-      
+
       if (isPointInPolygon(point, coordinates)) {
         return {
           zone: feature.properties.zone,
@@ -60,9 +60,9 @@ export function getParkingZone(lat, lng) {
  */
 export function formatParkingZone(zoneNumber) {
   if (!zoneNumber) {
-    return 'Zone Unknown';
+    return "אזור לא ידוע";
   }
-  return `Zone ${zoneNumber}`;
+  return `אזור ${zoneNumber}`;
 }
 
 /**
@@ -74,7 +74,7 @@ export function getParkingZoneInfo(zoneNumber) {
   if (!zoneNumber) return null;
 
   const feature = parkingZones.features.find(
-    f => f.properties.zone === zoneNumber
+    (f) => f.properties.zone === zoneNumber,
   );
 
   if (feature) {

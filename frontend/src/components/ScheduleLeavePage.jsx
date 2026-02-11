@@ -2,11 +2,23 @@ import React, { useState, useRef, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import "./ScheduleLeavePage.css";
 
-const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSuccess }) => {
+const ScheduleLeavePage = ({
+  user,
+  userOwnPin,
+  onBack,
+  onClose,
+  onScheduleSuccess,
+}) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedHour, setSelectedHour] = useState(new Date().getHours() % 12 || 12);
-  const [selectedMinute, setSelectedMinute] = useState(Math.ceil(new Date().getMinutes() / 5) * 5 % 60);
-  const [selectedPeriod, setSelectedPeriod] = useState(new Date().getHours() >= 12 ? "PM" : "AM");
+  const [selectedHour, setSelectedHour] = useState(
+    new Date().getHours() % 12 || 12,
+  );
+  const [selectedMinute, setSelectedMinute] = useState(
+    (Math.ceil(new Date().getMinutes() / 5) * 5) % 60,
+  );
+  const [selectedPeriod, setSelectedPeriod] = useState(
+    new Date().getHours() >= 12 ? "PM" : "AM",
+  );
   const [isScheduling, setIsScheduling] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState(null);
@@ -68,7 +80,9 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
 
             setFutureReservation({
               ...frData,
-              reserver_name: userData ? `${userData.first_name} ${userData.last_name}` : "A user",
+              reserver_name: userData
+                ? `${userData.first_name} ${userData.last_name}`
+                : "משתמש",
             });
           }
         } catch (frErr) {
@@ -111,7 +125,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
     const index = items.indexOf(currentValue);
     ref.current.scrollTo({
       top: index * ITEM_HEIGHT,
-      behavior: "smooth"
+      behavior: "smooth",
     });
   };
 
@@ -137,19 +151,22 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
   };
 
   const formatDate = (date) => {
-    if (isToday(date)) return "Today";
-    if (isTomorrow(date)) return "Tomorrow";
-    return date.toLocaleDateString("en-US", {
+    if (isToday(date)) return "היום";
+    if (isTomorrow(date)) return "מחר";
+    return date.toLocaleDateString("he-IL", {
       weekday: "short",
       month: "short",
-      day: "numeric"
+      day: "numeric",
     });
   };
 
   const formatScheduledTime = (isoString) => {
     const date = new Date(isoString);
-    const timeStr = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    return `${timeStr} on ${formatDate(date)}`;
+    const timeStr = date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `${timeStr} ב${formatDate(date)}`;
   };
 
   const getScheduledDateTime = () => {
@@ -172,8 +189,11 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
   };
 
   const handleSchedule = async () => {
-    if (!userOwnPin || (userOwnPin.status !== "waiting" && userOwnPin.status !== "published")) {
-      setError("You don't have a parking spot to schedule. Please mark your parking location first.");
+    if (
+      !userOwnPin ||
+      (userOwnPin.status !== "waiting" && userOwnPin.status !== "published")
+    ) {
+      setError("אין לך מקום חניה לתזמון. אנא סמן את מיקום החניה שלך קודם.");
       return;
     }
 
@@ -181,7 +201,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
     const now = new Date();
 
     if (scheduledTime <= now) {
-      setError("Please select a time in the future.");
+      setError("אנא בחר זמן בעתיד.");
       return;
     }
 
@@ -193,7 +213,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
       const token = sessionData?.session?.access_token;
 
       if (!token) {
-        setError("Authentication error. Please log in again.");
+        setError("שגיאת אימות. אנא התחבר מחדש.");
         setIsScheduling(false);
         return;
       }
@@ -218,15 +238,15 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
       }
 
       // Success - show toast and close sidebar
-      const successMessage = `Scheduled! Your parking will be visible at ${scheduledTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} on ${formatDate(scheduledTime)}.`;
-      
+      const successMessage = `תוזמן! החניה שלך תהיה גלויה ב-${scheduledTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ב${formatDate(scheduledTime)}.`;
+
       if (onScheduleSuccess) {
         onScheduleSuccess(successMessage);
       }
       onClose();
     } catch (err) {
       console.error("Error scheduling leave:", err);
-      setError(err.message || "Failed to schedule. Please try again.");
+      setError(err.message || "התזמון נכשל. אנא נסה שוב.");
     } finally {
       setIsScheduling(false);
     }
@@ -243,7 +263,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
       const token = sessionData?.session?.access_token;
 
       if (!token) {
-        setError("Authentication error. Please log in again.");
+        setError("שגיאת אימות. אנא התחבר מחדש.");
         setIsCancelling(false);
         return;
       }
@@ -269,20 +289,22 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
 
       // Success - clear pending schedule and show toast
       setPendingSchedule(null);
-      
+
       if (onScheduleSuccess) {
-        onScheduleSuccess("Scheduled leave cancelled successfully.");
+        onScheduleSuccess("יציאה מתוזמנת בוטלה בהצלחה.");
       }
       onClose();
     } catch (err) {
       console.error("Error cancelling scheduled leave:", err);
-      setError(err.message || "Failed to cancel. Please try again.");
+      setError(err.message || "הביטול נכשל. אנא נסה שוב.");
     } finally {
       setIsCancelling(false);
     }
   };
 
-  const hasWaitingPin = userOwnPin && (userOwnPin.status === "waiting" || userOwnPin.status === "published");
+  const hasWaitingPin =
+    userOwnPin &&
+    (userOwnPin.status === "waiting" || userOwnPin.status === "published");
 
   if (loadingSchedule) {
     return (
@@ -291,13 +313,13 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
           <button className="back-button" onClick={onBack}>
             ‹
           </button>
-          <h2 className="page-title">Schedule Leave</h2>
+          <h2 className="page-title">תזמון יציאה</h2>
           <button className="page-close-button" onClick={onClose}>
             ×
           </button>
         </div>
         <div className="page-content">
-          <div className="loading-state">Loading...</div>
+          <div className="loading-state">טוען...</div>
         </div>
       </div>
     );
@@ -309,7 +331,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
         <button className="back-button" onClick={onBack}>
           ‹
         </button>
-        <h2 className="page-title">Schedule Leave</h2>
+        <h2 className="page-title">תזמון יציאה</h2>
         <button className="page-close-button" onClick={onClose}>
           ×
         </button>
@@ -319,49 +341,51 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
         {!hasWaitingPin ? (
           <div className="no-pin-message">
             <div className="no-pin-icon">📍</div>
-            <h3>No Parking Location</h3>
-            <p>You need to mark your parking location first before scheduling when to leave.</p>
+            <h3>אין מיקום חניה</h3>
+            <p>עליך לסמן את מיקום החניה שלך קודם לפני תזמון יציאה.</p>
             <button className="close-btn" onClick={onClose}>
-              Go to Map
+              עבור למפה
             </button>
           </div>
         ) : pendingSchedule ? (
           <div className="existing-schedule">
             <div className="existing-schedule-icon">⏰</div>
-            <h3>You have a scheduled leave</h3>
+            <h3>יש לך יציאה מתוזמנת</h3>
             <p className="scheduled-time">
-              Your parking will become available at<br />
-              <strong>{formatScheduledTime(pendingSchedule.scheduled_for)}</strong>
+              החניה שלך תהיה זמינה ב<br />
+              <strong>
+                {formatScheduledTime(pendingSchedule.scheduled_for)}
+              </strong>
             </p>
 
             {futureReservation && (
               <div className="reservation-notification">
                 <div className="reservation-notification-icon">📋</div>
                 <div className="reservation-notification-text">
-                  <strong>{futureReservation.reserver_name}</strong> has reserved your future spot.
-                  They will be matched with you when the scheduled time arrives.
+                  <strong>{futureReservation.reserver_name}</strong> הזמין/ה את
+                  המקום העתידי שלך. הם ישויכו אליך כשהזמן המתוזמן יגיע.
                 </div>
               </div>
             )}
-            
+
             {error && <div className="error-message">{error}</div>}
-            
+
             <button
               className="cancel-schedule-btn"
               onClick={handleCancelSchedule}
               disabled={isCancelling}
             >
-              {isCancelling ? "Cancelling..." : "Cancel Scheduled Leave"}
+              {isCancelling ? "מבטל..." : "בטל יציאה מתוזמנת"}
             </button>
-            
+
             <p className="cancel-hint">
-              You can cancel this and schedule a new time.
-              {futureReservation && " This will also cancel the reservation."}
+              אתה יכול לבטל ולתזמן זמן חדש.
+              {futureReservation && " פעולה זו גם תבטל את ההזמנה."}
             </p>
           </div>
         ) : (
           <>
-            <h3 className="schedule-header">When do you want to leave your parking?</h3>
+            <h3 className="schedule-header">מתי אתה רוצה לעזוב את החניה?</h3>
 
             {/* Date Selection */}
             <div className="date-selection">
@@ -369,20 +393,24 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
                 className={`date-btn ${isToday(selectedDate) ? "active" : ""}`}
                 onClick={setToday}
               >
-                Today
+                היום
               </button>
               <button
                 className={`date-btn ${isTomorrow(selectedDate) ? "active" : ""}`}
                 onClick={setTomorrow}
               >
-                Tomorrow
+                מחר
               </button>
               <input
                 type="date"
                 className="date-picker"
                 value={selectedDate.toISOString().split("T")[0]}
                 min={new Date().toISOString().split("T")[0]}
-                max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]}
+                max={
+                  new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                    .toISOString()
+                    .split("T")[0]
+                }
                 onChange={(e) => setSelectedDate(new Date(e.target.value))}
               />
             </div>
@@ -394,7 +422,7 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
             {/* Time Wheel Picker */}
             <div className="time-picker-container">
               <div className="time-picker-highlight" />
-              
+
               {/* Hours */}
               <div
                 ref={hourRef}
@@ -421,9 +449,15 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
               <div
                 ref={minuteRef}
                 className="wheel-column"
-                onScroll={() => handleScroll(minuteRef, minutes, setSelectedMinute)}
-                onTouchEnd={() => handleScrollEnd(minuteRef, minutes, selectedMinute)}
-                onMouseUp={() => handleScrollEnd(minuteRef, minutes, selectedMinute)}
+                onScroll={() =>
+                  handleScroll(minuteRef, minutes, setSelectedMinute)
+                }
+                onTouchEnd={() =>
+                  handleScrollEnd(minuteRef, minutes, selectedMinute)
+                }
+                onMouseUp={() =>
+                  handleScrollEnd(minuteRef, minutes, selectedMinute)
+                }
               >
                 <div className="wheel-padding" />
                 {minutes.map((minute) => (
@@ -441,9 +475,15 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
               <div
                 ref={periodRef}
                 className="wheel-column period-column"
-                onScroll={() => handleScroll(periodRef, periods, setSelectedPeriod)}
-                onTouchEnd={() => handleScrollEnd(periodRef, periods, selectedPeriod)}
-                onMouseUp={() => handleScrollEnd(periodRef, periods, selectedPeriod)}
+                onScroll={() =>
+                  handleScroll(periodRef, periods, setSelectedPeriod)
+                }
+                onTouchEnd={() =>
+                  handleScrollEnd(periodRef, periods, selectedPeriod)
+                }
+                onMouseUp={() =>
+                  handleScrollEnd(periodRef, periods, selectedPeriod)
+                }
               >
                 <div className="wheel-padding" />
                 {periods.map((period) => (
@@ -460,11 +500,12 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
 
             {/* Preview */}
             <div className="schedule-preview">
-              Your parking will become visible at{" "}
+              החניה שלך תהיה גלויה ב{" "}
               <strong>
-                {selectedHour}:{selectedMinute.toString().padStart(2, "0")} {selectedPeriod}
+                {selectedHour}:{selectedMinute.toString().padStart(2, "0")}{" "}
+                {selectedPeriod}
               </strong>{" "}
-              on <strong>{formatDate(selectedDate)}</strong>
+              ב<strong>{formatDate(selectedDate)}</strong>
             </div>
 
             {/* Messages */}
@@ -476,12 +517,12 @@ const ScheduleLeavePage = ({ user, userOwnPin, onBack, onClose, onScheduleSucces
               onClick={handleSchedule}
               disabled={isScheduling || !isValidScheduleTime()}
             >
-              {isScheduling ? "Scheduling..." : "Schedule Leave"}
+              {isScheduling ? "מתזמן..." : "תזמן יציאה"}
             </button>
 
             {!isValidScheduleTime() && (
               <p className="validation-hint">
-                Please select a time at least 1 minute in the future.
+                אנא בחר זמן לפחות דקה אחת בעתיד.
               </p>
             )}
           </>

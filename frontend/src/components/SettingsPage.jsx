@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import { useToast } from "../contexts/ToastContext";
 import "./SettingsPage.css";
 
 const SettingsPage = ({ user, onBack, onClose }) => {
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     car_license_plate: "",
     car_make: "",
@@ -48,25 +50,25 @@ const SettingsPage = ({ user, onBack, onClose }) => {
 
   const validateLicensePlate = (plate) => {
     if (!plate || plate.trim().length === 0) {
-      return "License plate is required";
+      return "מספר רישוי נדרש";
     }
     const plateRegex = /^\d{2,3}-?\d{2}-?\d{3}$/;
     if (!plateRegex.test(plate.trim())) {
-      return "Invalid format. Expected: XX-XXX-XX or XXX-XX-XXX";
+      return "פורמט לא תקין. נדרש: XX-XXX-XX או XXX-XX-XXX";
     }
     return null;
   };
 
   const validateTextField = (value, fieldName, maxLength) => {
     if (!value || value.trim().length === 0) {
-      return `${fieldName} is required`;
+      return `${fieldName} נדרש`;
     }
     if (value.trim().length > maxLength) {
-      return `${fieldName} must be ${maxLength} characters or less`;
+      return `${fieldName} חייב להיות ${maxLength} תווים או פחות`;
     }
-    const textRegex = /^[a-zA-Z0-9\s\-'.]+$/;
+    const textRegex = /^[a-zA-Z0-9\s\-'.א-ת]+$/;
     if (!textRegex.test(value.trim())) {
-      return `${fieldName} contains invalid characters`;
+      return `${fieldName} מכיל תווים לא חוקיים`;
     }
     return null;
   };
@@ -92,13 +94,13 @@ const SettingsPage = ({ user, onBack, onClose }) => {
     const plateError = validateLicensePlate(formData.car_license_plate);
     if (plateError) newErrors.car_license_plate = plateError;
 
-    const makeError = validateTextField(formData.car_make, "Car make", 50);
+    const makeError = validateTextField(formData.car_make, "יצרן", 50);
     if (makeError) newErrors.car_make = makeError;
 
-    const modelError = validateTextField(formData.car_model, "Car model", 50);
+    const modelError = validateTextField(formData.car_model, "דגם", 50);
     if (modelError) newErrors.car_model = modelError;
 
-    const colorError = validateTextField(formData.car_color, "Car color", 30);
+    const colorError = validateTextField(formData.car_color, "צבע", 30);
     if (colorError) newErrors.car_color = colorError;
 
     setErrors(newErrors);
@@ -120,7 +122,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
         await supabase.auth.getSession();
 
       if (sessionError || !sessionData?.session?.access_token) {
-        alert("Please log in to update your car data.");
+        showToast("אנא התחבר כדי לעדכן את פרטי הרכב.");
         return;
       }
 
@@ -148,7 +150,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
       console.error("Error updating car data:", error);
-      alert(`Failed to save car data: ${error.message}`);
+      showToast(`שמירת פרטי הרכב נכשלה: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -160,7 +162,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
         <button className="back-button" onClick={onBack}>
           ‹
         </button>
-        <h2 className="page-title">Settings</h2>
+        <h2 className="page-title">הגדרות</h2>
         <button className="page-close-button" onClick={onClose}>
           ×
         </button>
@@ -168,21 +170,21 @@ const SettingsPage = ({ user, onBack, onClose }) => {
 
       <div className="page-content">
         {loading ? (
-          <div className="loading-state">Loading...</div>
+          <div className="loading-state">טוען...</div>
         ) : (
           <form onSubmit={handleSubmit} className="settings-form">
             <div className="form-section">
               <div className="section-header">
                 <span className="section-icon">🚗</span>
-                <h3 className="section-title">Car Details</h3>
+                <h3 className="section-title">פרטי רכב</h3>
               </div>
               <p className="section-description">
-                Help others identify your vehicle during parking exchanges
+                עזור לאחרים לזהות את הרכב שלך בזמן החלפת חניות
               </p>
 
               <div className="form-group">
                 <label htmlFor="car_license_plate" className="form-label">
-                  License Plate *
+                  מספר רישוי *
                 </label>
                 <input
                   type="text"
@@ -193,7 +195,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
                   className={`form-input ${
                     errors.car_license_plate ? "form-input-error" : ""
                   }`}
-                  placeholder="e.g., 12-345-67"
+                  placeholder="לדוגמה: 12-345-67"
                   disabled={isSubmitting}
                 />
                 {errors.car_license_plate && (
@@ -203,7 +205,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
 
               <div className="form-group">
                 <label htmlFor="car_make" className="form-label">
-                  Car Make *
+                  יצרן *
                 </label>
                 <input
                   type="text"
@@ -214,7 +216,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
                   className={`form-input ${
                     errors.car_make ? "form-input-error" : ""
                   }`}
-                  placeholder="e.g., Toyota, Honda, Mazda"
+                  placeholder="לדוגמה: טויוטה, הונדה, מאזדה"
                   disabled={isSubmitting}
                 />
                 {errors.car_make && (
@@ -224,7 +226,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
 
               <div className="form-group">
                 <label htmlFor="car_model" className="form-label">
-                  Car Model *
+                  דגם *
                 </label>
                 <input
                   type="text"
@@ -235,7 +237,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
                   className={`form-input ${
                     errors.car_model ? "form-input-error" : ""
                   }`}
-                  placeholder="e.g., Corolla, Civic, CX-5"
+                  placeholder="לדוגמה: קורולה, סיוויק, CX-5"
                   disabled={isSubmitting}
                 />
                 {errors.car_model && (
@@ -245,7 +247,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
 
               <div className="form-group">
                 <label htmlFor="car_color" className="form-label">
-                  Car Color *
+                  צבע *
                 </label>
                 <input
                   type="text"
@@ -256,7 +258,7 @@ const SettingsPage = ({ user, onBack, onClose }) => {
                   className={`form-input ${
                     errors.car_color ? "form-input-error" : ""
                   }`}
-                  placeholder="e.g., White, Black, Silver"
+                  placeholder="לדוגמה: לבן, שחור, כסוף"
                   disabled={isSubmitting}
                 />
                 {errors.car_color && (
@@ -271,10 +273,10 @@ const SettingsPage = ({ user, onBack, onClose }) => {
               disabled={isSubmitting}
             >
               {isSubmitting
-                ? "Saving..."
+                ? "שומר..."
                 : saveSuccess
-                ? "Saved!"
-                : "Save Changes"}
+                  ? "נשמר!"
+                  : "שמור שינויים"}
             </button>
           </form>
         )}

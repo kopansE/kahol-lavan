@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Modal,
   View,
@@ -6,15 +6,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
   Linking,
-} from 'react-native';
-import { commonStyles } from '../styles/common';
-import { colors } from '../styles/colors';
-import { reserveParking } from '../utils/edgeFunctions';
-import { formatParkingZone } from '../utils/parkingZoneUtils';
+} from "react-native";
+import { commonStyles } from "../styles/common";
+import { colors } from "../styles/colors";
+import { useToast } from "../contexts/ToastContext";
+import { reserveParking } from "../utils/edgeFunctions";
+import { formatParkingZone } from "../utils/parkingZoneUtils";
 
 /**
  * Opens the device's default navigation app with directions to the specified coordinates
@@ -22,15 +22,15 @@ import { formatParkingZone } from '../utils/parkingZoneUtils';
  * @param {number} lng - Longitude of the destination
  * @param {string} address - Address label for the destination (optional)
  */
-const openNavigation = async (lat, lng, address = '') => {
+const openNavigation = async (lat, lng, address = "") => {
   const destination = `${lat},${lng}`;
-  const label = encodeURIComponent(address || 'Parking Location');
-  
-  if (Platform.OS === 'ios') {
+  const label = encodeURIComponent(address || "מיקום חניה");
+
+  if (Platform.OS === "ios") {
     // Try Google Maps first, then Apple Maps
     const googleMapsUrl = `comgooglemaps://?daddr=${destination}&directionsmode=driving`;
     const appleMapsUrl = `maps://?daddr=${destination}&dirflg=d`;
-    
+
     try {
       const canOpenGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
       if (canOpenGoogleMaps) {
@@ -38,20 +38,20 @@ const openNavigation = async (lat, lng, address = '') => {
         return true;
       }
     } catch (error) {
-      console.log('Google Maps not available, trying Apple Maps');
+      console.log("Google Maps not available, trying Apple Maps");
     }
-    
+
     try {
       await Linking.openURL(appleMapsUrl);
       return true;
     } catch (error) {
-      console.error('Failed to open Apple Maps:', error);
+      console.error("Failed to open Apple Maps:", error);
     }
-  } else if (Platform.OS === 'android') {
+  } else if (Platform.OS === "android") {
     // Try Google Maps intent first, then geo URI
     const googleMapsUrl = `google.navigation:q=${destination}`;
     const geoUrl = `geo:${destination}?q=${destination}(${label})`;
-    
+
     try {
       const canOpenGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
       if (canOpenGoogleMaps) {
@@ -59,39 +59,47 @@ const openNavigation = async (lat, lng, address = '') => {
         return true;
       }
     } catch (error) {
-      console.log('Google Maps navigation not available, trying geo URI');
+      console.log("Google Maps navigation not available, trying geo URI");
     }
-    
+
     try {
       await Linking.openURL(geoUrl);
       return true;
     } catch (error) {
-      console.error('Failed to open geo URI:', error);
+      console.error("Failed to open geo URI:", error);
     }
   }
-  
+
   // Fallback to web Google Maps
   const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
   try {
     await Linking.openURL(webUrl);
     return true;
   } catch (error) {
-    console.error('Failed to open Google Maps web:', error);
+    console.error("Failed to open Google Maps web:", error);
     return false;
   }
 };
 
-const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => {
+const ParkingDetailModal = ({
+  visible,
+  parking,
+  onClose,
+  userReservedPins,
+}) => {
+  const { showToast } = useToast();
   const [isReserving, setIsReserving] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const hasExistingReservation = userReservedPins && userReservedPins.length > 0;
+  const hasExistingReservation =
+    userReservedPins && userReservedPins.length > 0;
 
   // Check if we have valid coordinates
-  const hasValidCoordinates = parking?.position && 
-    Array.isArray(parking.position) && 
+  const hasValidCoordinates =
+    parking?.position &&
+    Array.isArray(parking.position) &&
     parking.position.length >= 2 &&
-    typeof parking.position[0] === 'number' &&
-    typeof parking.position[1] === 'number';
+    typeof parking.position[0] === "number" &&
+    typeof parking.position[1] === "number";
 
   const handleNavigateClick = async () => {
     if (isNavigating || !hasValidCoordinates) return;
@@ -100,22 +108,13 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
       setIsNavigating(true);
       const [lat, lng] = parking.position;
       const success = await openNavigation(lat, lng, parking.address);
-      
+
       if (!success) {
-        Alert.alert(
-          'Navigation Error',
-          `Could not open navigation app. The parking address is:\n\n${parking.address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`}`,
-          [
-            { text: 'OK' }
-          ]
-        );
+        showToast("לא ניתן לפתוח אפליקציית ניווט.");
       }
     } catch (error) {
-      console.error('Error opening navigation:', error);
-      Alert.alert(
-        'Error',
-        'Failed to open navigation. Please try again.'
-      );
+      console.error("Error opening navigation:", error);
+      showToast("פתיחת הניווט נכשלה. אנא נסה שוב.");
     } finally {
       setIsNavigating(false);
     }
@@ -125,10 +124,7 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
     if (isReserving) return;
 
     if (hasExistingReservation) {
-      Alert.alert(
-        'Already Reserved',
-        'You already have an active reservation. Please cancel it before reserving another spot.'
-      );
+      showToast("כבר יש לך הזמנה פעילה. אנא בטל אותה לפני הזמנת מקום נוסף.");
       return;
     }
 
@@ -137,14 +133,11 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
 
       const result = await reserveParking(parking.id);
 
-      Alert.alert(
-        'Success',
-        `${result.message}\nAmount paid: ₪${result.amount_paid}`
-      );
+      showToast(`החניה הוזמנה בהצלחה! סכום ששולם: ₪${result.amount_paid}`);
       onClose();
     } catch (error) {
-      console.error('Error reserving parking:', error);
-      Alert.alert('Error', `Failed to reserve parking: ${error.message}`);
+      console.error("Error reserving parking:", error);
+      showToast(`הזמנת החניה נכשלה: ${error.message}`);
     } finally {
       setIsReserving(false);
     }
@@ -153,7 +146,7 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
   if (!parking) return null;
 
   const userData = parking.user || parking.users || parking;
-  const ownerName = userData?.full_name || 'Unknown Owner';
+  const ownerName = userData?.full_name || "בעלים לא ידוע";
   const carMake = userData?.car_make;
   const carModel = userData?.car_model;
   const carColor = userData?.car_color;
@@ -174,15 +167,17 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Location</Text>
+              <Text style={styles.sectionTitle}>מיקום</Text>
               <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>🅿️</Text>
-                <Text style={styles.infoText}>{formatParkingZone(parking.parking_zone)}</Text>
+                <Text style={styles.infoText}>
+                  {formatParkingZone(parking.parking_zone)}
+                </Text>
               </View>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Owner</Text>
+              <Text style={styles.sectionTitle}>בעלים</Text>
               <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>👤</Text>
                 <Text style={styles.infoText}>{ownerName}</Text>
@@ -191,7 +186,7 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
 
             {(carMake || carModel || carColor || licensePlate) && (
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Vehicle Details</Text>
+                <Text style={styles.sectionTitle}>פרטי רכב</Text>
                 {(carMake || carModel) && (
                   <View style={styles.infoItem}>
                     <Text style={styles.infoIcon}>🚗</Text>
@@ -220,8 +215,7 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
             {hasExistingReservation && (
               <View style={styles.warningContainer}>
                 <Text style={styles.warningText}>
-                  ⚠️ You already have an active reservation. Cancel it first to
-                  reserve another spot.
+                  ⚠️ כבר יש לך הזמנה פעילה. בטל אותה קודם כדי להזמין מקום אחר.
                 </Text>
               </View>
             )}
@@ -230,7 +224,8 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
               <TouchableOpacity
                 style={[
                   styles.reserveButton,
-                  (isReserving || hasExistingReservation) && styles.reserveButtonDisabled,
+                  (isReserving || hasExistingReservation) &&
+                    styles.reserveButtonDisabled,
                 ]}
                 onPress={handleReserveClick}
                 disabled={isReserving || hasExistingReservation}
@@ -240,9 +235,7 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
                 ) : (
                   <>
                     <Text style={styles.reserveButtonText}>
-                      {hasExistingReservation
-                        ? 'Already Reserved'
-                        : 'Reserve parking'}
+                      {hasExistingReservation ? "כבר הוזמנה" : "הזמן חניה"}
                     </Text>
                     <Text style={styles.reserveButtonPrice}>50 ₪</Text>
                   </>
@@ -251,7 +244,8 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
               <TouchableOpacity
                 style={[
                   styles.navigateButton,
-                  (!hasValidCoordinates || isNavigating) && styles.navigateButtonDisabled,
+                  (!hasValidCoordinates || isNavigating) &&
+                    styles.navigateButtonDisabled,
                 ]}
                 onPress={handleNavigateClick}
                 disabled={!hasValidCoordinates || isNavigating}
@@ -261,17 +255,20 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
                 ) : (
                   <View style={styles.navigateButtonContent}>
                     <Text style={styles.navigateIcon}>🧭</Text>
-                    <Text style={[
-                      styles.navigateButtonText,
-                      !hasValidCoordinates && styles.navigateButtonTextDisabled,
-                    ]}>
-                      {hasValidCoordinates ? 'Navigate to Parking' : 'Location unavailable'}
+                    <Text
+                      style={[
+                        styles.navigateButtonText,
+                        !hasValidCoordinates &&
+                          styles.navigateButtonTextDisabled,
+                      ]}
+                    >
+                      {hasValidCoordinates ? "נווט לחניה" : "מיקום לא זמין"}
                     </Text>
                   </View>
                 )}
               </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                <Text style={styles.closeButtonText}>Close</Text>
+                <Text style={styles.closeButtonText}>סגור</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -283,29 +280,29 @@ const ParkingDetailModal = ({ visible, parking, onClose, userReservedPins }) => 
 
 const styles = StyleSheet.create({
   modalContent: {
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   header: {
     marginBottom: 24,
   },
   address: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.darkGray,
-    textAlign: 'center',
+    textAlign: "center",
   },
   section: {
     marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.darkGray,
     marginBottom: 12,
   },
   infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     marginBottom: 8,
   },
@@ -317,19 +314,19 @@ const styles = StyleSheet.create({
     color: colors.darkGray,
   },
   licensePlate: {
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 2,
   },
   warningContainer: {
-    backgroundColor: '#FFF3CD',
+    backgroundColor: "#FFF3CD",
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   warningText: {
     fontSize: 14,
-    color: '#856404',
-    textAlign: 'center',
+    color: "#856404",
+    textAlign: "center",
   },
   buttonContainer: {
     gap: 12,
@@ -339,9 +336,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryGradientStart,
     paddingVertical: 16,
     borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
   },
   reserveButtonDisabled: {
@@ -350,12 +347,12 @@ const styles = StyleSheet.create({
   reserveButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   reserveButtonPrice: {
     color: colors.white,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   navigateButton: {
     backgroundColor: colors.white,
@@ -363,17 +360,17 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: colors.primaryGradientStart,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   navigateButtonDisabled: {
     borderColor: colors.mediumGray,
     backgroundColor: colors.lightGray,
   },
   navigateButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
   navigateIcon: {
@@ -382,7 +379,7 @@ const styles = StyleSheet.create({
   navigateButtonText: {
     color: colors.primaryGradientStart,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   navigateButtonTextDisabled: {
     color: colors.gray,
@@ -391,12 +388,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightGray,
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   closeButtonText: {
     color: colors.gray,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

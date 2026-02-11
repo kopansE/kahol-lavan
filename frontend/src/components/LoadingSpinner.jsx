@@ -6,7 +6,7 @@ const LoadingSpinner = () => {
     <div className="loading-screen">
       <div className="loading-content">
         <div className="loading-spinner"></div>
-        Loading...
+        טוען...
       </div>
     </div>
   );

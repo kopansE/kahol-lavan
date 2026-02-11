@@ -13,7 +13,7 @@ const UserProfileBar = ({ user }) => {
       )}
       <div className="user-info">
         <div className="user-name">
-          {user.user_metadata?.full_name || "User"}
+          {user.user_metadata?.full_name || "משתמש"}
         </div>
         <div className="user-email">{user.email}</div>
       </div>

@@ -1,20 +1,21 @@
-import 'react-native-gesture-handler';
-import React, { useState, useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, StyleSheet } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { supabase } from './src/config/supabase';
-import { StreamChatProvider } from './src/contexts/StreamChatContext';
-import LoginScreen from './src/screens/LoginScreen';
-import MainScreen from './src/screens/MainScreen';
-import ChatChannelListScreen from './src/screens/ChatChannelListScreen';
-import ChatThreadScreen from './src/screens/ChatThreadScreen';
-import WalletScreen from './src/screens/WalletScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
-import ReportsScreen from './src/screens/ReportsScreen';
-import ReportScreen from './src/screens/ReportScreen';
-import LoadingSpinner from './src/components/LoadingSpinner';
+import "react-native-gesture-handler";
+import React, { useState, useEffect } from "react";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaView, StyleSheet } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import { createStackNavigator } from "@react-navigation/stack";
+import { supabase } from "./src/config/supabase";
+import { StreamChatProvider } from "./src/contexts/StreamChatContext";
+import { ToastProvider } from "./src/contexts/ToastContext";
+import LoginScreen from "./src/screens/LoginScreen";
+import MainScreen from "./src/screens/MainScreen";
+import ChatChannelListScreen from "./src/screens/ChatChannelListScreen";
+import ChatThreadScreen from "./src/screens/ChatThreadScreen";
+import WalletScreen from "./src/screens/WalletScreen";
+import SettingsScreen from "./src/screens/SettingsScreen";
+import ReportsScreen from "./src/screens/ReportsScreen";
+import ReportScreen from "./src/screens/ReportScreen";
+import LoadingSpinner from "./src/components/LoadingSpinner";
 
 const Stack = createStackNavigator();
 
@@ -30,11 +31,11 @@ export default function App() {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -44,7 +45,7 @@ export default function App() {
       await supabase.auth.signOut();
       setUser(null);
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
 
@@ -53,30 +54,41 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      <NavigationContainer>
-        {user ? (
-          <StreamChatProvider user={user}>
+    <ToastProvider>
+      <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
+        <NavigationContainer>
+          {user ? (
+            <StreamChatProvider user={user}>
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="Main">
+                  {(props) => (
+                    <MainScreen
+                      {...props}
+                      user={user}
+                      onSignOut={handleSignOut}
+                    />
+                  )}
+                </Stack.Screen>
+                <Stack.Screen
+                  name="ChatChannelList"
+                  component={ChatChannelListScreen}
+                />
+                <Stack.Screen name="ChatThread" component={ChatThreadScreen} />
+                <Stack.Screen name="Wallet" component={WalletScreen} />
+                <Stack.Screen name="Settings" component={SettingsScreen} />
+                <Stack.Screen name="Reports" component={ReportsScreen} />
+                <Stack.Screen name="Report" component={ReportScreen} />
+              </Stack.Navigator>
+            </StreamChatProvider>
+          ) : (
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="Main">
-                {(props) => <MainScreen {...props} user={user} onSignOut={handleSignOut} />}
-              </Stack.Screen>
-              <Stack.Screen name="ChatChannelList" component={ChatChannelListScreen} />
-              <Stack.Screen name="ChatThread" component={ChatThreadScreen} />
-              <Stack.Screen name="Wallet" component={WalletScreen} />
-              <Stack.Screen name="Settings" component={SettingsScreen} />
-              <Stack.Screen name="Reports" component={ReportsScreen} />
-              <Stack.Screen name="Report" component={ReportScreen} />
+              <Stack.Screen name="Login" component={LoginScreen} />
             </Stack.Navigator>
-          </StreamChatProvider>
-        ) : (
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Login" component={LoginScreen} />
-          </Stack.Navigator>
-        )}
-      </NavigationContainer>
-    </SafeAreaView>
+          )}
+        </NavigationContainer>
+      </SafeAreaView>
+    </ToastProvider>
   );
 }
 

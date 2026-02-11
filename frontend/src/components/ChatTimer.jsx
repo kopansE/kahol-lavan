@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import './ChatTimer.css';
+import React, { useState, useEffect } from "react";
+import "./ChatTimer.css";
 
 const ChatTimer = ({ startedAt, expiresAt, initialMinutes = 20, onExpire }) => {
   const calculateTimeRemaining = () => {
@@ -10,18 +10,18 @@ const ChatTimer = ({ startedAt, expiresAt, initialMinutes = 20, onExpire }) => {
       const remaining = Math.floor((expires - now) / 1000);
       return Math.max(0, remaining);
     }
-    
+
     // Fallback to startedAt + initialMinutes calculation
     if (!startedAt) {
       return initialMinutes * 60;
     }
-    
+
     const now = new Date();
     const started = new Date(startedAt);
     const elapsedSeconds = Math.floor((now - started) / 1000);
     const totalSeconds = initialMinutes * 60;
     const remaining = totalSeconds - elapsedSeconds;
-    
+
     return Math.max(0, remaining);
   };
 
@@ -48,13 +48,13 @@ const ChatTimer = ({ startedAt, expiresAt, initialMinutes = 20, onExpire }) => {
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   return (
     <div className="chat-timer">
       <div className="chat-timer-display">{formatTime(timeRemaining)}</div>
-      <div className="chat-timer-label">REMAINING</div>
+      <div className="chat-timer-label">נותר</div>
     </div>
   );
 };

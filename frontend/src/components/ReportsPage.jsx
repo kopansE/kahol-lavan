@@ -15,10 +15,11 @@ const ReportsPage = ({ user, onBack, onClose }) => {
   const loadReports = async () => {
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
         .from("reports")
-        .select(`
+        .select(
+          `
           id,
           report_type,
           description,
@@ -27,7 +28,8 @@ const ReportsPage = ({ user, onBack, onClose }) => {
           reported_user_id,
           resolution_notes,
           action_taken
-        `)
+        `,
+        )
         .eq("reporter_id", user.id)
         .order("created_at", { ascending: false });
 
@@ -38,20 +40,20 @@ const ReportsPage = ({ user, onBack, onClose }) => {
 
       // Fetch reported user names
       if (data && data.length > 0) {
-        const userIds = [...new Set(data.map(r => r.reported_user_id))];
+        const userIds = [...new Set(data.map((r) => r.reported_user_id))];
         const { data: profiles } = await supabase
           .from("user_profiles")
           .select("id, full_name")
           .in("id", userIds);
 
         const profileMap = {};
-        profiles?.forEach(p => {
+        profiles?.forEach((p) => {
           profileMap[p.id] = p.full_name;
         });
 
-        const reportsWithNames = data.map(r => ({
+        const reportsWithNames = data.map((r) => ({
           ...r,
-          reported_user_name: profileMap[r.reported_user_id] || "Unknown User"
+          reported_user_name: profileMap[r.reported_user_id] || "משתמש לא ידוע",
         }));
 
         setReports(reportsWithNames);
@@ -82,23 +84,23 @@ const ReportsPage = ({ user, onBack, onClose }) => {
 
   const getReportTypeLabel = (type) => {
     const labels = {
-      no_show: "No Show",
-      wrong_location: "Wrong Location",
-      harassment: "Harassment",
-      fraud: "Fraud",
-      other: "Other"
+      no_show: "לא הופיע",
+      wrong_location: "מיקום שגוי",
+      harassment: "הטרדה",
+      fraud: "הונאה",
+      other: "אחר",
     };
     return labels[type] || type;
   };
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    return date.toLocaleDateString("he-IL", {
       month: "short",
       day: "numeric",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
@@ -108,7 +110,7 @@ const ReportsPage = ({ user, onBack, onClose }) => {
         <button className="back-button" onClick={onBack}>
           ‹
         </button>
-        <h2 className="page-title">My Reports</h2>
+        <h2 className="page-title">הדיווחים שלי</h2>
         <button className="page-close-button" onClick={onClose}>
           ×
         </button>
@@ -116,12 +118,12 @@ const ReportsPage = ({ user, onBack, onClose }) => {
 
       <div className="page-content">
         {loading ? (
-          <div className="loading-state">Loading reports...</div>
+          <div className="loading-state">טוען דיווחים...</div>
         ) : reports.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">📋</div>
-            <h3>No Reports</h3>
-            <p>You haven't submitted any reports yet.</p>
+            <h3>אין דיווחים</h3>
+            <p>עדיין לא שלחת דיווחים.</p>
           </div>
         ) : (
           <div className="reports-list">
@@ -131,24 +133,27 @@ const ReportsPage = ({ user, onBack, onClose }) => {
                   <span className="report-type">
                     {getReportTypeLabel(report.report_type)}
                   </span>
-                  <span className={`report-status ${getStatusBadgeClass(report.status)}`}>
+                  <span
+                    className={`report-status ${getStatusBadgeClass(report.status)}`}
+                  >
                     {report.status.replace("_", " ")}
                   </span>
                 </div>
                 <div className="report-user">
-                  Reported: {report.reported_user_name}
+                  דווח על: {report.reported_user_name}
                 </div>
-                <div className="report-description">
-                  {report.description}
-                </div>
+                <div className="report-description">{report.description}</div>
                 <div className="report-date">
                   {formatDate(report.created_at)}
                 </div>
                 {report.status === "resolved" && report.resolution_notes && (
                   <div className="report-resolution">
-                    <strong>Resolution:</strong> {report.resolution_notes}
+                    <strong>פתרון:</strong> {report.resolution_notes}
                     {report.action_taken && (
-                      <span className="action-taken"> ({report.action_taken.replace("_", " ")})</span>
+                      <span className="action-taken">
+                        {" "}
+                        ({report.action_taken.replace("_", " ")})
+                      </span>
                     )}
                   </div>
                 )}

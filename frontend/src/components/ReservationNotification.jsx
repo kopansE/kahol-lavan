@@ -29,27 +29,27 @@ const ReservationNotification = ({ notification, onAccept, onDecline }) => {
     const expiration = new Date(expirationDate);
     const diff = expiration - now;
 
-    if (diff <= 0) return "Expired";
+    if (diff <= 0) return "פג תוקף";
 
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
     if (hours > 0) {
-      return `${hours}h ${minutes}m remaining`;
+      return `נותרו ${hours}ש ${minutes}ד`;
     }
-    return `${minutes}m remaining`;
+    return `נותרו ${minutes}ד`;
   };
 
   return (
     <div className="reservation-notification">
       <div className="notification-header">
         <div className="notification-icon">🚗</div>
-        <div className="notification-title">Parking Reservation Request</div>
+        <div className="notification-title">בקשת הזמנת חניה</div>
       </div>
 
       <div className="notification-content">
         <div className="notification-message">
-          <strong>{notification.sender_name}</strong> wants to reserve your parking spot
+          <strong>{notification.sender_name}</strong> רוצה להזמין את החניה שלך
         </div>
 
         {notification.pins && notification.pins.address && (
@@ -60,7 +60,7 @@ const ReservationNotification = ({ notification, onAccept, onDecline }) => {
 
         <div className="notification-details">
           <div className="notification-amount">
-            <span className="amount-label">Amount:</span>
+            <span className="amount-label">סכום:</span>
             <span className="amount-value">
               ₪{notification.amount.toFixed(2)}
             </span>
@@ -77,14 +77,14 @@ const ReservationNotification = ({ notification, onAccept, onDecline }) => {
           onClick={handleAccept}
           disabled={isProcessing}
         >
-          {isProcessing ? "Processing..." : "Accept"}
+          {isProcessing ? "מעבד..." : "אשר"}
         </button>
         <button
           className="btn-decline"
           onClick={handleDecline}
           disabled={isProcessing}
         >
-          {isProcessing ? "Processing..." : "Decline"}
+          {isProcessing ? "מעבד..." : "דחה"}
         </button>
       </div>
     </div>

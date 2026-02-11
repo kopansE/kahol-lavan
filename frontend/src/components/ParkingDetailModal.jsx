@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { useToast } from "../contexts/ToastContext";
 import { formatParkingZone } from "../utils/parkingZoneUtils";
 import "./ParkingDetailModal.css";
 
@@ -8,7 +9,9 @@ import "./ParkingDetailModal.css";
  */
 const isMobileDevice = () => {
   const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-  return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+  return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+    userAgent.toLowerCase(),
+  );
 };
 
 /**
@@ -34,97 +37,97 @@ const isAndroid = () => {
  * @param {string} address - Address label for the destination (optional)
  * @returns {Promise<boolean>} - Whether navigation was successfully opened
  */
-const openNavigation = async (lat, lng, address = '') => {
+const openNavigation = async (lat, lng, address = "") => {
   const destination = `${lat},${lng}`;
-  const label = encodeURIComponent(address || 'Parking Location');
-  
+  const label = encodeURIComponent(address || "מיקום חניה");
+
   // Google Maps web URL (universal fallback)
   const googleMapsWebUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
-  
+
   if (isMobileDevice()) {
     if (isIOS()) {
       // Try Google Maps app first, then Apple Maps
       const googleMapsUrl = `comgooglemaps://?daddr=${destination}&directionsmode=driving`;
       const appleMapsUrl = `maps://?daddr=${destination}&dirflg=d`;
-      
+
       // Create hidden iframe to try deep link
       const tryDeepLink = (url, fallbackUrl) => {
         return new Promise((resolve) => {
           const startTime = Date.now();
           const timeout = setTimeout(() => {
             // If we're still here after 500ms, the app likely didn't open
-            window.open(fallbackUrl, '_blank');
+            window.open(fallbackUrl, "_blank");
             resolve(true);
           }, 500);
-          
+
           window.location.href = url;
-          
+
           // If the app opens, the page will lose focus
           const handleBlur = () => {
             clearTimeout(timeout);
-            window.removeEventListener('blur', handleBlur);
+            window.removeEventListener("blur", handleBlur);
             resolve(true);
           };
-          window.addEventListener('blur', handleBlur);
+          window.addEventListener("blur", handleBlur);
         });
       };
-      
+
       // Try to open Apple Maps (more reliable on iOS)
       window.location.href = appleMapsUrl;
       return true;
     } else if (isAndroid()) {
       // Try Google Maps intent
       const geoUrl = `geo:${destination}?q=${destination}(${label})`;
-      
+
       // Try geo URI first
       window.location.href = geoUrl;
-      
+
       // Set a timeout to fallback to web if geo URI doesn't work
       setTimeout(() => {
-        window.open(googleMapsWebUrl, '_blank');
+        window.open(googleMapsWebUrl, "_blank");
       }, 1000);
-      
+
       return true;
     }
   }
-  
+
   // Desktop or fallback: open Google Maps in new tab
-  window.open(googleMapsWebUrl, '_blank');
+  window.open(googleMapsWebUrl, "_blank");
   return true;
 };
 
 const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
   const modalRef = useRef(null);
+  const { showToast } = useToast();
   const [isReserving, setIsReserving] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const hasExistingReservation =
     userReservedPins && userReservedPins.length > 0;
 
   // Check if we have valid coordinates
-  const hasValidCoordinates = parking?.position && 
-    Array.isArray(parking.position) && 
+  const hasValidCoordinates =
+    parking?.position &&
+    Array.isArray(parking.position) &&
     parking.position.length >= 2 &&
-    typeof parking.position[0] === 'number' &&
-    typeof parking.position[1] === 'number';
+    typeof parking.position[0] === "number" &&
+    typeof parking.position[1] === "number";
 
   const handleNavigateClick = async (e) => {
     e.stopPropagation();
-    
+
     if (isNavigating || !hasValidCoordinates) return;
 
     try {
       setIsNavigating(true);
       const [lat, lng] = parking.position;
       const success = await openNavigation(lat, lng, parking.address);
-      
+
       if (!success) {
-        const coordinates = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-        const message = `Could not open navigation app.\n\nParking address:\n${parking.address || coordinates}\n\nCoordinates:\n${coordinates}`;
-        alert(message);
+        showToast("לא ניתן לפתוח אפליקציית ניווט.");
       }
     } catch (error) {
-      console.error('Error opening navigation:', error);
-      alert('Failed to open navigation. Please try again.');
+      console.error("Error opening navigation:", error);
+      showToast("פתיחת הניווט נכשלה. אנא נסה שוב.");
     } finally {
       // Brief delay to show loading state
       setTimeout(() => setIsNavigating(false), 500);
@@ -153,9 +156,7 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
     if (isReserving) return;
 
     if (hasExistingReservation) {
-      alert(
-        "You already have an active reservation. Please cancel it before reserving another spot."
-      );
+      showToast("כבר יש לך הזמנה פעילה. אנא בטל אותה לפני הזמנת מקום נוסף.");
       return;
     }
 
@@ -167,7 +168,7 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
         await supabase.auth.getSession();
 
       if (sessionError || !sessionData?.session?.access_token) {
-        alert("Please log in to reserve parking.");
+        showToast("אנא התחבר כדי להזמין חניה.");
         return;
       }
 
@@ -193,14 +194,14 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
         throw new Error(result.error || "Failed to reserve parking");
       }
 
-      alert(`✅ ${result.message}\nAmount paid: ₪${result.amount_paid}`);
+      showToast(`החניה הוזמנה בהצלחה! סכום ששולם: ₪${result.amount_paid}`);
       onClose();
 
       // Optionally refresh the map to remove the reserved parking
       window.location.reload();
     } catch (error) {
       console.error("Error reserving parking:", error);
-      alert(`Failed to reserve parking: ${error.message}`);
+      showToast(`הזמנת החניה נכשלה: ${error.message}`);
     } finally {
       setIsReserving(false);
     }
@@ -211,7 +212,7 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
   // Extract user data (could be nested as 'user', 'users', or at parking level)
   const userData = parking.user || parking.users || parking;
 
-  const ownerName = userData?.full_name || "Unknown Owner";
+  const ownerName = userData?.full_name || "בעלים לא ידוע";
   const carMake = userData?.car_make;
   const carModel = userData?.car_model;
   const carColor = userData?.car_color;
@@ -226,16 +227,18 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
         <div className="parking-detail-body">
           {/* Parking Zone */}
           <div className="parking-info-section">
-            <h3 className="info-section-title">Location</h3>
+            <h3 className="info-section-title">מיקום</h3>
             <div className="info-item">
               <span className="info-icon">🅿️</span>
-              <span className="info-text">{formatParkingZone(parking.parking_zone)}</span>
+              <span className="info-text">
+                {formatParkingZone(parking.parking_zone)}
+              </span>
             </div>
           </div>
 
           {/* Owner Information */}
           <div className="parking-info-section">
-            <h3 className="info-section-title">Owner</h3>
+            <h3 className="info-section-title">בעלים</h3>
             <div className="info-item">
               <span className="info-icon">👤</span>
               <span className="info-text">{ownerName}</span>
@@ -245,7 +248,7 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
           {/* Car Information */}
           {(carMake || carModel || carColor || licensePlate) && (
             <div className="parking-info-section">
-              <h3 className="info-section-title">Vehicle Details</h3>
+              <h3 className="info-section-title">פרטי רכב</h3>
               {(carMake || carModel) && (
                 <div className="info-item">
                   <span className="info-icon">🚗</span>
@@ -273,8 +276,7 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
 
           {hasExistingReservation && (
             <div className="reservation-warning">
-              ⚠️ You already have an active reservation. Cancel it first to
-              reserve another spot.
+              ⚠️ כבר יש לך הזמנה פעילה. בטל אותה קודם כדי להזמין מקום אחר.
             </div>
           )}
           <button
@@ -284,25 +286,25 @@ const ParkingDetailModal = ({ parking, onClose, userReservedPins }) => {
           >
             <span>
               {isReserving
-                ? "Processing..."
+                ? "מעבד..."
                 : hasExistingReservation
-                ? "Already Reserved"
-                : "Reserve parking"}
+                  ? "כבר הוזמנה"
+                  : "הזמן חניה"}
             </span>
             <span>50 ₪</span>
           </button>
           <button
-            className={`navigate-button ${(!hasValidCoordinates || isNavigating) ? 'navigate-button-disabled' : ''}`}
+            className={`navigate-button ${!hasValidCoordinates || isNavigating ? "navigate-button-disabled" : ""}`}
             onClick={handleNavigateClick}
             disabled={!hasValidCoordinates || isNavigating}
           >
             {isNavigating ? (
-              <span className="navigate-loading">Opening navigation...</span>
+              <span className="navigate-loading">פותח ניווט...</span>
             ) : (
               <>
                 <span className="navigate-icon">🧭</span>
                 <span>
-                  {hasValidCoordinates ? 'Navigate to Parking' : 'Location unavailable'}
+                  {hasValidCoordinates ? "נווט לחניה" : "מיקום לא זמין"}
                 </span>
               </>
             )}

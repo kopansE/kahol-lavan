@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Modal,
   View,
@@ -6,26 +6,26 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
   Linking,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../styles/colors';
-import { formatParkingZone } from '../utils/parkingZoneUtils';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { colors } from "../styles/colors";
+import { useToast } from "../contexts/ToastContext";
+import { formatParkingZone } from "../utils/parkingZoneUtils";
 
 /**
  * Opens the device's default navigation app with directions to the specified coordinates
  */
-const openNavigation = async (lat, lng, address = '') => {
+const openNavigation = async (lat, lng, address = "") => {
   const destination = `${lat},${lng}`;
-  const label = encodeURIComponent(address || 'Parking Location');
-  
-  if (Platform.OS === 'ios') {
+  const label = encodeURIComponent(address || "מיקום חניה");
+
+  if (Platform.OS === "ios") {
     const googleMapsUrl = `comgooglemaps://?daddr=${destination}&directionsmode=driving`;
     const appleMapsUrl = `maps://?daddr=${destination}&dirflg=d`;
-    
+
     try {
       const canOpenGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
       if (canOpenGoogleMaps) {
@@ -33,19 +33,19 @@ const openNavigation = async (lat, lng, address = '') => {
         return true;
       }
     } catch (error) {
-      console.log('Google Maps not available, trying Apple Maps');
+      console.log("Google Maps not available, trying Apple Maps");
     }
-    
+
     try {
       await Linking.openURL(appleMapsUrl);
       return true;
     } catch (error) {
-      console.error('Failed to open Apple Maps:', error);
+      console.error("Failed to open Apple Maps:", error);
     }
-  } else if (Platform.OS === 'android') {
+  } else if (Platform.OS === "android") {
     const googleMapsUrl = `google.navigation:q=${destination}`;
     const geoUrl = `geo:${destination}?q=${destination}(${label})`;
-    
+
     try {
       const canOpenGoogleMaps = await Linking.canOpenURL(googleMapsUrl);
       if (canOpenGoogleMaps) {
@@ -53,24 +53,24 @@ const openNavigation = async (lat, lng, address = '') => {
         return true;
       }
     } catch (error) {
-      console.log('Google Maps navigation not available, trying geo URI');
+      console.log("Google Maps navigation not available, trying geo URI");
     }
-    
+
     try {
       await Linking.openURL(geoUrl);
       return true;
     } catch (error) {
-      console.error('Failed to open geo URI:', error);
+      console.error("Failed to open geo URI:", error);
     }
   }
-  
+
   // Fallback to web Google Maps
   const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${destination}&travelmode=driving`;
   try {
     await Linking.openURL(webUrl);
     return true;
   } catch (error) {
-    console.error('Failed to open Google Maps web:', error);
+    console.error("Failed to open Google Maps web:", error);
     return false;
   }
 };
@@ -80,10 +80,10 @@ const openNavigation = async (lat, lng, address = '') => {
  */
 const formatTime = (dateString) => {
   const date = new Date(dateString);
-  return date.toLocaleTimeString('he-IL', { 
-    hour: '2-digit', 
-    minute: '2-digit',
-    hour12: false 
+  return date.toLocaleTimeString("he-IL", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   });
 };
 
@@ -103,25 +103,47 @@ const formatDate = (dateString) => {
  */
 const getStatusInfo = (status) => {
   switch (status) {
-    case 'active':
-      return { text: 'Active', hebrewText: 'פעיל', color: '#28a745', bgColor: '#d4edda' };
-    case 'waiting':
-      return { text: 'Waiting', hebrewText: 'בתור להקצאה', color: '#856404', bgColor: '#fff3cd' };
-    case 'reserved':
-      return { text: 'Reserved', hebrewText: 'שמור', color: '#dc3545', bgColor: '#f8d7da' };
+    case "active":
+      return {
+        text: "פעיל",
+        hebrewText: "פעיל",
+        color: "#28a745",
+        bgColor: "#d4edda",
+      };
+    case "waiting":
+      return {
+        text: "ממתין",
+        hebrewText: "בתור להקצאה",
+        color: "#856404",
+        bgColor: "#fff3cd",
+      };
+    case "reserved":
+      return {
+        text: "הוזמנה",
+        hebrewText: "שמור",
+        color: "#dc3545",
+        bgColor: "#f8d7da",
+      };
     default:
-      return { text: 'Active', hebrewText: 'פעיל', color: '#28a745', bgColor: '#d4edda' };
+      return {
+        text: "פעיל",
+        hebrewText: "פעיל",
+        color: "#28a745",
+        bgColor: "#d4edda",
+      };
   }
 };
 
 const OwnParkingDetailModal = ({ visible, parking, onClose }) => {
+  const { showToast } = useToast();
   const [isNavigating, setIsNavigating] = useState(false);
 
-  const hasValidCoordinates = parking?.position && 
-    Array.isArray(parking.position) && 
+  const hasValidCoordinates =
+    parking?.position &&
+    Array.isArray(parking.position) &&
     parking.position.length >= 2 &&
-    typeof parking.position[0] === 'number' &&
-    typeof parking.position[1] === 'number';
+    typeof parking.position[0] === "number" &&
+    typeof parking.position[1] === "number";
 
   const handleNavigateClick = async () => {
     if (isNavigating || !hasValidCoordinates) return;
@@ -130,17 +152,13 @@ const OwnParkingDetailModal = ({ visible, parking, onClose }) => {
       setIsNavigating(true);
       const [lat, lng] = parking.position;
       const success = await openNavigation(lat, lng, parking.address);
-      
+
       if (!success) {
-        Alert.alert(
-          'Navigation Error',
-          `Could not open navigation app. The parking address is:\n\n${parking.address || `${lat.toFixed(6)}, ${lng.toFixed(6)}`}`,
-          [{ text: 'OK' }]
-        );
+        showToast("לא ניתן לפתוח אפליקציית ניווט.");
       }
     } catch (error) {
-      console.error('Error opening navigation:', error);
-      Alert.alert('Error', 'Failed to open navigation. Please try again.');
+      console.error("Error opening navigation:", error);
+      showToast("פתיחת הניווט נכשלה. אנא נסה שוב.");
     } finally {
       setIsNavigating(false);
     }
@@ -168,7 +186,7 @@ const OwnParkingDetailModal = ({ visible, parking, onClose }) => {
               <View style={styles.headerContent}>
                 <View style={styles.headerText}>
                   <Text style={styles.headerTitleHebrew}>מקום החניה שלך</Text>
-                  <Text style={styles.headerTitleEnglish}>Your Parking Spot</Text>
+                  <Text style={styles.headerTitleEnglish}>החניה שלך</Text>
                 </View>
                 <View style={styles.headerIcon}>
                   <View style={styles.iconCircle}>
@@ -187,18 +205,35 @@ const OwnParkingDetailModal = ({ visible, parking, onClose }) => {
                 </View>
                 <View style={styles.addressInfo}>
                   <Text style={styles.addressLabel}>כתובת</Text>
-                  <Text style={styles.addressText}>{parking.address || 'Unknown Address'}</Text>
+                  <Text style={styles.addressText}>
+                    {parking.address || "כתובת לא ידועה"}
+                  </Text>
                 </View>
               </View>
 
               {/* Status Bar */}
               <View style={styles.statusBar}>
                 <View style={styles.zoneBadge}>
-                  <Text style={styles.zoneBadgeText}>{formatParkingZone(parking.parking_zone)}</Text>
+                  <Text style={styles.zoneBadgeText}>
+                    {formatParkingZone(parking.parking_zone)}
+                  </Text>
                 </View>
-                <View style={[styles.statusInfo, { backgroundColor: statusInfo.bgColor }]}>
-                  <Text style={[styles.statusText, { color: statusInfo.color }]}>{statusInfo.text}</Text>
-                  <Text style={[styles.statusHebrew, { color: statusInfo.color }]}>{statusInfo.hebrewText}</Text>
+                <View
+                  style={[
+                    styles.statusInfo,
+                    { backgroundColor: statusInfo.bgColor },
+                  ]}
+                >
+                  <Text
+                    style={[styles.statusText, { color: statusInfo.color }]}
+                  >
+                    {statusInfo.text}
+                  </Text>
+                  <Text
+                    style={[styles.statusHebrew, { color: statusInfo.color }]}
+                  >
+                    {statusInfo.hebrewText}
+                  </Text>
                   <Text style={styles.statusIcon}>⏱️</Text>
                 </View>
               </View>
@@ -208,14 +243,18 @@ const OwnParkingDetailModal = ({ visible, parking, onClose }) => {
                 <View style={styles.datetimeBox}>
                   <Text style={styles.datetimeLabel}>שעה</Text>
                   <View style={styles.datetimeValue}>
-                    <Text style={styles.datetimeText}>{formatTime(parking.timestamp)}</Text>
+                    <Text style={styles.datetimeText}>
+                      {formatTime(parking.timestamp)}
+                    </Text>
                     <Text style={styles.datetimeIcon}>🕐</Text>
                   </View>
                 </View>
                 <View style={styles.datetimeBox}>
                   <Text style={styles.datetimeLabel}>תאריך</Text>
                   <View style={styles.datetimeValue}>
-                    <Text style={styles.datetimeText}>{formatDate(parking.timestamp)}</Text>
+                    <Text style={styles.datetimeText}>
+                      {formatDate(parking.timestamp)}
+                    </Text>
                     <Text style={styles.datetimeIcon}>📅</Text>
                   </View>
                 </View>
@@ -225,7 +264,8 @@ const OwnParkingDetailModal = ({ visible, parking, onClose }) => {
               <TouchableOpacity
                 style={[
                   styles.navigateButton,
-                  (!hasValidCoordinates || isNavigating) && styles.navigateButtonDisabled,
+                  (!hasValidCoordinates || isNavigating) &&
+                    styles.navigateButtonDisabled,
                 ]}
                 onPress={handleNavigateClick}
                 disabled={!hasValidCoordinates || isNavigating}
@@ -236,7 +276,7 @@ const OwnParkingDetailModal = ({ visible, parking, onClose }) => {
                   <View style={styles.navigateButtonContent}>
                     <Text style={styles.navigateIcon}>🧭</Text>
                     <Text style={styles.navigateButtonText}>
-                      {hasValidCoordinates ? 'Navigate' : 'Location unavailable'}
+                      {hasValidCoordinates ? "נווט" : "מיקום לא זמין"}
                     </Text>
                   </View>
                 )}
@@ -244,7 +284,7 @@ const OwnParkingDetailModal = ({ visible, parking, onClose }) => {
 
               {/* Close Button */}
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                <Text style={styles.closeButtonText}>Close</Text>
+                <Text style={styles.closeButtonText}>סגור</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -257,49 +297,49 @@ const OwnParkingDetailModal = ({ visible, parking, onClose }) => {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   modal: {
-    backgroundColor: '#f5f7fa',
+    backgroundColor: "#f5f7fa",
     borderRadius: 24,
-    width: '100%',
+    width: "100%",
     maxWidth: 360,
-    maxHeight: '90%',
-    overflow: 'hidden',
+    maxHeight: "90%",
+    overflow: "hidden",
   },
   header: {
     paddingVertical: 24,
     paddingHorizontal: 20,
   },
   headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   headerText: {
     flex: 1,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   headerTitleHebrew: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.white,
     marginBottom: 4,
   },
   headerTitleEnglish: {
     fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: "rgba(255, 255, 255, 0.9)",
   },
   headerIcon: {
     width: 56,
     height: 56,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginLeft: 16,
   },
   iconCircle: {
@@ -308,8 +348,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     borderColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   iconDot: {
     width: 12,
@@ -325,7 +365,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
     ...Platform.select({
       ios: {
@@ -342,22 +382,22 @@ const styles = StyleSheet.create({
   addressMapPreview: {
     width: 100,
     height: 100,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   mapPinIcon: {
     fontSize: 32,
   },
   addressInfo: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
+    justifyContent: "center",
+    alignItems: "flex-end",
   },
   addressLabel: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.darkGray,
     marginBottom: 8,
   },
@@ -365,12 +405,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.gray,
     lineHeight: 20,
-    textAlign: 'right',
+    textAlign: "right",
   },
   statusBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: colors.white,
     borderRadius: 16,
     padding: 12,
@@ -388,21 +428,21 @@ const styles = StyleSheet.create({
     }),
   },
   zoneBadge: {
-    backgroundColor: '#f0f4ff',
+    backgroundColor: "#f0f4ff",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   zoneBadgeText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#4a5568',
+    fontWeight: "600",
+    color: "#4a5568",
   },
   statusInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -410,7 +450,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   statusHebrew: {
     fontSize: 12,
@@ -419,7 +459,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   datetimeContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   datetimeBox: {
@@ -427,9 +467,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#e8e8e8',
+    borderColor: "#e8e8e8",
     ...Platform.select({
       ios: {
         shadowColor: colors.black,
@@ -444,18 +484,18 @@ const styles = StyleSheet.create({
   },
   datetimeLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.gray,
     marginBottom: 8,
   },
   datetimeValue: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   datetimeText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.darkGray,
   },
   datetimeIcon: {
@@ -465,8 +505,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryGradientStart,
     paddingVertical: 16,
     borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...Platform.select({
       ios: {
         shadowColor: colors.primaryGradientStart,
@@ -485,9 +525,9 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   navigateButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
   },
   navigateIcon: {
@@ -496,18 +536,18 @@ const styles = StyleSheet.create({
   navigateButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   closeButton: {
-    backgroundColor: '#e8e8e8',
+    backgroundColor: "#e8e8e8",
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   closeButtonText: {
     color: colors.gray,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 

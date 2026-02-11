@@ -1,15 +1,16 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Text,
-} from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../styles/colors';
-import * as Location from 'expo-location';
+  Alert,
+} from "react-native";
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import { LinearGradient } from "expo-linear-gradient";
+import { colors } from "../styles/colors";
+import * as Location from "expo-location";
 
 const MapContainer = ({
   userLocation,
@@ -40,7 +41,7 @@ const MapContainer = ({
           {
             edgePadding: { top: 100, right: 50, bottom: 150, left: 50 },
             animated: true,
-          }
+          },
         );
       } else {
         // For specific addresses, zoom in close
@@ -51,7 +52,7 @@ const MapContainer = ({
             latitudeDelta: 0.002,
             longitudeDelta: 0.002,
           },
-          800
+          800,
         );
       }
     }
@@ -62,8 +63,8 @@ const MapContainer = ({
       setIsGpsLoading(true);
 
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        alert('Permission to access location was denied');
+      if (status !== "granted") {
+        Alert.alert("שגיאה", "הגישה למיקום נדחתה");
         return;
       }
 
@@ -79,11 +80,11 @@ const MapContainer = ({
             latitudeDelta: 0.005,
             longitudeDelta: 0.005,
           },
-          800
+          800,
         );
       }
     } catch (error) {
-      console.error('Error getting location:', error);
+      console.error("Error getting location:", error);
     } finally {
       setIsGpsLoading(false);
     }
@@ -101,7 +102,7 @@ const MapContainer = ({
         colors={[colors.primaryGradientStart, colors.primaryGradientEnd]}
         style={styles.loadingContainer}
       >
-        <Text style={styles.loadingText}>Loading map...</Text>
+        <Text style={styles.loadingText}>טוען מפה...</Text>
       </LinearGradient>
     );
   }
@@ -131,7 +132,7 @@ const MapContainer = ({
             longitude: userLocation[1],
           }}
           pinColor={colors.cyan}
-          title="Your Location"
+          title="המיקום שלך"
         />
 
         {/* User's own pin (red) */}
@@ -178,11 +179,11 @@ const MapContainer = ({
                 longitude: pin.position[1],
               }}
               pinColor={colors.orange}
-              title="Your Reserved Parking"
-              description="Tap to view details"
+              title="החניה שהזמנת"
+              description="לחץ לצפייה בפרטים"
               onPress={() => {
                 if (onPinClick) {
-                  onPinClick(pin, 'reserved');
+                  onPinClick(pin, "reserved");
                 }
               }}
             />
@@ -198,8 +199,8 @@ const MapContainer = ({
                 longitude: pin.position[1],
               }}
               pinColor="#34A853"
-              title="Upcoming Parking"
-              description="Tap to schedule"
+              title="חניה עתידית"
+              description="לחץ לתזמון"
               onPress={() => {
                 if (onPublishedPinClick) {
                   onPublishedPinClick(pin);
@@ -216,13 +217,14 @@ const MapContainer = ({
               longitude: searchResult.lng,
             }}
             pinColor="#EA4335"
-            title={searchResult.name || 'Search Result'}
+            title={searchResult.name || "תוצאת חיפוש"}
             description={searchResult.formattedAddress}
           />
         )}
 
         {/* Street highlight polylines (multiple segments) */}
-        {searchResult?.isStreet && searchResult?.streetGeometry?.segments &&
+        {searchResult?.isStreet &&
+          searchResult?.streetGeometry?.segments &&
           searchResult.streetGeometry.segments.map((segment, index) => (
             <Polyline
               key={`street-segment-${index}`}
@@ -235,8 +237,7 @@ const MapContainer = ({
               lineCap="round"
               lineJoin="round"
             />
-          ))
-        }
+          ))}
       </MapView>
 
       {/* GPS button overlay */}
@@ -260,28 +261,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   map: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     color: colors.white,
     fontSize: 18,
   },
   gpsButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 120,
     right: 20,
     width: 50,
     height: 50,
     borderRadius: 25,
     backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

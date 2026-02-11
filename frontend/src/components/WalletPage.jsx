@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
+import { useToast } from "../contexts/ToastContext";
 import "./WalletPage.css";
 
 const WalletPage = ({ user, onBack, onClose }) => {
+  const { showToast } = useToast();
   const [paymentSetupCompleted, setPaymentSetupCompleted] = useState(false);
   const [walletAmount, setWalletAmount] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,7 +43,7 @@ const WalletPage = ({ user, onBack, onClose }) => {
       const { data, error } = await supabase
         .from("users")
         .select(
-          "rapyd_customer_id, rapyd_payment_method_id, payment_setup_completed, rapyd_wallet_id"
+          "rapyd_customer_id, rapyd_payment_method_id, payment_setup_completed, rapyd_wallet_id",
         )
         .eq("id", user.id)
         .single();
@@ -111,12 +113,12 @@ const WalletPage = ({ user, onBack, onClose }) => {
         await supabase.auth.getSession();
 
       if (sessionError) {
-        throw new Error("Authentication error. Please log in again.");
+        throw new Error("שגיאת אימות. אנא התחבר מחדש.");
       }
 
       const token = sessionData?.session?.access_token;
       if (!token) {
-        throw new Error("No session token found. Please log in again.");
+        throw new Error("לא נמצא טוקן. אנא התחבר מחדש.");
       }
 
       const url = `${
@@ -143,27 +145,27 @@ const WalletPage = ({ user, onBack, onClose }) => {
         result = JSON.parse(resultText);
       } catch (e) {
         throw new Error(
-          `Unexpected server response (${response.status}): ${resultText}`
+          `Unexpected server response (${response.status}): ${resultText}`,
         );
       }
 
       if (!response.ok || !result?.success || !result?.hosted_page_url) {
         const message =
-          result?.error || result?.message || "Failed to start payment setup";
+          result?.error || result?.message || "הגדרת התשלום נכשלה";
         throw new Error(message);
       }
 
       window.location.href = result.hosted_page_url;
     } catch (err) {
       console.error("Failed to update payment details:", err);
-      alert(err.message || "Failed to update payment details");
+      showToast(err.message || "עדכון פרטי התשלום נכשל");
     } finally {
       setIsUpdatingPayment(false);
     }
   };
 
   const handleWithdrawToBank = () => {
-    alert("Withdraw to bank account button clicked! (Coming soon)");
+    showToast("משיכה לחשבון בנק - בקרוב!");
   };
 
   return (
@@ -172,7 +174,7 @@ const WalletPage = ({ user, onBack, onClose }) => {
         <button className="back-button" onClick={onBack}>
           ‹
         </button>
-        <h2 className="page-title">Wallet</h2>
+        <h2 className="page-title">ארנק</h2>
         <button className="page-close-button" onClick={onClose}>
           ×
         </button>
@@ -184,22 +186,31 @@ const WalletPage = ({ user, onBack, onClose }) => {
           onClick={handleUpdatePaymentDetails}
           disabled={isUpdatingPayment}
         >
-          {isUpdatingPayment ? "Redirecting..." : "Update Payment Details"}
+          {isUpdatingPayment ? "מפנה..." : "עדכון פרטי תשלום"}
         </button>
 
         {loading ? (
-          <div className="loading-state">Loading...</div>
+          <div className="loading-state">טוען...</div>
         ) : paymentSetupCompleted ? (
           <div className="wallet-setup-section">
             <div className="wallet-balance-card">
               <div className="balance-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <rect x="2" y="4" width="20" height="16" rx="2" />
                   <path d="M2 10h20" />
                   <path d="M6 16h4" />
                 </svg>
               </div>
-              <div className="balance-label">Wallet Balance</div>
+              <div className="balance-label">יתרת ארנק</div>
               {walletAmount !== null ? (
                 <div className="balance-amount">₪{walletAmount.toFixed(2)}</div>
               ) : (
@@ -211,15 +222,13 @@ const WalletPage = ({ user, onBack, onClose }) => {
               className="wallet-button withdraw-button"
               onClick={handleWithdrawToBank}
             >
-              Withdraw to Bank Account
+              משיכה לחשבון בנק
             </button>
           </div>
         ) : (
           <div className="wallet-not-setup">
             <div className="not-setup-icon">💳</div>
-            <p>
-              Complete payment setup to view wallet balance and withdraw funds.
-            </p>
+            <p>השלם את הגדרת התשלום כדי לצפות ביתרה ולמשוך כספים.</p>
           </div>
         )}
       </div>

@@ -1,10 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabaseClient";
+import { useToast } from "../contexts/ToastContext";
 import { formatParkingZone } from "../utils/parkingZoneUtils";
 import "./ParkingDetailModal.css";
 
-const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publishedPins, currentUserId }) => {
+const PublishedParkingDetailModal = ({
+  parking,
+  onClose,
+  userReservedPins,
+  publishedPins,
+  currentUserId,
+}) => {
   const modalRef = useRef(null);
+  const { showToast } = useToast();
   const [isScheduling, setIsScheduling] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const hasExistingReservation =
@@ -13,8 +21,10 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
   // Determine reservation status from data passed by get-active-pins (no RLS issues)
   const futureReservedBy = parking?.future_reserved_by || null;
   const futureReservationId = parking?.future_reservation_id || null;
-  const isScheduledByMe = futureReservedBy && futureReservedBy === currentUserId;
-  const isScheduledByOther = futureReservedBy && futureReservedBy !== currentUserId;
+  const isScheduledByMe =
+    futureReservedBy && futureReservedBy === currentUserId;
+  const isScheduledByOther =
+    futureReservedBy && futureReservedBy !== currentUserId;
   const alreadyScheduled = isScheduledByMe || isScheduledByOther;
 
   useEffect(() => {
@@ -32,28 +42,28 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
   }, [onClose]);
 
   const formatScheduledTime = (isoString) => {
-    if (!isoString) return "Unknown time";
+    if (!isoString) return "זמן לא ידוע";
     const date = new Date(isoString);
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
-    const timeStr = date.toLocaleTimeString("en-US", {
+    const timeStr = date.toLocaleTimeString("he-IL", {
       hour: "2-digit",
       minute: "2-digit",
     });
-    const dateStr = date.toLocaleDateString("en-US", {
+    const dateStr = date.toLocaleDateString("he-IL", {
       weekday: "short",
       month: "short",
       day: "numeric",
     });
 
-    if (diffMs < 0) return `${dateStr} at ${timeStr} (past due)`;
+    if (diffMs < 0) return `${dateStr} ב-${timeStr} (חלף)`;
     if (diffHours > 0) {
-      return `${dateStr} at ${timeStr} (in ${diffHours}h ${diffMinutes}m)`;
+      return `${dateStr} ב-${timeStr} (בעוד ${diffHours}ש ${diffMinutes}ד)`;
     }
-    return `${dateStr} at ${timeStr} (in ${diffMinutes}m)`;
+    return `${dateStr} ב-${timeStr} (בעוד ${diffMinutes}ד)`;
   };
 
   const handleScheduleClick = async (e) => {
@@ -62,9 +72,7 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
     if (isScheduling) return;
 
     if (hasExistingReservation) {
-      alert(
-        "You already have an active reservation. Please cancel it before scheduling another spot."
-      );
+      showToast("כבר יש לך הזמנה פעילה. אנא בטל אותה לפני תזמון מקום נוסף.");
       return;
     }
 
@@ -75,7 +83,7 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
         await supabase.auth.getSession();
 
       if (sessionError || !sessionData?.session?.access_token) {
-        alert("Please log in to schedule parking.");
+        showToast("אנא התחבר כדי לתזמן חניה.");
         return;
       }
 
@@ -101,14 +109,14 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
         throw new Error(result.error || "Failed to schedule parking");
       }
 
-      alert(`${result.message}`);
+      showToast("החניה תוזמנה בהצלחה!");
       onClose();
 
       // Refresh the map
       window.location.reload();
     } catch (error) {
       console.error("Error scheduling parking:", error);
-      alert(`Failed to schedule parking: ${error.message}`);
+      showToast(`תזמון החניה נכשל: ${error.message}`);
     } finally {
       setIsScheduling(false);
     }
@@ -119,7 +127,9 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
 
     if (isCancelling || !futureReservationId) return;
 
-    const confirmed = window.confirm("Are you sure you want to cancel your scheduled reservation?");
+    const confirmed = window.confirm(
+      "האם אתה בטוח שברצונך לבטל את ההזמנה המתוזמנת?",
+    );
     if (!confirmed) return;
 
     try {
@@ -129,7 +139,7 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
         await supabase.auth.getSession();
 
       if (sessionError || !sessionData?.session?.access_token) {
-        alert("Please log in to cancel.");
+        showToast("אנא התחבר כדי לבטל.");
         return;
       }
 
@@ -155,14 +165,14 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
         throw new Error(result.error || "Failed to cancel reservation");
       }
 
-      alert(result.message);
+      showToast("ההזמנה בוטלה בהצלחה.");
       onClose();
 
       // Refresh the map
       window.location.reload();
     } catch (error) {
       console.error("Error cancelling future reservation:", error);
-      alert(`Failed to cancel reservation: ${error.message}`);
+      showToast(`ביטול ההזמנה נכשל: ${error.message}`);
     } finally {
       setIsCancelling(false);
     }
@@ -171,7 +181,7 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
   if (!parking) return null;
 
   const userData = parking.user || parking.users || parking;
-  const ownerName = userData?.full_name || "Unknown Owner";
+  const ownerName = userData?.full_name || "בעלים לא ידוע";
   const carMake = userData?.car_make;
   const carModel = userData?.car_model;
   const carColor = userData?.car_color;
@@ -186,10 +196,13 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
         <div className="parking-detail-body">
           {/* Scheduled Departure Time */}
           <div className="parking-info-section">
-            <h3 className="info-section-title">Scheduled Departure</h3>
+            <h3 className="info-section-title">יציאה מתוזמנת</h3>
             <div className="info-item">
               <span className="info-icon">🕐</span>
-              <span className="info-text" style={{ fontWeight: 600, color: "#34A853" }}>
+              <span
+                className="info-text"
+                style={{ fontWeight: 600, color: "#34A853" }}
+              >
                 {formatScheduledTime(parking.scheduled_for)}
               </span>
             </div>
@@ -197,16 +210,18 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
 
           {/* Parking Zone */}
           <div className="parking-info-section">
-            <h3 className="info-section-title">Location</h3>
+            <h3 className="info-section-title">מיקום</h3>
             <div className="info-item">
               <span className="info-icon">🅿️</span>
-              <span className="info-text">{formatParkingZone(parking.parking_zone)}</span>
+              <span className="info-text">
+                {formatParkingZone(parking.parking_zone)}
+              </span>
             </div>
           </div>
 
           {/* Owner Information */}
           <div className="parking-info-section">
-            <h3 className="info-section-title">Owner</h3>
+            <h3 className="info-section-title">בעלים</h3>
             <div className="info-item">
               <span className="info-icon">👤</span>
               <span className="info-text">{ownerName}</span>
@@ -216,7 +231,7 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
           {/* Car Information */}
           {(carMake || carModel || carColor || licensePlate) && (
             <div className="parking-info-section">
-              <h3 className="info-section-title">Vehicle Details</h3>
+              <h3 className="info-section-title">פרטי רכב</h3>
               {(carMake || carModel) && (
                 <div className="info-item">
                   <span className="info-icon">🚗</span>
@@ -244,20 +259,26 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
 
           {hasExistingReservation && !isScheduledByMe && (
             <div className="reservation-warning">
-              You already have an active reservation. Cancel it first to
-              schedule another spot.
+              כבר יש לך הזמנה פעילה. בטל אותה קודם כדי לתזמן מקום אחר.
             </div>
           )}
 
           {isScheduledByMe && (
-            <div className="reservation-warning" style={{ background: "#e8f5e9", borderColor: "#34A853", color: "#2e7d32" }}>
-              You have scheduled this spot. It will activate at the scheduled time.
+            <div
+              className="reservation-warning"
+              style={{
+                background: "#e8f5e9",
+                borderColor: "#34A853",
+                color: "#2e7d32",
+              }}
+            >
+              תזמנת מקום זה. הוא יופעל בזמן המתוזמן.
             </div>
           )}
 
           {isScheduledByOther && (
             <div className="reservation-warning">
-              This parking spot is already scheduled by another user.
+              חניה זו כבר תוזמנה על ידי משתמש אחר.
             </div>
           )}
 
@@ -268,25 +289,27 @@ const PublishedParkingDetailModal = ({ parking, onClose, userReservedPins, publi
               disabled={isCancelling}
               style={{ background: "#dc3545" }}
             >
-              <span>{isCancelling ? "Cancelling..." : "Cancel My Reservation"}</span>
+              <span>{isCancelling ? "מבטל..." : "בטל את ההזמנה שלי"}</span>
             </button>
           ) : (
             <button
               className="reserve-button"
               onClick={handleScheduleClick}
-              disabled={isScheduling || hasExistingReservation || isScheduledByOther}
+              disabled={
+                isScheduling || hasExistingReservation || isScheduledByOther
+              }
               style={{ background: isScheduledByOther ? "#999" : "#34A853" }}
             >
               <span>
                 {isScheduling
-                  ? "Scheduling..."
+                  ? "מתזמן..."
                   : isScheduledByOther
-                  ? "Already Scheduled"
-                  : hasExistingReservation
-                  ? "Already Reserved"
-                  : "Schedule This Spot"}
+                    ? "כבר מתוזמן"
+                    : hasExistingReservation
+                      ? "כבר הוזמנה"
+                      : "תזמן מקום זה"}
               </span>
-              {!isScheduledByOther && <span>Free</span>}
+              {!isScheduledByOther && <span>חינם</span>}
             </button>
           )}
         </div>

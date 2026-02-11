@@ -1,17 +1,17 @@
-import React from 'react';
-import { TouchableOpacity, View, Text, StyleSheet, Alert } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../styles/colors';
+import React from "react";
+import { TouchableOpacity, View, Text, StyleSheet, Alert } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { colors } from "../styles/colors";
 
 const LeavingParkingButton = ({ waitingPin, onActivate }) => {
   const handleClick = () => {
     Alert.alert(
-      'Leaving Parking',
-      'Are you leaving this parking spot now? This will make it visible to other users.',
+      "עוזב חניה",
+      "האם אתה עוזב את מקום החניה עכשיו? פעולה זו תציג אותו למשתמשים אחרים.",
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Yes, Leaving', onPress: onActivate },
-      ]
+        { text: "ביטול", style: "cancel" },
+        { text: "כן, עוזב", onPress: onActivate },
+      ],
     );
   };
 
@@ -27,8 +27,8 @@ const LeavingParkingButton = ({ waitingPin, onActivate }) => {
       >
         <Text style={styles.icon}>🚗</Text>
         <View style={styles.textContainer}>
-          <Text style={styles.title}>Leaving Parking</Text>
-          <Text style={styles.subtitle}>Click to publish your spot</Text>
+          <Text style={styles.title}>עוזב חניה</Text>
+          <Text style={styles.subtitle}>לחץ לפרסום המקום שלך</Text>
         </View>
       </LinearGradient>
     </TouchableOpacity>
@@ -37,7 +37,7 @@ const LeavingParkingButton = ({ waitingPin, onActivate }) => {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     top: 20,
     right: 20,
     borderRadius: 16,
@@ -48,8 +48,8 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   gradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 20,
     borderRadius: 16,
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.white,
     marginBottom: 2,
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   View,
@@ -7,15 +7,15 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  Alert,
   ActivityIndicator,
-} from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
-import { supabase } from '../config/supabase';
-import ReservationNotification from './ReservationNotification';
-import { colors } from '../styles/colors';
-import { getWalletBalance, setupPaymentMethod } from '../utils/edgeFunctions';
-import { NGROK_URL } from '@env';
+} from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import { supabase } from "../config/supabase";
+import ReservationNotification from "./ReservationNotification";
+import { colors } from "../styles/colors";
+import { useToast } from "../contexts/ToastContext";
+import { getWalletBalance, setupPaymentMethod } from "../utils/edgeFunctions";
+import { NGROK_URL } from "@env";
 
 const PaymentSideMenu = ({
   visible,
@@ -26,6 +26,7 @@ const PaymentSideMenu = ({
   onAcceptReservation,
   onDeclineReservation,
 }) => {
+  const { showToast } = useToast();
   const [paymentSetupCompleted, setPaymentSetupCompleted] = useState(false);
   const [walletAmount, setWalletAmount] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,9 +43,9 @@ const PaymentSideMenu = ({
 
     const interval = setInterval(async () => {
       const { data } = await supabase
-        .from('users')
-        .select('rapyd_wallet_id, payment_setup_completed')
-        .eq('id', user.id)
+        .from("users")
+        .select("rapyd_wallet_id, payment_setup_completed")
+        .eq("id", user.id)
         .single();
 
       if (data?.payment_setup_completed && data?.rapyd_wallet_id) {
@@ -61,15 +62,15 @@ const PaymentSideMenu = ({
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('users')
+        .from("users")
         .select(
-          'rapyd_customer_id, rapyd_payment_method_id, payment_setup_completed, rapyd_wallet_id'
+          "rapyd_customer_id, rapyd_payment_method_id, payment_setup_completed, rapyd_wallet_id",
         )
-        .eq('id', user.id)
+        .eq("id", user.id)
         .single();
 
       if (error) {
-        console.error('Error loading user payment data:', error);
+        console.error("Error loading user payment data:", error);
         setPaymentSetupCompleted(false);
       } else {
         const isSetupCompleted = Boolean(data?.payment_setup_completed);
@@ -80,7 +81,7 @@ const PaymentSideMenu = ({
         }
       }
     } catch (error) {
-      console.error('Error loading user payment data:', error);
+      console.error("Error loading user payment data:", error);
       setPaymentSetupCompleted(false);
     } finally {
       setLoading(false);
@@ -92,7 +93,7 @@ const PaymentSideMenu = ({
       const result = await getWalletBalance();
       setWalletAmount(result.balance);
     } catch (error) {
-      console.error('Error fetching wallet balance:', error);
+      console.error("Error fetching wallet balance:", error);
       setWalletAmount(0);
     }
   };
@@ -103,22 +104,22 @@ const PaymentSideMenu = ({
     try {
       setIsUpdatingPayment(true);
 
-      const redirectBaseUrl = NGROK_URL || 'kahollavan://';
+      const redirectBaseUrl = NGROK_URL || "kahollavan://";
       const result = await setupPaymentMethod(redirectBaseUrl);
 
       if (result.hosted_page_url) {
         await WebBrowser.openBrowserAsync(result.hosted_page_url);
       }
     } catch (error) {
-      console.error('Failed to update payment details:', error);
-      Alert.alert('Error', error.message || 'Failed to update payment details');
+      console.error("Failed to update payment details:", error);
+      showToast(error.message || "עדכון פרטי התשלום נכשל");
     } finally {
       setIsUpdatingPayment(false);
     }
   };
 
   const handleWithdrawToBank = () => {
-    Alert.alert('Coming Soon', 'Withdraw to bank account feature is coming soon!');
+    showToast("משיכה לחשבון בנק - בקרוב!");
   };
 
   return (
@@ -132,7 +133,7 @@ const PaymentSideMenu = ({
         <View style={styles.menu}>
           <View style={styles.header}>
             <View style={styles.headerTop}>
-              <Text style={styles.headerTitle}>Payment Settings</Text>
+              <Text style={styles.headerTitle}>הגדרות תשלום</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
@@ -146,15 +147,18 @@ const PaymentSideMenu = ({
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Text style={styles.avatarText}>
-                    {user?.email?.charAt(0).toUpperCase() || 'U'}
+                    {user?.email?.charAt(0).toUpperCase() || "U"}
                   </Text>
                 </View>
               )}
-              <Text style={styles.email}>{user?.email || ''}</Text>
+              <Text style={styles.email}>{user?.email || ""}</Text>
             </View>
           </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
             <TouchableOpacity
               style={styles.updateButton}
               onPress={handleUpdatePaymentDetails}
@@ -163,7 +167,7 @@ const PaymentSideMenu = ({
               {isUpdatingPayment ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
-                <Text style={styles.updateButtonText}>Update Payment Details</Text>
+                <Text style={styles.updateButtonText}>עדכון פרטי תשלום</Text>
               )}
             </TouchableOpacity>
 
@@ -174,13 +178,15 @@ const PaymentSideMenu = ({
             ) : paymentSetupCompleted ? (
               <View style={styles.setupSection}>
                 <View style={styles.walletSection}>
-                  <Text style={styles.walletTitle}>Wallet Balance</Text>
+                  <Text style={styles.walletTitle}>יתרת ארנק</Text>
                   {walletAmount !== null ? (
                     <Text style={styles.walletAmount}>
                       ₪{walletAmount.toFixed(2)}
                     </Text>
                   ) : (
-                    <Text style={[styles.walletAmount, styles.loading]}>₪0.00</Text>
+                    <Text style={[styles.walletAmount, styles.loading]}>
+                      ₪0.00
+                    </Text>
                   )}
                 </View>
 
@@ -189,7 +195,7 @@ const PaymentSideMenu = ({
                   onPress={handleWithdrawToBank}
                 >
                   <Text style={styles.withdrawButtonText}>
-                    Withdraw to Bank Account
+                    משיכה לחשבון בנק
                   </Text>
                 </TouchableOpacity>
 
@@ -209,7 +215,7 @@ const PaymentSideMenu = ({
             ) : (
               <View style={styles.notSetupSection}>
                 <Text style={styles.notSetupText}>
-                  Complete payment setup to view wallet balance and withdraw funds.
+                  השלם את הגדרת התשלום כדי לצפות ביתרה ולמשוך כספים.
                 </Text>
               </View>
             )}
@@ -217,7 +223,7 @@ const PaymentSideMenu = ({
             <View style={styles.divider} />
 
             <TouchableOpacity style={styles.signoutButton} onPress={onSignOut}>
-              <Text style={styles.signoutButtonText}>Sign Out</Text>
+              <Text style={styles.signoutButtonText}>התנתקות</Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -230,13 +236,13 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: colors.modalOverlay,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   menu: {
     backgroundColor: colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
+    maxHeight: "90%",
   },
   header: {
     borderBottomWidth: 1,
@@ -244,29 +250,29 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 20,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.darkGray,
   },
   closeButton: {
     width: 32,
     height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeButtonText: {
     fontSize: 24,
     color: colors.gray,
   },
   profileSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 16,
   },
   avatar: {
@@ -280,13 +286,13 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: colors.primaryGradientStart,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 8,
   },
   avatarText: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.white,
   },
   email: {
@@ -300,17 +306,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryGradientStart,
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   updateButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   loadingState: {
     paddingVertical: 40,
-    alignItems: 'center',
+    alignItems: "center",
   },
   setupSection: {
     marginBottom: 16,
@@ -319,18 +325,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.lightGray,
     padding: 20,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   walletTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.darkGray,
     marginBottom: 8,
   },
   walletAmount: {
     fontSize: 32,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.primaryGradientStart,
   },
   loading: {
@@ -340,25 +346,25 @@ const styles = StyleSheet.create({
     backgroundColor: colors.blue,
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
   },
   withdrawButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   notificationsSection: {
     marginTop: 8,
   },
   notSetupSection: {
     paddingVertical: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   notSetupText: {
     fontSize: 14,
     color: colors.gray,
-    textAlign: 'center',
+    textAlign: "center",
     paddingHorizontal: 20,
   },
   divider: {
@@ -370,13 +376,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.red,
     paddingVertical: 14,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   signoutButtonText: {
     color: colors.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
 
