@@ -175,3 +175,4 @@ coverage/
 # Stylelint cache
 .stylelintcache
 .vercel
+.firebase/
