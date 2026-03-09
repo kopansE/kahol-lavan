@@ -4,7 +4,7 @@ export default {
   expo: {
     name: "כחולבן",
     slug: "kahol-lavan",
-    version: "1.0.0",
+    version: "1.1.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
