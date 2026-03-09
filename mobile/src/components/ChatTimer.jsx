@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 const ChatTimer = ({ startedAt, expiresAt, initialMinutes = 20, onExpire }) => {
+  const hasExpiredRef = useRef(false);
   const calculateTimeRemaining = () => {
     // If expiresAt is provided, use it directly (for extensions)
     if (expiresAt) {
@@ -35,7 +36,10 @@ const ChatTimer = ({ startedAt, expiresAt, initialMinutes = 20, onExpire }) => {
 
   useEffect(() => {
     if (timeRemaining <= 0) {
-      if (onExpire) onExpire();
+      if (onExpire && !hasExpiredRef.current) {
+        hasExpiredRef.current = true;
+        onExpire();
+      }
       return;
     }
 
@@ -59,30 +63,32 @@ const ChatTimer = ({ startedAt, expiresAt, initialMinutes = 20, onExpire }) => {
       end={{ x: 1, y: 1 }}
       style={styles.container}
     >
-      <Text style={styles.timeDisplay}>{formatTime(timeRemaining)}</Text>
       <Text style={styles.label}>נותר</Text>
+      <Text style={styles.timeDisplay}>{formatTime(timeRemaining)}</Text>
     </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
   },
   timeDisplay: {
-    fontSize: 48,
+    fontSize: 28,
     fontWeight: "700",
     color: "white",
     letterSpacing: 2,
-    marginBottom: 8,
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: "white",
-    letterSpacing: 3,
+    letterSpacing: 2,
     opacity: 0.95,
   },
 });

@@ -9,9 +9,9 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
 import { makeRedirectUri } from "expo-auth-session";
-import { supabase } from "../config/supabase";
-import { colors } from "../styles/colors";
-import { useToast } from "../contexts/ToastContext";
+import { supabase } from "../config/supabase.js";
+import { colors } from "../styles/colors.js";
+import { useToast } from "../contexts/ToastContext.jsx";
 import { Svg, Path } from "react-native-svg";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -50,11 +50,13 @@ const LoginScreen = () => {
         path: "auth/callback",
       });
 
+      console.log("Redirect URL:", redirectUrl);
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: redirectUrl,
-          skipBrowserRedirect: false,
+          skipBrowserRedirect: true,
         },
       });
 
@@ -66,18 +68,53 @@ const LoginScreen = () => {
           redirectUrl,
         );
 
-        if (result.type === "success" && result.url) {
-          // Extract the access_token and refresh_token from the URL
-          const url = new URL(result.url);
-          const access_token = url.searchParams.get("access_token");
-          const refresh_token = url.searchParams.get("refresh_token");
+        console.log("Auth result type:", result.type);
 
-          if (access_token && refresh_token) {
-            await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
+        if (result.type === "success" && result.url) {
+          const callbackUrl = result.url;
+          const hashIndex = callbackUrl.indexOf("#");
+          const queryIndex = callbackUrl.indexOf("?");
+
+          // Try hash fragment first (implicit flow)
+          if (hashIndex !== -1) {
+            const params = new URLSearchParams(
+              callbackUrl.substring(hashIndex + 1),
+            );
+            const access_token = params.get("access_token");
+            const refresh_token = params.get("refresh_token");
+
+            if (access_token && refresh_token) {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token,
+                refresh_token,
+              });
+              if (sessionError) throw sessionError;
+              return;
+            }
           }
+
+          // Try code from query params (PKCE flow — default in Supabase v2)
+          if (queryIndex !== -1) {
+            const endIndex = hashIndex !== -1 ? hashIndex : callbackUrl.length;
+            const params = new URLSearchParams(
+              callbackUrl.substring(queryIndex + 1, endIndex),
+            );
+            const code = params.get("code");
+
+            if (code) {
+              const { error: sessionError } =
+                await supabase.auth.exchangeCodeForSession(code);
+              if (sessionError) throw sessionError;
+              return;
+            }
+          }
+
+          console.warn(
+            "No auth tokens or code found in callback URL:",
+            callbackUrl,
+          );
+        } else {
+          console.log("Auth browser session dismissed:", result.type);
         }
       }
     } catch (error) {
@@ -116,7 +153,7 @@ const LoginScreen = () => {
           </View>
         </TouchableOpacity>
 
-        <Text style={styles.disclaimer}>אימות מאובטח מבית Supabase</Text>
+        <Text style={styles.disclaimer}>אימות מאובטח</Text>
       </View>
     </LinearGradient>
   );

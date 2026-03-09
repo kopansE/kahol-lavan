@@ -17,6 +17,7 @@ Kahol-Lavan (Hebrew for "Blue-White," referencing Israeli parking zones) is a co
 The project consists of three main components:
 
 ### 1. **Web Application** (`/frontend`)
+
 - **Framework**: React 18 with Vite
 - **UI Features**:
   - Interactive map with parking spot visualization (Leaflet/React-Leaflet)
@@ -28,6 +29,7 @@ The project consists of three main components:
   - Parking zone visualization
 
 ### 2. **Mobile Application** (`/mobile`)
+
 - **Framework**: React Native with Expo
 - **Platform Support**: iOS and Android
 - **Features**:
@@ -39,6 +41,7 @@ The project consists of three main components:
   - Integrated payment flow
 
 ### 3. **Backend** (`/supabase`)
+
 - **Platform**: Supabase (PostgreSQL + Edge Functions)
 - **Edge Functions** (Deno-based):
   - `save-pin`, `activate-pin`, `deactivate-pin` - Parking spot management
@@ -55,29 +58,34 @@ The project consists of three main components:
 ## 🚀 Key Features
 
 ### Parking Management
+
 - **Real-time Parking Pins**: See available parking spots on an interactive map
 - **Parking Zones**: Support for Israeli parking zones (Blue-White system)
 - **Status Tracking**: Multiple states - waiting, active, reserved, published
 - **Address Reverse Geocoding**: Automatic address resolution for parking locations
 
 ### Reservation System
+
 - **Instant Reservations**: Reserve available spots immediately
 - **Future Reservations**: Book spots that will be available later
 - **Cancellation with Refunds**: Cancel reservations with automatic refund processing
 - **Timer-based Approvals**: Automated expiration of pending reservation requests
 
 ### Communication
+
 - **Real-time Chat**: Integrated Stream Chat for user-to-user communication
 - **In-chat Actions**: Approve, cancel, or extend reservations directly in chat
 - **Notifications**: Real-time notification system for parking events
 
 ### Payment System
+
 - **Digital Wallet**: Integrated Rapyd payment processing
 - **Secure Transactions**: Handle payments and refunds automatically
 - **Payment Methods**: Support for multiple payment methods
 - **Transaction History**: Complete wallet transaction tracking
 
 ### User Experience
+
 - **Google OAuth**: Seamless authentication via Google Sign-In
 - **Car Information**: User profiles with vehicle details
 - **Search**: Address search with autocomplete
@@ -86,6 +94,7 @@ The project consists of three main components:
 ## 🛠️ Technology Stack
 
 ### Frontend Technologies
+
 - **React** 18.2.0 - Web UI framework
 - **React Native** 0.81.5 - Mobile framework
 - **Expo** ~54.0.31 - React Native tooling
@@ -95,12 +104,14 @@ The project consists of three main components:
 - **React Navigation** - Mobile navigation
 
 ### Backend Technologies
+
 - **Supabase** - Backend-as-a-Service
 - **PostgreSQL** - Database
 - **Deno** - Edge functions runtime
 - **QStash (Upstash)** - Task scheduling and queuing
 
 ### External Services
+
 - **Rapyd** - Payment processing
 - **Stream** - Chat infrastructure
 - **Google Maps API** - Geocoding and location services
@@ -141,43 +152,15 @@ kahol-lavan/
 ## 🔧 Setup & Installation
 
 ### Prerequisites
+
 - Node.js 18+ and npm
 - Supabase account
 - Google Cloud account (for Maps API and OAuth)
 - Stream account (for chat)
 - Rapyd account (for payments)
 
-### Environment Variables
-
-Create `.env` files in the respective directories:
-
-#### Frontend (`/frontend/.env`)
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_STREAM_API_KEY=your_stream_api_key
-```
-
-#### Mobile (`/mobile/.env`)
-```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-STREAM_API_KEY=your_stream_api_key
-GOOGLE_MAPS_API_KEY_IOS=your_ios_maps_key
-GOOGLE_MAPS_API_KEY_ANDROID=your_android_maps_key
-```
-
-#### Supabase (`/supabase/.env`)
-See the existing `.env` file for required variables including:
-- Supabase credentials
-- Rapyd API keys
-- Stream credentials
-- Google Maps API key
-- QStash tokens
-
-### Installation
-
 #### Web Frontend
+
 ```bash
 cd frontend
 npm install
@@ -185,6 +168,7 @@ npm run dev
 ```
 
 #### Mobile App
+
 ```bash
 cd mobile
 npm install
@@ -192,6 +176,7 @@ npm start
 ```
 
 #### Supabase Functions
+
 ```bash
 # Install Supabase CLI
 npm install -g supabase
@@ -206,6 +191,7 @@ supabase functions deploy
 ## 🎯 How It Works
 
 ### For Parking Spot Owners:
+
 1. **Mark Your Spot**: Click on the map where you're parked
 2. **Activate**: Confirm when you're ready to leave
 3. **Get Notified**: Receive requests from users wanting your spot
@@ -213,6 +199,7 @@ supabase functions deploy
 5. **Complete**: Approve the transfer and receive payment
 
 ### For Parking Seekers:
+
 1. **Browse Map**: See available parking spots in real-time
 2. **Reserve**: Click on a spot to reserve it
 3. **Chat**: Coordinate details with the spot owner
@@ -220,6 +207,7 @@ supabase functions deploy
 5. **Navigate**: Get directions to your reserved spot
 
 ### Future Scheduling:
+
 - **Schedule Departure**: Set a future time when you'll leave
 - **Pre-book**: Others can reserve your spot in advance
 - **Automated Handoff**: System manages the transition automatically
@@ -235,6 +223,7 @@ supabase functions deploy
 ## 🗺️ Parking Zones
 
 The system supports Israeli parking zones (stored in `parking_zones.json`):
+
 - **Blue-White zones**: Paid parking with time restrictions
 - **Zone detection**: Automatic determination based on GPS coordinates
 - **Pricing**: Zone-based pricing calculation
@@ -244,12 +233,14 @@ The system supports Israeli parking zones (stored in `parking_zones.json`):
 The project includes testing setup:
 
 **Frontend Testing:**
+
 ```bash
 cd frontend
 npm run test
 ```
 
 Test utilities configured:
+
 - Vitest
 - React Testing Library
 - MSW (Mock Service Worker) for API mocking
@@ -257,11 +248,13 @@ Test utilities configured:
 ## 📱 Mobile App Configuration
 
 ### iOS
+
 - Bundle ID: `com.kahollavan.app`
 - Requires location permissions
 - Google Maps API key configured in `Info.plist`
 
 ### Android
+
 - Package: `com.kahollavan.app`
 - Permissions: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`
 - Google Maps API key in app config
@@ -277,6 +270,7 @@ Test utilities configured:
 ## 🚧 Database Schema
 
 Key tables:
+
 - `pins` - Parking spot locations and status
 - `user_profiles` - Extended user information and car details
 - `scheduled_leaves` - Future parking availability
@@ -287,6 +281,7 @@ Key tables:
 ## 🔄 Real-time Features
 
 The application uses:
+
 - **Supabase Realtime**: Database change subscriptions
 - **Stream Chat**: Real-time messaging
 - **QStash**: Scheduled job execution
@@ -295,13 +290,16 @@ The application uses:
 ## 🌐 Deployment
 
 ### Frontend
+
 Configured for deployment to Vercel (see APP_URL in `.env`)
 
 ### Mobile
+
 - Build with EAS Build (Expo Application Services)
 - Deploy to App Store and Google Play
 
 ### Backend
+
 - Supabase functions auto-deploy
 - PostgreSQL hosted on Supabase cloud
 

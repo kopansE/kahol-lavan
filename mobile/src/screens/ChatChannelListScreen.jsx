@@ -129,7 +129,8 @@ const ChatChannelListScreen = ({ navigation }) => {
         style={styles.channelItem}
         onPress={() =>
           navigation.navigate("ChatThread", {
-            channel: channel,
+            channelType: channelData.stream_channel_type,
+            channelId: channelData.stream_channel_id,
             channelData: channelData,
           })
         }

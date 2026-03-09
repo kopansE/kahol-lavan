@@ -1,5 +1,13 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  Platform,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useToast } from "../contexts/ToastContext";
 import {
   Chat,
@@ -20,10 +28,11 @@ import {
 } from "../utils/edgeFunctions";
 
 const ChatThreadScreen = ({ route, navigation }) => {
-  const { channel, channelData } = route.params;
+  const { channelType, channelId, channelData } = route.params;
   const { chatClient } = useStreamChat();
   const { showToast } = useToast();
   const otherUser = channelData.other_user;
+  const [channel, setChannel] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [expiresAt, setExpiresAt] = useState(channelData?.expires_at || null);
   const [approvalState, setApprovalState] = useState({
@@ -31,6 +40,19 @@ const ChatThreadScreen = ({ route, navigation }) => {
     otherUserApproved: false,
     bothApproved: false,
   });
+
+  const handleTimerExpire = useCallback(() => {
+    showToast("הזמן פג. זמן ההזמנה הסתיים.");
+  }, [showToast]);
+
+  useEffect(() => {
+    if (!chatClient || !channelId || !channelType) return;
+    const streamChannel = chatClient.channel(channelType, channelId);
+    streamChannel
+      .watch()
+      .then(() => setChannel(streamChannel))
+      .catch((err) => console.error("Failed to watch channel:", err));
+  }, [chatClient, channelId, channelType]);
 
   if (!chatClient || !channel) {
     return null;
@@ -47,10 +69,6 @@ const ChatThreadScreen = ({ route, navigation }) => {
     channelData?.type === "future_reservation" &&
     channelData?.status === "future_reservation";
   const chatStatus = channelData?.status || "unknown";
-
-  const handleTimerExpire = () => {
-    showToast("הזמן פג. זמן ההזמנה הסתיים.");
-  };
 
   const handleExtension = async () => {
     if (isProcessing) return;
@@ -183,103 +201,107 @@ const ChatThreadScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      {!isFutureReservation && (
-        <ChatTimer
-          startedAt={channelData?.started_at}
-          expiresAt={expiresAt}
-          initialMinutes={20}
-          onExpire={handleTimerExpire}
-        />
-      )}
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        {isActive && (
+          <ChatTimer
+            startedAt={channelData?.started_at}
+            expiresAt={expiresAt}
+            initialMinutes={20}
+            onExpire={handleTimerExpire}
+          />
+        )}
 
-      {isFutureReservation && channelData?.scheduled_for && (
-        <View style={styles.futureReservationBanner}>
-          <Text style={styles.futureReservationBannerText}>
-            הזמנה עתידית - מופעלת{" "}
-            {new Date(channelData.scheduled_for).toLocaleString("he-IL")}
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>{otherUser?.full_name || "משתמש"}</Text>
-          {otherUser && (
-            <Text style={styles.userDetails}>
-              {otherUser.car_make && otherUser.car_model && (
-                <>
-                  {otherUser.car_make} {otherUser.car_model}
-                  {otherUser.car_color && ` • ${otherUser.car_color}`}
-                  {otherUser.car_license_plate &&
-                    ` • ${otherUser.car_license_plate}`}
-                </>
-              )}
+        {isFutureReservation && channelData?.scheduled_for && (
+          <View style={styles.futureReservationBanner}>
+            <Text style={styles.futureReservationBannerText}>
+              הזמנה עתידית - מופעלת{" "}
+              {new Date(channelData.scheduled_for).toLocaleString("he-IL")}
             </Text>
-          )}
-        </View>
-      </View>
+          </View>
+        )}
 
-      <OverlayProvider>
-        <Chat client={chatClient} style={customChatTheme}>
-          <Channel channel={channel}>
-            <View style={styles.chatContainer}>
-              <MessageList />
-              {isActive || isFutureReservation ? (
-                <MessageInput />
-              ) : (
-                <View style={styles.inactiveMessageBar}>
-                  <Text style={styles.inactiveMessageText}>
-                    הצ׳אט {chatStatus}. לא ניתן לשלוח הודעות חדשות.
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.reportUserButton}
-                    onPress={() =>
-                      navigation.navigate("Report", {
-                        reportedUserId: otherUser?.id,
-                        reportedUserName: otherUser?.full_name,
-                        transferRequestId: channelData?.transfer_request_id,
-                      })
-                    }
-                  >
-                    <Text style={styles.reportUserButtonText}>
-                      דווח על משתמש
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </Channel>
-        </Chat>
-      </OverlayProvider>
-
-      {isActive && (
-        <ChatActionButtons
-          onApprove={handleApprove}
-          onCancel={handleCancel}
-          onExtension={handleExtension}
-          isProcessing={isProcessing}
-          approvalState={approvalState}
-        />
-      )}
-
-      {isFutureReservation && (
-        <View style={styles.futureReservationActions}>
-          <TouchableOpacity
-            style={styles.cancelFutureButton}
-            onPress={handleCancelFutureReservation}
-            disabled={isProcessing}
-          >
-            <Text style={styles.cancelFutureButtonText}>
-              {isProcessing ? "מבטל..." : "בטל הזמנה עתידית"}
-            </Text>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={styles.backButton}>←</Text>
           </TouchableOpacity>
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>
+              {otherUser?.full_name || "משתמש"}
+            </Text>
+            {otherUser && (
+              <Text style={styles.userDetails}>
+                {otherUser.car_make && otherUser.car_model && (
+                  <>
+                    {otherUser.car_make} {otherUser.car_model}
+                    {otherUser.car_color && ` • ${otherUser.car_color}`}
+                    {otherUser.car_license_plate &&
+                      ` • ${otherUser.car_license_plate}`}
+                  </>
+                )}
+              </Text>
+            )}
+          </View>
         </View>
-      )}
-    </View>
+
+        <View style={styles.streamChatWrapper}>
+          <OverlayProvider>
+            <Chat client={chatClient} style={customChatTheme}>
+              <Channel channel={channel} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : undefined}>
+                <View style={styles.chatContainer}>
+                <View style={styles.messageListWrapper}>
+                  <MessageList />
+                </View>
+                {isActive || isFutureReservation ? (
+                  <MessageInput />
+                ) : (
+                  <View style={styles.inactiveMessageBar}>
+                    <Text style={styles.inactiveMessageText}>
+                      הצ׳אט {chatStatus}. לא ניתן לשלוח הודעות חדשות.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.reportUserButton}
+                      onPress={() =>
+                        navigation.navigate("Report", {
+                          reportedUserId: otherUser?.id,
+                          reportedUserName: otherUser?.full_name,
+                          transferRequestId: channelData?.transfer_request_id,
+                        })
+                      }
+                    >
+                      <Text style={styles.reportUserButtonText}>
+                        דווח על משתמש
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {isActive && (
+                  <ChatActionButtons
+                    onApprove={handleApprove}
+                    onCancel={handleCancel}
+                    onExtension={handleExtension}
+                    isProcessing={isProcessing}
+                    approvalState={approvalState}
+                  />
+                )}
+                {isFutureReservation && (
+                  <View style={styles.futureReservationActions}>
+                    <TouchableOpacity
+                      style={styles.cancelFutureButton}
+                      onPress={handleCancelFutureReservation}
+                      disabled={isProcessing}
+                    >
+                      <Text style={styles.cancelFutureButtonText}>
+                        {isProcessing ? "מבטל..." : "בטל הזמנה עתידית"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+              </Channel>
+            </Chat>
+          </OverlayProvider>
+        </View>
+    </SafeAreaView>
   );
 };
 
@@ -287,6 +309,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f9f9f9",
+  },
+  streamChatWrapper: {
+    flex: 1,
   },
   header: {
     flexDirection: "row",
@@ -315,6 +340,9 @@ const styles = StyleSheet.create({
     color: "#666",
   },
   chatContainer: {
+    flex: 1,
+  },
+  messageListWrapper: {
     flex: 1,
   },
   inactiveMessageBar: {

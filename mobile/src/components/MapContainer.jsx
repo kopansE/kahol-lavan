@@ -25,6 +25,7 @@ const MapContainer = ({
   searchResult,
 }) => {
   const mapRef = useRef(null);
+  const markerPressedRef = useRef(false);
   const [isGpsLoading, setIsGpsLoading] = useState(false);
 
   // Handle search result navigation
@@ -90,7 +91,15 @@ const MapContainer = ({
     }
   }, []);
 
+  const handleMarkerPress = useCallback(() => {
+    markerPressedRef.current = true;
+    setTimeout(() => {
+      markerPressedRef.current = false;
+    }, 500);
+  }, []);
+
   const handleMapPress = (e) => {
+    if (markerPressedRef.current) return;
     if (onMapPress && e.nativeEvent.coordinate) {
       onMapPress(e.nativeEvent.coordinate);
     }
@@ -144,6 +153,7 @@ const MapContainer = ({
             }}
             pinColor={colors.red}
             onPress={() => {
+              handleMarkerPress();
               if (onOwnPinClick) {
                 onOwnPinClick(userOwnPin);
               }
@@ -162,6 +172,7 @@ const MapContainer = ({
               }}
               pinColor={colors.blue}
               onPress={() => {
+                handleMarkerPress();
                 if (onPinClick) {
                   onPinClick(pin);
                 }
@@ -182,6 +193,7 @@ const MapContainer = ({
               title="החניה שהזמנת"
               description="לחץ לצפייה בפרטים"
               onPress={() => {
+                handleMarkerPress();
                 if (onPinClick) {
                   onPinClick(pin, "reserved");
                 }
@@ -202,6 +214,7 @@ const MapContainer = ({
               title="חניה עתידית"
               description="לחץ לתזמון"
               onPress={() => {
+                handleMarkerPress();
                 if (onPublishedPinClick) {
                   onPublishedPinClick(pin);
                 }

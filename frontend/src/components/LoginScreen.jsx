@@ -30,7 +30,7 @@ const LoginScreen = ({ onGoogleSignIn }) => {
           </svg>
           המשך עם Google
         </button>
-        <p className="signin-disclaimer">אימות מאובטח מבית Supabase</p>
+        <p className="signin-disclaimer">אימות מאובטח</p>
       </div>
     </div>
   );

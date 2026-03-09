@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useToast } from "../contexts/ToastContext";
 import * as Location from "expo-location";
 import * as Linking from "expo-linking";
@@ -65,6 +66,16 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
       getUserLocation();
     }
   }, [user]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        loadUserOwnPin(user.id);
+        loadOtherUsersPins(user.id);
+        loadPendingNotifications();
+      }
+    }, [user]),
+  );
 
   useEffect(() => {
     if (!user) return;

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Kahol-Lavan",
+    "name": "כחולבן",
     "slug": "kahol-lavan",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,12 +9,12 @@
     "newArchEnabled": true,
     "scheme": "kahollavan",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/loading_image.png",
       "resizeMode": "contain",
       "backgroundColor": "#667eea"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.kahollavan.app",
       "config": {
         "googleMapsApiKey": "GOOGLE_MAPS_API_KEY_IOS"
@@ -31,7 +31,9 @@
       "package": "com.kahollavan.app",
       "permissions": [
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -53,8 +55,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "cf10e21d-9f18-4b9c-a2bc-313c1bde0568"
       }
-    }
+    },
+    "owner": "kaholavan"
   }
 }
