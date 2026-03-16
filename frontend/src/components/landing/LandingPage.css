@@ -811,7 +811,7 @@
    ═══════════════════════════════════════════ */
 @media (max-width: 960px) {
   .landing-hero-inner {
-    flex-direction: column;
+    flex-direction: column-reverse;
     text-align: center;
     gap: 40px;
   }
