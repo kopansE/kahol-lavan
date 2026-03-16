@@ -114,23 +114,14 @@ const PaymentSideMenu = ({
     // Unlike openBrowserAsync (SFSafariViewController), it works without a user
     // gesture and does NOT fire a system Linking event — so we handle
     // completePaymentSetup here instead of relying on MainScreen's deep link handler.
-    console.log("[Payment] Full setup result:", JSON.stringify(setupResult));
-    console.log("[Payment] Opening auth session for:", setupResult.hosted_page_url);
-    console.log("[Payment] Redirect URLs registered with Rapyd:", {
-      complete: setupResult._debug_complete_url,
-      cancel: setupResult._debug_cancel_url,
-      error: setupResult._debug_error_url,
-    });
     const sessionResult = await WebBrowser.openAuthSessionAsync(
       setupResult.hosted_page_url,
       "kahollavan://",
       { preferEphemeralSession: true }
     );
-    console.log("[Payment] Session result:", JSON.stringify(sessionResult));
 
     if (sessionResult.type === "success") {
       const parsed = Linking.parse(sessionResult.url);
-      console.log("[Payment] Parsed URL:", JSON.stringify(parsed));
       const paymentStatus = parsed.queryParams?.payment_setup;
 
       if (paymentStatus === "complete") {

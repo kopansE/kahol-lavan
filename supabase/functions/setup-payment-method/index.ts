@@ -310,10 +310,6 @@ serve(async (req) => {
       hosted_page_url: checkoutResponse.data.redirect_url,
       checkout_id: checkoutResponse.data.id,
       customer_id: customerId || null,
-      // debug: URLs actually registered with Rapyd
-      _debug_complete_url: completeCheckoutUrl,
-      _debug_cancel_url: cancelCheckoutUrl,
-      _debug_error_url: errorPaymentUrl,
     });
   } catch (error) {
     console.error("❌ Error:", error.message);

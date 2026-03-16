@@ -19,10 +19,6 @@ serve(async (req) => {
     const url = new URL(req.url);
     const target = url.searchParams.get("target");
     const paymentStatus = url.searchParams.get("payment_setup") || "complete";
-    console.log("[handle-redirect] Incoming URL:", req.url);
-    console.log("[handle-redirect] target param:", target);
-    console.log("[handle-redirect] payment_setup param:", paymentStatus);
-    console.log("[handle-redirect] User-Agent:", req.headers.get("user-agent"));
 
     // If target is a valid HTTPS URL, do a standard 302 redirect (web flow)
     if (target && target.startsWith("https://")) {

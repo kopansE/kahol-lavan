@@ -100,22 +100,14 @@ const WalletScreen = ({ navigation, route }) => {
     const setupResult = await setupPaymentMethod(redirectBaseUrl, nameOverride);
     if (!setupResult.hosted_page_url) return;
 
-    console.log("[Payment] Full setup result:", JSON.stringify(setupResult));
-    console.log("[Payment] Redirect URLs registered with Rapyd:", {
-      complete: setupResult._debug_complete_url,
-      cancel: setupResult._debug_cancel_url,
-      error: setupResult._debug_error_url,
-    });
     const sessionResult = await WebBrowser.openAuthSessionAsync(
       setupResult.hosted_page_url,
       "kahollavan://",
       { preferEphemeralSession: true }
     );
-    console.log("[Payment] Session result:", JSON.stringify(sessionResult));
 
     if (sessionResult.type === "success") {
       const parsed = Linking.parse(sessionResult.url);
-      console.log("[Payment] Parsed URL:", JSON.stringify(parsed));
       const paymentStatus = parsed.queryParams?.payment_setup;
 
       if (paymentStatus === "complete") {
