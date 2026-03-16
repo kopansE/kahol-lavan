@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(grep -n \"\\\\\"expo-apple-authentication\\\\\"\" \"C:/Users/evyat/OneDrive/Desktop/kahol-lavan/mobile/package.json\" || echo \"not found\")",
-      "Bash(cd \"C:/Users/evyat/OneDrive/Desktop/kahol-lavan/mobile\" && npx expo install expo-apple-authentication 2>&1 | tail -5)"
+      "Bash(cd \"C:/Users/evyat/OneDrive/Desktop/kahol-lavan/mobile\" && npx expo install expo-apple-authentication 2>&1 | tail -5)",
+      "Bash(cd:*)"
     ]
   }
 }

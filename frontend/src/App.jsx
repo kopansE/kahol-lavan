@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import LandingPage from "./components/landing/LandingPage";
 import MapContainer from "./components/MapContainer";
 import LoadingSpinner from "./components/LoadingSpinner";
 import PinConfirmationModal from "./components/PinConfirmationModal";
@@ -21,6 +22,7 @@ import { getParkingZone } from "./utils/parkingZoneUtils";
 import "./App.css";
 
 function App() {
+  const [showLanding, setShowLanding] = useState(true);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState(null);
@@ -752,6 +754,10 @@ function App() {
   const handleClearSearch = () => {
     setSearchResult(null);
   };
+
+  if (showLanding) {
+    return <LandingPage onOpenApp={() => setShowLanding(false)} />;
+  }
 
   if (loading) {
     return <LoadingSpinner />;
