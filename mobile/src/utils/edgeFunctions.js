@@ -214,10 +214,11 @@ export const getWalletBalance = async () => {
 };
 
 // Payment operations
-export const setupPaymentMethod = async (redirectBaseUrl) => {
-  return callEdgeFunction('setup-payment-method', {
-    body: { redirect_base_url: redirectBaseUrl },
-  });
+export const setupPaymentMethod = async (redirectBaseUrl, { firstName, lastName } = {}) => {
+  const body = { redirect_base_url: redirectBaseUrl };
+  if (firstName) body.first_name = firstName;
+  if (lastName) body.last_name = lastName;
+  return callEdgeFunction('setup-payment-method', { body });
 };
 
 export const completePaymentSetup = async () => {
@@ -230,6 +231,12 @@ export const completePaymentSetup = async () => {
 export const updateUserCarData = async (carData) => {
   return callEdgeFunction('update-user-car-data', {
     body: carData,
+  });
+};
+
+export const deleteAccount = async () => {
+  return callEdgeFunction('delete-account', {
+    method: 'POST',
   });
 };
 

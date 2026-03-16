@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
 import MapContainer from "./components/MapContainer";
 import LoadingSpinner from "./components/LoadingSpinner";
-import LoginScreen from "./components/LoginScreen";
 import PinConfirmationModal from "./components/PinConfirmationModal";
 import LeavingParkingButton from "./components/LeavingParkingButton";
 import NotLeavingParkingButton from "./components/NotLeavingParkingButton";
@@ -495,7 +494,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (user && navigator.geolocation) {
+    if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
@@ -512,7 +511,22 @@ function App() {
         },
       );
     }
-  }, [user]);
+  }, []);
+
+  const handleAppleSignIn = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "apple",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error signing in with Apple:", error.message);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -544,7 +558,11 @@ function App() {
   };
 
   const handleMapClick = async (latlng) => {
-    // Calculate parking zone
+    if (!user) {
+      showToast("אנא התחברו כדי לסמן חניה");
+      return;
+    }
+
     const parkingZoneInfo = getParkingZone(latlng.lat, latlng.lng);
 
     const newPin = {
@@ -739,13 +757,10 @@ function App() {
     return <LoadingSpinner />;
   }
 
-  if (!user) {
-    return <LoginScreen onGoogleSignIn={handleGoogleSignIn} />;
-  }
   return (
     <StreamChatProvider user={user}>
-      <div className={`app ${!userDataComplete ? "app-with-banner" : ""}`}>
-        {!userDataComplete && (
+      <div className={`app ${user && !userDataComplete ? "app-with-banner" : ""}`}>
+        {user && !userDataComplete && (
           <CarDataBanner onClickBanner={handleCarDataBannerClick} />
         )}
         <button
@@ -784,19 +799,19 @@ function App() {
           onSearchResult={handleSearchResult}
           onClearSearch={handleClearSearch}
         />
-        {userOwnPin && userOwnPin.status === "waiting" && (
+        {user && userOwnPin && userOwnPin.status === "waiting" && (
           <LeavingParkingButton
             waitingPin={userOwnPin}
             onActivate={activateWaitingPin}
           />
         )}
-        {userOwnPin && userOwnPin.status === "active" && (
+        {user && userOwnPin && userOwnPin.status === "active" && (
           <NotLeavingParkingButton
             activePin={userOwnPin}
             onDeactivate={deactivateActivePin}
           />
         )}
-        {userOwnPin && userOwnPin.status === "reserved" && (
+        {user && userOwnPin && userOwnPin.status === "reserved" && (
           <ReservedParkingButton
             reservedPin={userOwnPin}
             reservedByName={reservedByName}
@@ -805,7 +820,7 @@ function App() {
             }
           />
         )}
-        {showConfirmModal && (
+        {user && showConfirmModal && (
           <PinConfirmationModal
             address={pinAddress}
             parkingZone={pendingPin?.parking_zone}
@@ -819,17 +834,19 @@ function App() {
           onClose={() => setIsPaymentMenuOpen(false)}
           user={user}
           onSignOut={handleSignOut}
+          onSignIn={handleGoogleSignIn}
+          onAppleSignIn={handleAppleSignIn}
           userOwnPin={userOwnPin}
           onShowToast={showToast}
         />
-        {selectedParking && (
+        {user && selectedParking && (
           <ParkingDetailModal
             parking={selectedParking}
             onClose={handleCloseParkingDetail}
             userReservedPins={userReservedPins}
           />
         )}
-        {selectedPublishedParking && (
+        {user && selectedPublishedParking && (
           <PublishedParkingDetailModal
             parking={selectedPublishedParking}
             onClose={handleClosePublishedParkingDetail}
@@ -838,26 +855,26 @@ function App() {
             currentUserId={user?.id}
           />
         )}
-        {selectedReservedParking && (
+        {user && selectedReservedParking && (
           <ReservedParkingDetailModal
             parking={selectedReservedParking}
             onClose={handleCloseReservedParkingDetail}
           />
         )}
-        {selectedOwnParking && (
+        {user && selectedOwnParking && (
           <OwnParkingDetailModal
             parking={selectedOwnParking}
             onClose={handleCloseOwnParkingDetail}
           />
         )}
-        {showCancelModal && (
+        {user && showCancelModal && (
           <CancelReservationModal
             onConfirm={handleConfirmCancelReservation}
             onClose={handleCloseCancelModal}
             userType={cancelUserType}
           />
         )}
-        {showCarDataModal && (
+        {user && showCarDataModal && (
           <CarDataFormModal
             onClose={handleCarDataModalClose}
             onSuccess={handleCarDataSuccess}

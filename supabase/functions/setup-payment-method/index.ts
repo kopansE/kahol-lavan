@@ -53,27 +53,44 @@ serve(async (req) => {
       walletId = null;
     }
 
+    // Resolve user name — prefer explicit override from request body,
+    // then try various auth metadata fields, then email prefix, then fallback.
+    const rawFirstName =
+      requestBody?.first_name ||
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.user_metadata?.given_name ||
+      user.email?.split("@")[0] ||
+      "";
+    const firstName = String(rawFirstName)
+      .replace(/[^a-zA-Z\u0590-\u05FF\s'-]/g, "")
+      .trim();
+    const lastName = requestBody?.last_name || "";
+
+    if (!firstName) {
+      return errorResponse("NAME_REQUIRED", 400);
+    }
+
+    const phoneNumber =
+      user.user_metadata?.phone_number || "+972500000000";
+
     // Step 1: Create e-wallet if it doesn't exist
     if (!walletId) {
       console.log("📱 Creating e-wallet for user...");
       try {
-        const firstName =
-          user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
-        const phoneNumber = user.user_metadata?.phone_number || "+972500000000";
-
         const walletResponse = await makeRapydRequest("post", "/v1/ewallets", {
           first_name: firstName,
-          last_name: "",
+          last_name: lastName,
           type: "person",
           contact: {
             phone_number: phoneNumber,
             email: user.email,
             first_name: firstName,
-            last_name: "",
+            last_name: lastName,
             contact_type: "personal",
-            country: "IL", // Israel
+            country: "IL",
             address: {
-              name: firstName,
+              name: `${firstName} ${lastName}`.trim(),
               line_1: "Tel Aviv",
               city: "Tel Aviv",
               state: "IL",
@@ -115,10 +132,7 @@ serve(async (req) => {
           "post",
           "/v1/customers",
           {
-            name:
-              user.user_metadata?.full_name ||
-              user.email?.split("@")[0] ||
-              "User",
+            name: firstName,
             email: user.email,
             ewallet: walletId,
           }
@@ -163,45 +177,34 @@ serve(async (req) => {
     console.log("Using App URL for Rapyd redirect:", appUrl);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-
-    // Check if we need to use middleman redirect for local/ngrok URLs
-    const isLocalOrNgrok =
-      !appUrl ||
-      appUrl.includes("localhost") ||
-      appUrl.includes("127.0.0.1") ||
-      appUrl.includes("ngrok") ||
-      appUrl.startsWith("http://") ||
-      !appUrl.startsWith("https://");
-
-    console.log(
-      "URL detection - appUrl:",
-      appUrl,
-      "isLocalOrNgrok:",
-      isLocalOrNgrok
-    );
+    const middlemanUrl = `${supabaseUrl}/functions/v1/handle-redirect`;
+    const isProductionHttps =
+      appUrl.startsWith("https://") && !appUrl.includes("ngrok");
 
     let completeCheckoutUrl: string;
     let errorPaymentUrl: string;
     let cancelCheckoutUrl: string;
 
-    if (isLocalOrNgrok) {
-      // Use middleman redirect for local/dev URLs
-      const middlemanUrl = `${supabaseUrl}/functions/v1/handle-redirect`;
-      console.log(
-        "Using Middleman Redirect (local/dev detected):",
-        middlemanUrl
-      );
-
+    if (isProductionHttps) {
+      // Production web — redirect straight to the app URL
+      console.log("Using Direct Redirect (production):", appUrl);
+      completeCheckoutUrl = `${appUrl}?payment_setup=complete`;
+      errorPaymentUrl = `${appUrl}?payment_setup=error`;
+      cancelCheckoutUrl = `${appUrl}?payment_setup=cancelled`;
+    } else if (appUrl.startsWith("https://") || appUrl.startsWith("http://")) {
+      // Dev web (ngrok / localhost) — use middleman with target
+      console.log("Using Middleman Redirect (dev web):", middlemanUrl);
       const encodedTarget = encodeURIComponent(appUrl);
       completeCheckoutUrl = `${middlemanUrl}?payment_setup=complete&target=${encodedTarget}`;
       errorPaymentUrl = `${middlemanUrl}?payment_setup=error&target=${encodedTarget}`;
       cancelCheckoutUrl = `${middlemanUrl}?payment_setup=cancelled&target=${encodedTarget}`;
     } else {
-      // Production URLs - use direct redirect
-      console.log("Using Direct Redirect (production):", appUrl);
-      completeCheckoutUrl = `${appUrl}?payment_setup=complete`;
-      errorPaymentUrl = `${appUrl}?payment_setup=error`;
-      cancelCheckoutUrl = `${appUrl}?payment_setup=cancelled`;
+      // Mobile — use middleman as a landing page (no target param).
+      // The mobile app polls for completion; user just closes the browser.
+      console.log("Using Middleman Landing Page (mobile):", middlemanUrl);
+      completeCheckoutUrl = `${middlemanUrl}?payment_setup=complete`;
+      errorPaymentUrl = `${middlemanUrl}?payment_setup=error`;
+      cancelCheckoutUrl = `${middlemanUrl}?payment_setup=cancelled`;
     }
 
     // Ensure all URLs are HTTPS (Rapyd requirement)
@@ -261,7 +264,7 @@ serve(async (req) => {
       // If URL error and we're not already using middleman, try using middleman as fallback
       if (
         error.message.includes("ERROR_HOSTED_PAGE_INVALID_URL") &&
-        !isLocalOrNgrok
+        isProductionHttps
       ) {
         console.warn(
           "URL rejected by Rapyd. Falling back to middleman redirect."
@@ -307,6 +310,10 @@ serve(async (req) => {
       hosted_page_url: checkoutResponse.data.redirect_url,
       checkout_id: checkoutResponse.data.id,
       customer_id: customerId || null,
+      // debug: URLs actually registered with Rapyd
+      _debug_complete_url: completeCheckoutUrl,
+      _debug_cancel_url: cancelCheckoutUrl,
+      _debug_error_url: errorPaymentUrl,
     });
   } catch (error) {
     console.error("❌ Error:", error.message);

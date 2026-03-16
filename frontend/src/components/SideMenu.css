@@ -229,6 +229,42 @@
   background: #fff5f5;
 }
 
+/* Sign In */
+.signin-item {
+  margin-top: auto;
+}
+
+.signin-item .menu-icon {
+  color: #667eea;
+}
+
+.signin-item .menu-label {
+  color: #667eea;
+  font-weight: 600;
+}
+
+.signin-item:hover {
+  background: #f0f2ff;
+}
+
+.apple-signin-item {
+  margin-top: 4px;
+  color: #000;
+}
+
+.apple-signin-item .menu-icon {
+  color: #000;
+}
+
+.apple-signin-item .menu-label {
+  color: #000;
+  font-weight: 600;
+}
+
+.apple-signin-item:hover {
+  background: #f0f0f0;
+}
+
 /* Page Header (for sub-pages) */
 .page-header {
   display: flex;

@@ -91,6 +91,34 @@
   height: 20px;
 }
 
+.apple-signin-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #000;
+  color: #fff;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  margin: 12px auto 0;
+}
+
+.apple-signin-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  background: #1a1a1a;
+}
+
+.apple-icon {
+  width: 16px;
+  height: 20px;
+}
+
 .signin-disclaimer {
   margin-top: 24px;
   font-size: 12px;

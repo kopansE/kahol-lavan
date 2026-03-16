@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../supabaseClient";
 import { useToast } from "../contexts/ToastContext";
 import "./SettingsPage.css";
@@ -15,6 +15,8 @@ const SettingsPage = ({ user, onBack, onClose }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -106,6 +108,43 @@ const SettingsPage = ({ user, onBack, onClose }) => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const handleDeleteAccount = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
+
+      if (sessionError || !sessionData?.session?.access_token) {
+        showToast("אנא התחבר כדי למחוק את החשבון.");
+        setIsDeleting(false);
+        return;
+      }
+
+      const token = sessionData.session.access_token;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to delete account");
+      }
+
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      showToast("מחיקת החשבון נכשלה. אנא נסה שוב.");
+      setIsDeleting(false);
+    }
+  }, [showToast]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -278,6 +317,53 @@ const SettingsPage = ({ user, onBack, onClose }) => {
                   ? "נשמר!"
                   : "שמור שינויים"}
             </button>
+
+            <div className="delete-account-section">
+              <div className="delete-divider"></div>
+              <div className="section-header">
+                <span className="section-icon">⚠️</span>
+                <h3 className="section-title delete-title">אזור מסוכן</h3>
+              </div>
+              <p className="section-description">
+                מחיקת החשבון היא פעולה בלתי הפיכה. כל הנתונים שלך יימחקו
+                לצמיתות.
+              </p>
+              {!showDeleteConfirm ? (
+                <button
+                  type="button"
+                  className="delete-account-button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isDeleting}
+                >
+                  מחק חשבון
+                </button>
+              ) : (
+                <div className="delete-confirm">
+                  <p className="delete-confirm-text">
+                    האם את/ה בטוח/ה? כל הנתונים, הפינים, הצ׳אטים וההיסטוריה
+                    יימחקו לצמיתות.
+                  </p>
+                  <div className="delete-confirm-buttons">
+                    <button
+                      type="button"
+                      className="delete-confirm-yes"
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? "מוחק..." : "כן, מחק את החשבון"}
+                    </button>
+                    <button
+                      type="button"
+                      className="delete-confirm-no"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      disabled={isDeleting}
+                    >
+                      ביטול
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </form>
         )}
       </div>

@@ -7,16 +7,26 @@ import ReportsPage from "./ReportsPage";
 import ScheduleLeavePage from "./ScheduleLeavePage";
 import "./SideMenu.css";
 
+const GUEST_MESSAGES = {
+  wallet: "אנא התחברו כדי לצפות בארנק",
+  chats: "אנא התחברו כדי לצפות בצ׳אטים",
+  scheduleleave: "אנא התחברו כדי לתזמן יציאה",
+  reports: "אנא התחברו כדי לצפות בדיווחים",
+  settings: "אנא התחברו כדי לצפות בהגדרות",
+};
+
 const SideMenu = ({
   isOpen,
   onClose,
   user,
   onSignOut,
+  onSignIn,
+  onAppleSignIn,
   userOwnPin,
   onShowToast,
 }) => {
   const { chatClient, isReady } = useStreamChat();
-  const [currentPage, setCurrentPage] = useState("menu"); // 'menu', 'wallet', 'chats', 'settings', 'reports', 'scheduleleave'
+  const [currentPage, setCurrentPage] = useState("menu");
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -38,7 +48,6 @@ const SideMenu = ({
     };
   }, [chatClient, isReady]);
 
-  // Reset to menu when sidebar closes
   useEffect(() => {
     if (!isOpen) {
       setCurrentPage("menu");
@@ -50,13 +59,17 @@ const SideMenu = ({
   };
 
   const handleMenuItemClick = (page) => {
+    if (!user) {
+      onShowToast(GUEST_MESSAGES[page] || "אנא התחברו כדי להשתמש בתכונה זו");
+      return;
+    }
     setCurrentPage(page);
   };
 
   if (!isOpen) return null;
 
-  // Render sub-pages
-  if (currentPage === "wallet") {
+  // Sub-pages (only reachable when authenticated)
+  if (user && currentPage === "wallet") {
     return (
       <>
         <div className="side-menu-overlay" onClick={onClose} />
@@ -67,7 +80,7 @@ const SideMenu = ({
     );
   }
 
-  if (currentPage === "chats") {
+  if (user && currentPage === "chats") {
     return (
       <>
         <div className="side-menu-overlay" onClick={onClose} />
@@ -82,7 +95,7 @@ const SideMenu = ({
     );
   }
 
-  if (currentPage === "settings") {
+  if (user && currentPage === "settings") {
     return (
       <>
         <div className="side-menu-overlay" onClick={onClose} />
@@ -93,7 +106,7 @@ const SideMenu = ({
     );
   }
 
-  if (currentPage === "reports") {
+  if (user && currentPage === "reports") {
     return (
       <>
         <div className="side-menu-overlay" onClick={onClose} />
@@ -104,7 +117,7 @@ const SideMenu = ({
     );
   }
 
-  if (currentPage === "scheduleleave") {
+  if (user && currentPage === "scheduleleave") {
     return (
       <>
         <div className="side-menu-overlay" onClick={onClose} />
@@ -131,19 +144,35 @@ const SideMenu = ({
             ×
           </button>
           <div className="user-profile-section">
-            <div className="menu-avatar">
-              {user?.user_metadata?.avatar_url ? (
-                <img
-                  src={user.user_metadata.avatar_url}
-                  alt={user.user_metadata.full_name || user.email}
-                />
-              ) : (
-                <div className="menu-avatar-placeholder">
-                  {user?.email?.charAt(0).toUpperCase() || "U"}
+            {user ? (
+              <>
+                <div className="menu-avatar">
+                  {user.user_metadata?.avatar_url ? (
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt={user.user_metadata.full_name || user.email}
+                    />
+                  ) : (
+                    <div className="menu-avatar-placeholder">
+                      {user.email?.charAt(0).toUpperCase() || "U"}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            <div className="menu-user-email">{user?.email || ""}</div>
+                <div className="menu-user-email">{user.email || ""}</div>
+              </>
+            ) : (
+              <>
+                <div className="menu-avatar">
+                  <div className="menu-avatar-placeholder">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="menu-user-email">כניסה כאורח/ת</div>
+              </>
+            )}
           </div>
         </div>
 
@@ -192,7 +221,7 @@ const SideMenu = ({
                 </svg>
               </span>
               <span className="menu-label">צ׳אטים</span>
-              {unreadCount > 0 && (
+              {user && unreadCount > 0 && (
                 <span className="menu-badge">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
@@ -274,25 +303,57 @@ const SideMenu = ({
 
           <div className="menu-divider"></div>
 
-          <button className="menu-item signout-item" onClick={onSignOut}>
-            <span className="menu-icon">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16,17 21,12 16,7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-            </span>
-            <span className="menu-label">התנתקות</span>
-          </button>
+          {user ? (
+            <button className="menu-item signout-item" onClick={onSignOut}>
+              <span className="menu-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16,17 21,12 16,7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </span>
+              <span className="menu-label">התנתקות</span>
+            </button>
+          ) : (
+            <>
+              <button className="menu-item signin-item" onClick={onSignIn}>
+                <span className="menu-icon">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                    <polyline points="10,17 15,12 10,7" />
+                    <line x1="15" y1="12" x2="3" y2="12" />
+                  </svg>
+                </span>
+                <span className="menu-label">המשך עם Google</span>
+              </button>
+              <button className="menu-item apple-signin-item" onClick={onAppleSignIn}>
+                <span className="menu-icon">
+                  <svg width="20" height="24" viewBox="0 0 814 1000" fill="currentColor">
+                    <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105.3-57.8-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 268.5-317.3 79.5 0 145.6 52.7 195.2 52.7 47.4 0 121.6-55.8 211.8-55.8 16.2.1 128.3 1.7 198.2 107.4zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z" />
+                  </svg>
+                </span>
+                <span className="menu-label">המשך עם Apple</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </>

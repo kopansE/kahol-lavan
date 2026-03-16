@@ -1,5 +1,6 @@
 export const colors = {
-  // Primary gradient colors
+  // Primary colors
+  primary: '#667eea',
   primaryGradientStart: '#667eea',
   primaryGradientEnd: '#764ba2',
   

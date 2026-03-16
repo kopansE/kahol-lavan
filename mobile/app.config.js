@@ -21,6 +21,7 @@ export default {
       config: {
         googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY_IOS,
       },
+      usesAppleSignIn: true,
       infoPlist: {
         NSLocationWhenInUseUsageDescription:
           "This app needs access to your location to show parking spots near you.",
@@ -45,6 +46,7 @@ export default {
     },
     plugins: [
       "expo-web-browser",
+      "expo-apple-authentication",
       [
         "expo-location",
         {

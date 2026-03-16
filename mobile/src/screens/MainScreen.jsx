@@ -34,7 +34,7 @@ import {
   completePaymentSetup,
 } from "../utils/edgeFunctions";
 
-const MainScreen = ({ user, onSignOut, navigation }) => {
+const MainScreen = ({ user, onSignOut, onSignIn, onAppleSignIn, navigation }) => {
   const { showToast } = useToast();
   const [userLocation, setUserLocation] = useState(null);
   const [otherUsersPins, setOtherUsersPins] = useState([]);
@@ -58,12 +58,21 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
   const [searchResult, setSearchResult] = useState(null);
 
   useEffect(() => {
+    getUserLocation();
+  }, []);
+
+  useEffect(() => {
     if (user) {
       loadUserOwnPin(user.id);
       loadOtherUsersPins(user.id);
       loadPendingNotifications();
       loadUserProfile();
-      getUserLocation();
+    } else {
+      setOtherUsersPins([]);
+      setUserOwnPin(null);
+      setUserReservedPins([]);
+      setPublishedPins([]);
+      setUserDataComplete(true);
     }
   }, [user]);
 
@@ -280,7 +289,11 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
   };
 
   const handleMapPress = async (coordinate) => {
-    // Calculate parking zone
+    if (!user) {
+      showToast("אנא התחברו כדי לסמן חניה");
+      return;
+    }
+
     const parkingZoneInfo = getParkingZone(
       coordinate.latitude,
       coordinate.longitude,
@@ -456,10 +469,10 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
     <View
       style={[
         styles.container,
-        !userDataComplete && styles.containerWithBanner,
+        user && !userDataComplete && styles.containerWithBanner,
       ]}
     >
-      {!userDataComplete && (
+      {user && !userDataComplete && (
         <CarDataBanner onClickBanner={handleCarDataBannerClick} />
       )}
 
@@ -492,21 +505,21 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         onClearSearch={handleClearSearch}
       />
 
-      {userOwnPin && userOwnPin.status === "waiting" && (
+      {user && userOwnPin && userOwnPin.status === "waiting" && (
         <LeavingParkingButton
           waitingPin={userOwnPin}
           onActivate={handleActivatePin}
         />
       )}
 
-      {userOwnPin && userOwnPin.status === "active" && (
+      {user && userOwnPin && userOwnPin.status === "active" && (
         <NotLeavingParkingButton
           activePin={userOwnPin}
           onDeactivate={handleDeactivatePin}
         />
       )}
 
-      {userOwnPin && userOwnPin.status === "reserved" && (
+      {user && userOwnPin && userOwnPin.status === "reserved" && (
         <ReservedParkingButton
           reservedPin={userOwnPin}
           reservedByName={reservedByName}
@@ -527,44 +540,50 @@ const MainScreen = ({ user, onSignOut, navigation }) => {
         onClose={() => setIsPaymentMenuOpen(false)}
         user={user}
         onSignOut={onSignOut}
+        onSignIn={onSignIn}
+        onAppleSignIn={onAppleSignIn}
         onNavigateToWallet={() => navigation.navigate("Wallet", { user })}
         onNavigateToChats={() => navigation.navigate("ChatChannelList")}
         onNavigateToSettings={() => navigation.navigate("Settings", { user })}
         onNavigateToReports={() => navigation.navigate("Reports")}
       />
 
-      <ParkingDetailModal
-        visible={!!selectedParking}
-        parking={selectedParking}
-        onClose={() => setSelectedParking(null)}
-        userReservedPins={userReservedPins}
-      />
+      {user && (
+        <>
+          <ParkingDetailModal
+            visible={!!selectedParking}
+            parking={selectedParking}
+            onClose={() => setSelectedParking(null)}
+            userReservedPins={userReservedPins}
+          />
 
-      <PublishedParkingDetailModal
-        visible={!!selectedPublishedParking}
-        parking={selectedPublishedParking}
-        onClose={() => setSelectedPublishedParking(null)}
-        userReservedPins={userReservedPins}
-        currentUserId={user?.id}
-      />
+          <PublishedParkingDetailModal
+            visible={!!selectedPublishedParking}
+            parking={selectedPublishedParking}
+            onClose={() => setSelectedPublishedParking(null)}
+            userReservedPins={userReservedPins}
+            currentUserId={user.id}
+          />
 
-      <ReservedParkingDetailModal
-        visible={!!selectedReservedParking}
-        parking={selectedReservedParking}
-        onClose={() => setSelectedReservedParking(null)}
-      />
+          <ReservedParkingDetailModal
+            visible={!!selectedReservedParking}
+            parking={selectedReservedParking}
+            onClose={() => setSelectedReservedParking(null)}
+          />
 
-      <OwnParkingDetailModal
-        visible={!!selectedOwnParking}
-        parking={selectedOwnParking}
-        onClose={() => setSelectedOwnParking(null)}
-      />
+          <OwnParkingDetailModal
+            visible={!!selectedOwnParking}
+            parking={selectedOwnParking}
+            onClose={() => setSelectedOwnParking(null)}
+          />
 
-      <CarDataFormModal
-        visible={showCarDataModal}
-        onClose={handleCarDataModalClose}
-        onSuccess={handleCarDataSuccess}
-      />
+          <CarDataFormModal
+            visible={showCarDataModal}
+            onClose={handleCarDataModalClose}
+            onSuccess={handleCarDataSuccess}
+          />
+        </>
+      )}
     </View>
   );
 };

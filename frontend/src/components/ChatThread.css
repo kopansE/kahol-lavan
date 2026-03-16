@@ -27,18 +27,17 @@
 .chat-thread-header {
   flex-shrink: 0;
   padding: 12px 20px;
-  background: #f5f5f5;
-  color: #333;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid #e0e0e0;
 }
 
 .chat-thread-back-button {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.2);
   border: none;
-  color: #333;
+  color: white;
   font-size: 20px;
   width: 36px;
   height: 36px;
@@ -51,7 +50,7 @@
 }
 
 .chat-thread-back-button:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .chat-thread-user-info {
@@ -62,13 +61,12 @@
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 2px 0;
-  color: #333;
+  color: white;
 }
 
 .chat-thread-user-details {
   font-size: 12px;
-  color: #666;
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* Stream Chat React Component Overrides */
@@ -198,18 +196,17 @@
 .chat-thread-header-side-menu {
   flex-shrink: 0;
   padding: 12px 16px;
-  background: #f5f5f5;
-  color: #333;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid #e0e0e0;
 }
 
 .chat-thread-back-button-side-menu {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.2);
   border: none;
-  color: #333;
+  color: white;
   font-size: 20px;
   width: 36px;
   height: 36px;
@@ -223,7 +220,7 @@
 }
 
 .chat-thread-back-button-side-menu:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Stream Chat overrides for side menu */

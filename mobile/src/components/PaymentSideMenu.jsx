@@ -8,14 +8,17 @@ import {
   ScrollView,
   Image,
   ActivityIndicator,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
+import * as Linking from "expo-linking";
 import { supabase } from "../config/supabase";
 import ReservationNotification from "./ReservationNotification";
 import { colors } from "../styles/colors";
 import { useToast } from "../contexts/ToastContext";
-import { getWalletBalance, setupPaymentMethod } from "../utils/edgeFunctions";
-import { NGROK_URL } from "@env";
+import { getWalletBalance, setupPaymentMethod, completePaymentSetup } from "../utils/edgeFunctions";
 
 const PaymentSideMenu = ({
   visible,
@@ -31,6 +34,9 @@ const PaymentSideMenu = ({
   const [walletAmount, setWalletAmount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+  const [nameModalVisible, setNameModalVisible] = useState(false);
+  const [firstNameInput, setFirstNameInput] = useState("");
+  const [lastNameInput, setLastNameInput] = useState("");
 
   useEffect(() => {
     if (visible && user) {
@@ -98,23 +104,94 @@ const PaymentSideMenu = ({
     }
   };
 
+  const openPaymentSetup = async (nameOverride) => {
+    const redirectBaseUrl = "kahollavan://";
+    const setupResult = await setupPaymentMethod(redirectBaseUrl, nameOverride);
+    if (!setupResult.hosted_page_url) return;
+
+    // openAuthSessionAsync (ASWebAuthenticationSession on iOS) intercepts any
+    // navigation to the kahollavan:// scheme and closes the browser automatically.
+    // Unlike openBrowserAsync (SFSafariViewController), it works without a user
+    // gesture and does NOT fire a system Linking event — so we handle
+    // completePaymentSetup here instead of relying on MainScreen's deep link handler.
+    console.log("[Payment] Full setup result:", JSON.stringify(setupResult));
+    console.log("[Payment] Opening auth session for:", setupResult.hosted_page_url);
+    console.log("[Payment] Redirect URLs registered with Rapyd:", {
+      complete: setupResult._debug_complete_url,
+      cancel: setupResult._debug_cancel_url,
+      error: setupResult._debug_error_url,
+    });
+    const sessionResult = await WebBrowser.openAuthSessionAsync(
+      setupResult.hosted_page_url,
+      "kahollavan://",
+      { preferEphemeralSession: true }
+    );
+    console.log("[Payment] Session result:", JSON.stringify(sessionResult));
+
+    if (sessionResult.type === "success") {
+      const parsed = Linking.parse(sessionResult.url);
+      console.log("[Payment] Parsed URL:", JSON.stringify(parsed));
+      const paymentStatus = parsed.queryParams?.payment_setup;
+
+      if (paymentStatus === "complete") {
+        try {
+          const result = await completePaymentSetup();
+          if (result.success) {
+            showToast(`אמצעי תשלום נוסף בהצלחה! 4 ספרות אחרונות: ${result.payment_method.last4}`);
+          }
+        } catch (e) {
+          showToast("שמירת אמצעי התשלום נכשלה. אנא נסה שוב.");
+        }
+      } else if (paymentStatus === "cancelled") {
+        showToast("הגדרת התשלום בוטלה.");
+      } else if (paymentStatus === "error") {
+        showToast("אירעה שגיאה בהגדרת התשלום.");
+      }
+    }
+
+    await loadUserPaymentData();
+  };
+
   const handleUpdatePaymentDetails = async () => {
     if (!user) return;
 
     try {
       setIsUpdatingPayment(true);
-
-      const redirectBaseUrl = NGROK_URL || "kahollavan://";
-      const result = await setupPaymentMethod(redirectBaseUrl);
-
-      if (result.hosted_page_url) {
-        await WebBrowser.openBrowserAsync(result.hosted_page_url);
-      }
+      await openPaymentSetup();
     } catch (error) {
       console.error("Failed to update payment details:", error);
+      if (error.message?.includes("NAME_REQUIRED")) {
+        setNameModalVisible(true);
+      } else {
+        showToast(error.message || "עדכון פרטי התשלום נכשל");
+      }
+    } finally {
+      setIsUpdatingPayment(false);
+    }
+  };
+
+  const handleNameSubmit = async () => {
+    const trimmedFirst = firstNameInput.trim();
+    if (!trimmedFirst) {
+      showToast("יש להזין שם פרטי");
+      return;
+    }
+
+    setNameModalVisible(false);
+
+    try {
+      setIsUpdatingPayment(true);
+      await openPaymentSetup({
+        firstName: trimmedFirst,
+        lastName: lastNameInput.trim(),
+      });
+    } catch (error) {
+      console.error("Failed to update payment details after name input:", error);
       showToast(error.message || "עדכון פרטי התשלום נכשל");
     } finally {
       setIsUpdatingPayment(false);
+      setFirstNameInput("");
+      setLastNameInput("");
     }
   };
 
@@ -228,6 +305,57 @@ const PaymentSideMenu = ({
           </ScrollView>
         </View>
       </View>
+
+      <Modal
+        visible={nameModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNameModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.nameModalOverlay}
+        >
+          <View style={styles.nameModalCard}>
+            <Text style={styles.nameModalTitle}>פרטי שם</Text>
+            <Text style={styles.nameModalSubtitle}>
+              נא להזין את שמך כדי להמשיך בהגדרת התשלום
+            </Text>
+
+            <TextInput
+              style={styles.nameModalInput}
+              placeholder="שם פרטי"
+              placeholderTextColor="#999"
+              value={firstNameInput}
+              onChangeText={setFirstNameInput}
+              autoFocus
+              textAlign="right"
+            />
+            <TextInput
+              style={styles.nameModalInput}
+              placeholder="שם משפחה"
+              placeholderTextColor="#999"
+              value={lastNameInput}
+              onChangeText={setLastNameInput}
+              textAlign="right"
+            />
+
+            <TouchableOpacity
+              style={styles.nameModalSubmitButton}
+              onPress={handleNameSubmit}
+            >
+              <Text style={styles.nameModalSubmitText}>המשך</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.nameModalCancelButton}
+              onPress={() => setNameModalVisible(false)}
+            >
+              <Text style={styles.nameModalCancelText}>ביטול</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </Modal>
   );
 };
@@ -383,6 +511,64 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: "600",
+  },
+  nameModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  nameModalCard: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 340,
+  },
+  nameModalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: colors.darkGray,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  nameModalSubtitle: {
+    fontSize: 14,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  nameModalInput: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: colors.darkGray,
+    marginBottom: 12,
+  },
+  nameModalSubmitButton: {
+    backgroundColor: colors.primaryGradientStart,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  nameModalSubmitText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  nameModalCancelButton: {
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  nameModalCancelText: {
+    color: "#999",
+    fontSize: 14,
   },
 });
 

@@ -243,6 +243,7 @@ const ChatChannelListScreen = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
+          style={{ backgroundColor: "#f9f9f9" }}
           data={sections.flatMap((section) => [
             {
               isHeader: true,
@@ -294,7 +295,7 @@ const ChatChannelListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.primary,
   },
   header: {
     flexDirection: "row",
@@ -317,6 +318,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#f9f9f9",
   },
   loadingText: {
     marginTop: 12,
@@ -327,6 +329,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 40,
+    backgroundColor: "#f9f9f9",
   },
   emptyIcon: {
     fontSize: 64,

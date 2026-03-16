@@ -8,23 +8,37 @@ import {
   Image,
   Animated,
   Dimensions,
+  Platform,
 } from "react-native";
+import * as AppleAuthentication from "expo-apple-authentication";
+import { Svg, Path } from "react-native-svg";
 import { useStreamChat } from "../contexts/StreamChatContext";
+import { useToast } from "../contexts/ToastContext";
 import { colors } from "../styles/colors";
 
 const { width } = Dimensions.get("window");
+
+const GUEST_MESSAGES = {
+  wallet: "אנא התחברו כדי לצפות בארנק",
+  chats: "אנא התחברו כדי לצפות בצ׳אטים",
+  reports: "אנא התחברו כדי לצפות בדיווחים",
+  settings: "אנא התחברו כדי לצפות בהגדרות",
+};
 
 const SideMenu = ({
   visible,
   onClose,
   user,
   onSignOut,
+  onSignIn,
+  onAppleSignIn,
   onNavigateToWallet,
   onNavigateToChats,
   onNavigateToSettings,
   onNavigateToReports,
 }) => {
   const { chatClient, isReady } = useStreamChat();
+  const { showToast } = useToast();
   const [unreadCount, setUnreadCount] = useState(0);
   const slideAnim = useState(new Animated.Value(-width * 0.85))[0];
 
@@ -63,10 +77,25 @@ const SideMenu = ({
     };
   }, [chatClient, isReady]);
 
-  const handleMenuItemPress = (action) => {
+  const handleMenuItemPress = (action, guestKey) => {
+    if (!user) {
+      showToast(GUEST_MESSAGES[guestKey] || "אנא התחברו כדי להשתמש בתכונה זו");
+      return;
+    }
     onClose();
     setTimeout(() => {
       action();
+    }, 300);
+  };
+
+  const handleAuthAction = () => {
+    onClose();
+    setTimeout(() => {
+      if (user) {
+        onSignOut();
+      } else {
+        onSignIn();
+      }
     }, 300);
   };
 
@@ -97,19 +126,30 @@ const SideMenu = ({
               <Text style={styles.closeButtonText}>×</Text>
             </TouchableOpacity>
             <View style={styles.profileSection}>
-              {user?.user_metadata?.avatar_url ? (
-                <Image
-                  source={{ uri: user.user_metadata.avatar_url }}
-                  style={styles.avatar}
-                />
+              {user ? (
+                <>
+                  {user.user_metadata?.avatar_url ? (
+                    <Image
+                      source={{ uri: user.user_metadata.avatar_url }}
+                      style={styles.avatar}
+                    />
+                  ) : (
+                    <View style={styles.avatarPlaceholder}>
+                      <Text style={styles.avatarText}>
+                        {user.email?.charAt(0).toUpperCase() || "U"}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.email}>{user.email || ""}</Text>
+                </>
               ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Text style={styles.avatarText}>
-                    {user?.email?.charAt(0).toUpperCase() || "U"}
-                  </Text>
-                </View>
+                <>
+                  <View style={styles.avatarPlaceholder}>
+                    <Text style={styles.guestAvatarText}>👤</Text>
+                  </View>
+                  <Text style={styles.email}>כניסה כאורח/ת</Text>
+                </>
               )}
-              <Text style={styles.email}>{user?.email || ""}</Text>
             </View>
           </View>
 
@@ -119,7 +159,9 @@ const SideMenu = ({
               {/* Wallet */}
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => handleMenuItemPress(onNavigateToWallet)}
+                onPress={() =>
+                  handleMenuItemPress(onNavigateToWallet, "wallet")
+                }
               >
                 <View style={styles.menuIcon}>
                   <WalletIcon />
@@ -131,13 +173,15 @@ const SideMenu = ({
               {/* Chats */}
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => handleMenuItemPress(onNavigateToChats)}
+                onPress={() =>
+                  handleMenuItemPress(onNavigateToChats, "chats")
+                }
               >
                 <View style={styles.menuIcon}>
                   <ChatIcon />
                 </View>
                 <Text style={styles.menuLabel}>צ׳אטים</Text>
-                {unreadCount > 0 && (
+                {user && unreadCount > 0 && (
                   <View style={styles.menuBadge}>
                     <Text style={styles.menuBadgeText}>
                       {unreadCount > 9 ? "9+" : unreadCount}
@@ -150,7 +194,9 @@ const SideMenu = ({
               {/* Reports */}
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => handleMenuItemPress(onNavigateToReports)}
+                onPress={() =>
+                  handleMenuItemPress(onNavigateToReports, "reports")
+                }
               >
                 <View style={styles.menuIcon}>
                   <ReportsIcon />
@@ -162,7 +208,9 @@ const SideMenu = ({
               {/* Settings */}
               <TouchableOpacity
                 style={styles.menuItem}
-                onPress={() => handleMenuItemPress(onNavigateToSettings)}
+                onPress={() =>
+                  handleMenuItemPress(onNavigateToSettings, "settings")
+                }
               >
                 <View style={styles.menuIcon}>
                   <SettingsIcon />
@@ -174,18 +222,55 @@ const SideMenu = ({
 
             <View style={styles.divider} />
 
-            {/* Sign Out */}
-            <TouchableOpacity
-              style={[styles.menuItem, styles.signoutItem]}
-              onPress={onSignOut}
-            >
-              <View style={[styles.menuIcon, styles.signoutIcon]}>
-                <SignOutIcon />
-              </View>
-              <Text style={[styles.menuLabel, styles.signoutLabel]}>
-                התנתקות
-              </Text>
-            </TouchableOpacity>
+            {/* Sign In / Sign Out */}
+            {user ? (
+              <TouchableOpacity
+                style={[styles.menuItem, styles.signoutItem]}
+                onPress={handleAuthAction}
+              >
+                <View style={[styles.menuIcon, styles.signoutIcon]}>
+                  <SignOutIcon />
+                </View>
+                <Text style={[styles.menuLabel, styles.signoutLabel]}>
+                  התנתקות
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.googleSigninButton}
+                  onPress={() => {
+                    onClose();
+                    setTimeout(() => onSignIn(), 300);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Svg width={20} height={20} viewBox="0 0 24 24">
+                    <Path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <Path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <Path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <Path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </Svg>
+                  <Text style={styles.googleSigninText}>המשך עם Google</Text>
+                </TouchableOpacity>
+                {Platform.OS === "ios" && (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={
+                      AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN
+                    }
+                    buttonStyle={
+                      AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                    }
+                    cornerRadius={12}
+                    style={styles.appleSigninButton}
+                    onPress={() => {
+                      onClose();
+                      setTimeout(() => onAppleSignIn(), 300);
+                    }}
+                  />
+                )}
+              </>
+            )}
           </View>
         </Animated.View>
       </View>
@@ -193,7 +278,7 @@ const SideMenu = ({
   );
 };
 
-// SVG-like Icon Components
+// Icon Components
 const WalletIcon = () => (
   <View style={iconStyles.container}>
     <View style={[iconStyles.rect, { width: 20, height: 14 }]} />
@@ -217,6 +302,12 @@ const SettingsIcon = () => (
 const SignOutIcon = () => (
   <View style={iconStyles.container}>
     <View style={iconStyles.signout} />
+  </View>
+);
+
+const SignInIcon = () => (
+  <View style={iconStyles.container}>
+    <View style={iconStyles.signin} />
   </View>
 );
 
@@ -267,6 +358,14 @@ const iconStyles = StyleSheet.create({
     borderColor: colors.red,
     borderRadius: 3,
     borderRightWidth: 0,
+  },
+  signin: {
+    width: 16,
+    height: 16,
+    borderWidth: 2,
+    borderColor: colors.primaryGradientStart,
+    borderRadius: 3,
+    borderLeftWidth: 0,
   },
   reports: {
     width: 16,
@@ -356,6 +455,9 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.white,
   },
+  guestAvatarText: {
+    fontSize: 36,
+  },
   email: {
     fontSize: 14,
     color: "rgba(255, 255, 255, 0.9)",
@@ -418,6 +520,33 @@ const styles = StyleSheet.create({
   },
   signoutLabel: {
     color: colors.red,
+  },
+  googleSigninButton: {
+    marginTop: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#dadce0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  googleSigninText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#3c4043",
+  },
+  appleSigninButton: {
+    width: "100%",
+    height: 48,
+    marginTop: 10,
   },
 });
 

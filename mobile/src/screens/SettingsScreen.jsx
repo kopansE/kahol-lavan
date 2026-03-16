@@ -9,11 +9,12 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { supabase } from "../config/supabase";
 import { colors } from "../styles/colors";
 import { useToast } from "../contexts/ToastContext";
-import { updateUserCarData } from "../utils/edgeFunctions";
+import { updateUserCarData, deleteAccount } from "../utils/edgeFunctions";
 
 const SettingsScreen = ({ navigation, route }) => {
   const { user } = route.params;
@@ -28,6 +29,7 @@ const SettingsScreen = ({ navigation, route }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -117,6 +119,31 @@ const SettingsScreen = ({ navigation, route }) => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "מחיקת חשבון",
+      "האם את/ה בטוח/ה? פעולה זו תמחק את החשבון שלך לצמיתות כולל כל הנתונים, הפינים, הצ׳אטים וההיסטוריה. לא ניתן לבטל פעולה זו.",
+      [
+        { text: "ביטול", style: "cancel" },
+        {
+          text: "מחק חשבון",
+          style: "destructive",
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              await deleteAccount();
+              await supabase.auth.signOut();
+            } catch (error) {
+              console.error("Error deleting account:", error);
+              showToast("מחיקת החשבון נכשלה. אנא נסה שוב.");
+              setIsDeleting(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleSubmit = async () => {
@@ -259,6 +286,30 @@ const SettingsScreen = ({ navigation, route }) => {
                 </Text>
               )}
             </TouchableOpacity>
+
+            {/* Delete Account Section */}
+            <View style={styles.deleteSection}>
+              <View style={styles.deleteDivider} />
+              <View style={styles.sectionHeader}>
+                <Text style={styles.deleteSectionIcon}>⚠️</Text>
+                <Text style={styles.deleteSectionTitle}>מחיקת חשבון</Text>
+              </View>
+              <Text style={styles.deleteDescription}>
+                מחיקת החשבון היא פעולה בלתי הפיכה. כל הנתונים שלך יימחקו
+                לצמיתות.
+              </Text>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={handleDeleteAccount}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={styles.deleteButtonText}>מחק חשבון</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -374,6 +425,44 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cyan,
   },
   saveButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  deleteSection: {
+    marginTop: 24,
+  },
+  deleteDivider: {
+    height: 1,
+    backgroundColor: colors.mediumGray,
+    marginBottom: 16,
+  },
+  deleteSectionIcon: {
+    fontSize: 24,
+  },
+  deleteSectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.red,
+  },
+  deleteDescription: {
+    fontSize: 14,
+    color: colors.gray,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  deleteButton: {
+    backgroundColor: colors.red,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: colors.red,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  deleteButtonText: {
     color: colors.white,
     fontSize: 16,
     fontWeight: "600",

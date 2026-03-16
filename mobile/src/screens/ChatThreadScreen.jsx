@@ -20,6 +20,7 @@ import { useStreamChat } from "../contexts/StreamChatContext";
 import ChatTimer from "../components/ChatTimer";
 import ChatActionButtons from "../components/ChatActionButtons";
 import { customChatTheme } from "../styles/chatTheme";
+import { colors } from "../styles/colors";
 import {
   approveInChat,
   cancelInChat,
@@ -308,22 +309,21 @@ const ChatThreadScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.primaryGradientStart,
   },
   streamChatWrapper: {
     flex: 1,
+    backgroundColor: "#f9f9f9",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
-    backgroundColor: "#f5f5f5",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    backgroundColor: colors.primaryGradientStart,
   },
   backButton: {
     fontSize: 28,
-    color: "#333",
+    color: "white",
     marginRight: 12,
   },
   userInfo: {
@@ -332,12 +332,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
+    color: "white",
     marginBottom: 2,
   },
   userDetails: {
     fontSize: 12,
-    color: "#666",
+    color: "rgba(255, 255, 255, 0.85)",
   },
   chatContainer: {
     flex: 1,
